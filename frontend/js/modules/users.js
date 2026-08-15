@@ -14,6 +14,7 @@ const UsersModule = (() => {
     { id: "Sotib olish (Zakup)", name: { uz: "🛒 Sotib olish (Zakup)", ru: "🛒 Закупки и Поступления" }, desc: { uz: "Xomashyo va materiallarni xarid qilish", ru: "Закупка и оприходование сырья и материалов" } },
     { id: "Sotish (Realizatsiya)", name: { uz: "🏷️ Sotish (Realizatsiya)", ru: "🏷️ Продажи и Реализация" }, desc: { uz: "Tayyor kafellarni mijozlarga sotish", ru: "Реализация готовой плитки покупателям" } },
     { id: "Moliya & PnL", name: { uz: "📈 Moliya & PnL", ru: "📈 Финансы и PnL" }, desc: { uz: "Foyda va zarar hisoboti (PnL), oyni yopish", ru: "Отчет о прибылях и убытках (PnL), закрытие месяца" } },
+    { id: "Ish haqi", name: { uz: "👷 Ish haqi & Xodimlar", ru: "👷 Зарплата и Персонал" }, desc: { uz: "Oyliklar, kunlik davomat, ishbay to'lovlar va vedomost", ru: "Оклады, табель посещаемости, сдельная оплата и ведомости" } },
     { id: "MDM (Spravochniklar)", name: { uz: "🗂️ MDM (Spravochniklar)", ru: "🗂️ MDM (Справочники)" }, desc: { uz: "Materiallar, kafel turlari va kontragentlar katalogi", ru: "Справочники материалов, видов плитки и контрагентов" } }
   ];
 

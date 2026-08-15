@@ -124,6 +124,7 @@ function hasModuleAccess(moduleName) {
   if (moduleName === "purchases") return roles.includes("Sotib olish (Zakup)") || roles.includes("Ombor") || roles.includes("Omborchi") || isDirector;
   if (moduleName === "sales") return roles.includes("Sotish (Realizatsiya)") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "finance") return roles.includes("Moliya & PnL") || roles.includes("Moliya") || roles.includes("Moliyachi") || roles.includes("Direktor") || roles.includes("Buxgalter");
+  if (moduleName === "salary") return roles.includes("Ish haqi") || roles.includes("Ish haqi & Xodimlar") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "users") return roles.includes("Admin");
   return false;
 }
@@ -242,6 +243,11 @@ async function navigateTo(moduleName) {
     case "finance":
       if (pageTitle) pageTitle.textContent = t("nav_finance");
       await FinanceModule.render(container);
+      break;
+    case "salary":
+      if (pageTitle) pageTitle.textContent = t("nav_salary");
+      container.innerHTML = `<div id="salary-module"></div>`;
+      await IshHaqiModule.render();
       break;
     case "users":
       if (pageTitle) pageTitle.textContent = t("nav_users");

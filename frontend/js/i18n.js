@@ -13,6 +13,7 @@ const I18N = {
     nav_purchases: "Sotib olish",
     nav_sales: "Sotish",
     nav_finance: "Moliya",
+    nav_salary: "Ish haqi",
     nav_users: "Foydalanuvchilar",
     users_title: "Foydalanuvchilar va Rollar",
     
@@ -131,6 +132,7 @@ const I18N = {
     nav_purchases: "Закупки",
     nav_sales: "Продажи",
     nav_finance: "Финансы",
+    nav_salary: "Зарплата",
     nav_users: "Пользователи",
     users_title: "Пользователи и Роли",
     

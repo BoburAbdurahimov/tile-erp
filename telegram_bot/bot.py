@@ -41,6 +41,7 @@ BOT_TEXTS = {
         "menu_production": "🏭 Ishlab chiqarish",
         "menu_balances": "👥 Balanslar",
         "menu_finance": "📊 Moliya & PnL",
+        "menu_salary": "👷 Ish haqi & Davomat",
         "btn_change_lang": "🌐 Tilni o'zgartirish",
         "select_warehouse": "Qaysi omborni ko'rmoqchisiz?",
         "select_currency": "Qaysi valyutada hisoblansin?",
@@ -56,6 +57,7 @@ BOT_TEXTS = {
         "menu_production": "🏭 Производство",
         "menu_balances": "👥 Балансы контрагентов",
         "menu_finance": "📊 Финансы & PnL",
+        "menu_salary": "👷 Зарплата & Табель",
         "btn_change_lang": "🌐 Сменить язык",
         "select_warehouse": "Какой склад вы хотите просмотреть?",
         "select_currency": "В какой валюте отобразить цены?",
@@ -110,7 +112,8 @@ def get_role_capabilities(role_str: str):
         "kassa": is_admin or "Kassa" in roles or "Kassir" in roles or "Buxgalter" in roles or "Ish boshqaruvchi" in roles or "Direktor" in roles,
         "production": is_admin or "Ishlab chiqarish" in roles or "Sex boshlig'i" in roles or "Ish boshqaruvchi" in roles or "Direktor" in roles,
         "balances": is_admin or "Kontragentlar & Balanslar" in roles or "Balanslar" in roles or "Buxgalter" in roles or "Kassir" in roles or "Ish boshqaruvchi" in roles or "Direktor" in roles,
-        "finance": is_admin or "Moliya & PnL" in roles or "Moliya" in roles or "Moliyachi" in roles or "Buxgalter" in roles or "Direktor" in roles
+        "finance": is_admin or "Moliya & PnL" in roles or "Moliya" in roles or "Moliyachi" in roles or "Buxgalter" in roles or "Direktor" in roles,
+        "salary": is_admin or "Ish haqi" in roles or "Ish haqi & Xodimlar" in roles or "Buxgalter" in roles or "Direktor" in roles
     }
 
 def get_main_keyboard(lang: str, role_str: str = "Admin") -> ReplyKeyboardMarkup:
@@ -141,12 +144,17 @@ def get_main_keyboard(lang: str, role_str: str = "Admin") -> ReplyKeyboardMarkup
     if row2:
         keyboard.append(row2)
         
-    # 4. Finance & Language switch
+    # 4. Finance & Salary row
     row3 = []
     if caps["finance"]:
         row3.append(KeyboardButton(text=t["menu_finance"]))
-    row3.append(KeyboardButton(text=t["btn_change_lang"]))
-    keyboard.append(row3)
+    if caps["salary"]:
+        row3.append(KeyboardButton(text=t["menu_salary"]))
+    if row3:
+        keyboard.append(row3)
+
+    # 5. Language switch
+    keyboard.append([KeyboardButton(text=t["btn_change_lang"])])
     
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -1481,6 +1489,51 @@ async def handle_finance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     finally:
         db.close()
 
+# ==================== SALARY MODULE ====================
+async def handle_salary_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str):
+    db = SessionLocal()
+    try:
+        from backend.services.salary_service import get_payroll_summary
+        current_ym = date.today().strftime("%Y-%m")
+        summary = get_payroll_summary(db, current_ym)
+        
+        is_uz = lang == "uz"
+        status_text = "🔒 Yopilgan (Tasdiqlangan)" if summary["is_all_finalized"] else "✏️ Ochiq (Qoralama)"
+        if not is_uz:
+            status_text = "🔒 Зафиксирован" if summary["is_all_finalized"] else "✏️ Открыт (Черновик)"
+
+        msg = (
+            f"👷 **{current_ym} Oylik ish haqi va Davomat hisobi**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👥 **Jami xodimlar soni:** `{summary['total_employees']} nafar`\n"
+            f"💼 **Jami hisoblangan fond:** `{summary['total_payroll']:,.0f} UZS`\n"
+            f"🏢 **Fiksalangan maoshlar:** `{summary['total_fixed']:,.0f} UZS`\n"
+            f"🔨 **Ishbay to'lovlar hajmi:** `{summary['total_piecework']:,.0f} UZS`\n"
+            f"✅ **To'langan ish haqi:** `{summary['total_paid']:,.0f} UZS`\n"
+            f"🟡 **To'lanishi kerak qoldiq:** `{summary['total_unpaid']:,.0f} UZS`\n\n"
+            f"📌 **Holat:** `{status_text}`\n\n"
+            f"👇 _Kunlik davomat va ishbay hajmlarni kiritish uchun **🚀 ERP Mini App** dan foydalaning._"
+            if is_uz else
+            f"👷 **Сводка по зарплате за {current_ym}**\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"👥 **Всего сотрудников:** `{summary['total_employees']}`\n"
+            f"💼 **Общий фонд начислений:** `{summary['total_payroll']:,.0f} UZS`\n"
+            f"🏢 **Окладная часть:** `{summary['total_fixed']:,.0f} UZS`\n"
+            f"🔨 **Сдельная часть:** `{summary['total_piecework']:,.0f} UZS`\n"
+            f"✅ **Выплачено:** `{summary['total_paid']:,.0f} UZS`\n"
+            f"🟡 **Остаток к выплате:** `{summary['total_unpaid']:,.0f} UZS`\n\n"
+            f"📌 **Статус:** `{status_text}`\n\n"
+            f"👇 _Для внесения ежедневного табеля и нарядов используйте **🚀 ERP Mini App**._"
+        )
+        
+        kb = [[InlineKeyboardButton("🚀 Mini Appni ochish" if is_uz else "🚀 Открыть Mini App", web_app=WebAppInfo(url=WEBAPP_HTTPS_URL))]]
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Error in handle_salary_menu: {e}")
+        await update.message.reply_text(f"⚠️ Xatolik: {e}")
+    finally:
+        db.close()
+
 # ==================== TEXT MESSAGES DISPATCHER ====================
 async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     raw_text = (update.message.text or "").strip()
@@ -1668,7 +1721,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
 
     # 2. Main menu handlers with authorization check
     is_appr, u_role, db_user = check_bot_user_auth(update.effective_user.id)
-    if not is_appr and ("ombor" in text or "склад" in text or "kassa" in text or "касс" in text or "ishlab" in text or "производ" in text or "balans" in text or "баланс" in text or "moliya" in text or "финанс" in text):
+    if not is_appr and ("ombor" in text or "склад" in text or "kassa" in text or "касс" in text or "ishlab" in text or "производ" in text or "balans" in text or "баланс" in text or "moliya" in text or "финанс" in text or "ish haqi" in text or "zarplat" in text or "зарплат" in text or "davomat" in text or "табель" in text):
         await update.message.reply_text(
             "⏳ **Hurmatli xodim!**\nSizning akkauntingiz administrator tomonidan tasdiqlanishi kutilmoqda. Administrator sizga rol berganidan so'ng ushbu bo'limlardan foydalanishingiz mumkin."
             if lang == "uz" else
@@ -1724,6 +1777,15 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             return
         await handle_finance_menu(update, context, lang)
+    elif "ish haqi" in text or "zarplat" in text or "зарплат" in text or "davomat" in text or "табель" in text:
+        if not caps["salary"]:
+            await update.message.reply_text(
+                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Ish haqi** bo'limiga kirish ruxsati yo'q."
+                if lang == "uz" else
+                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Зарплата**."
+            )
+            return
+        await handle_salary_menu(update, context, lang)
     elif "til" in text or "язык" in text or "сменить" in text:
         await start_cmd(update, context)
     else:

@@ -205,5 +205,32 @@ const API = {
     return apiRequest(url);
   },
   closeMonth: (data) => apiRequest("/moliya/month-closing/close", "POST", data),
-  reopenMonth: (data) => apiRequest("/moliya/month-closing/reopen", "POST", data)
+  reopenMonth: (data) => apiRequest("/moliya/month-closing/reopen", "POST", data),
+
+  // Salary & HR Management Module
+  getEmployees: (type, activeOnly = true, search = "") => {
+    let url = `/salary/employees?active_only=${activeOnly}`;
+    if (type) url += `&type=${type}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    return apiRequest(url);
+  },
+  createEmployee: (data) => apiRequest("/salary/employees", "POST", data),
+  updateEmployee: (id, data) => apiRequest(`/salary/employees/${id}`, "PUT", data),
+  toggleEmployeeActive: (id) => apiRequest(`/salary/employees/${id}/toggle-active`, "PUT"),
+
+  getJobTypes: (activeOnly = false) => apiRequest(`/salary/job-types?active_only=${activeOnly}`),
+  createJobType: (data) => apiRequest("/salary/job-types", "POST", data),
+  updateJobType: (id, data) => apiRequest(`/salary/job-types/${id}`, "PUT", data),
+
+  getDailySalaryData: (dateStr) => apiRequest(`/salary/daily-data?date_str=${dateStr}`),
+  saveDailyAttendance: (data) => apiRequest("/salary/daily-attendance", "POST", data),
+  addDailyWork: (data) => apiRequest("/salary/daily-work", "POST", data),
+  deleteDailyWork: (id) => apiRequest(`/salary/daily-work/${id}`, "DELETE"),
+
+  getPayroll: (yearMonth, recalculate = false) => apiRequest(`/salary/payroll/${yearMonth}?recalculate=${recalculate}`),
+  calculatePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/calculate`, "POST"),
+  finalizePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/finalize`, "POST"),
+  reopenPayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/reopen`, "POST"),
+  paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data)
 };
+

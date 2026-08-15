@@ -277,3 +277,121 @@ class AuditLog(Base):
     entity_id = Column(String(50), nullable=True)
     details = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+# ==============================================================================
+# SALARY & HR MANAGEMENT MODULE MODELS
+# ==============================================================================
+
+class Employee(Base):
+    __tablename__ = "employees"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    full_name = Column(String(150), nullable=False, index=True)
+    employee_type = Column(String(20), nullable=False, default="fixed") # "fixed" or "piecework"
+    position = Column(String(100), nullable=True) # e.g. "Kafel ustalari brigadiri", "Saralovchi"
+    phone_number = Column(String(50), nullable=True)
+    
+    # For "fixed" type employees:
+    monthly_salary = Column(Float, default=0.0) # Base monthly salary in UZS
+    standard_work_days = Column(Integer, default=26) # Standard work days per month
+    
+    hire_date = Column(Date, nullable=False, default=date.today)
+    removal_date = Column(Date, nullable=True)
+    is_active = Column(Boolean, default=True) # Soft delete
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    attendances = relationship("AttendanceEntry", back_populates="employee", cascade="all, delete-orphan")
+    work_entries = relationship("WorkEntry", back_populates="employee", cascade="all, delete-orphan")
+    salary_calculations = relationship("MonthlySalaryCalculation", back_populates="employee", cascade="all, delete-orphan")
+
+class JobType(Base):
+    __tablename__ = "job_types"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False, index=True) # e.g. "Kafel saralash", "Pechga ortish"
+    unit_of_measure = Column(String(30), nullable=False, default="dona") # m2, dona, taglik, tonna, quti
+    price_per_unit = Column(Float, nullable=False, default=0.0) # Rate in UZS
+    is_active = Column(Boolean, default=True) # Active for new entries
+    created_by = Column(String(50), default="Admin")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    work_entries = relationship("WorkEntry", back_populates="job_type")
+
+class AttendanceEntry(Base):
+    __tablename__ = "attendance_entries"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="absent") # "absent" | "present"
+    reason = Column(Text, nullable=True) # e.g. "Sababsiz", "Kasal", "Ruxsat olgan"
+    entered_by = Column(String(50), default="Admin")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint('employee_id', 'date', name='uq_employee_attendance_date'),
+    )
+    
+    employee = relationship("Employee", back_populates="attendances")
+
+class WorkEntry(Base):
+    __tablename__ = "work_entries"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    job_type_id = Column(Integer, ForeignKey("job_types.id"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    quantity = Column(Float, nullable=False, default=0.0) # e.g. 500 m2, 20 taglik
+    unit_price_snapshot = Column(Float, nullable=False, default=0.0) # Historical snapshot of rate
+    total_amount = Column(Float, nullable=False, default=0.0) # quantity * unit_price_snapshot
+    notes = Column(Text, nullable=True)
+    entered_by = Column(String(50), default="Admin")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    employee = relationship("Employee", back_populates="work_entries")
+    job_type = relationship("JobType", back_populates="work_entries")
+
+class MonthlySalaryCalculation(Base):
+    __tablename__ = "monthly_salary_calculations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    year_month = Column(String(7), nullable=False, index=True) # e.g. "2026-08"
+    employee_type = Column(String(20), nullable=False) # "fixed" | "piecework"
+    
+    # Calculation breakdown for Fixed:
+    base_salary = Column(Float, default=0.0)
+    standard_days = Column(Integer, default=26)
+    absent_days = Column(Integer, default=0)
+    per_day_rate = Column(Float, default=0.0)
+    deduction_amount = Column(Float, default=0.0)
+    
+    # Calculation breakdown for Piecework:
+    piecework_total = Column(Float, default=0.0)
+    
+    # Final amounts:
+    bonus_amount = Column(Float, default=0.0)
+    advance_paid = Column(Float, default=0.0)
+    final_amount = Column(Float, nullable=False, default=0.0) # Net payable
+    
+    status = Column(String(20), nullable=False, default="draft") # "draft", "finalized", "paid"
+    cash_transaction_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
+    
+    finalized_at = Column(DateTime, nullable=True)
+    finalized_by = Column(String(50), nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+    paid_by = Column(String(50), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint('employee_id', 'year_month', name='uq_employee_year_month_salary'),
+    )
+    
+    employee = relationship("Employee", back_populates="salary_calculations")
+    cash_transaction = relationship("CashTransaction")
+

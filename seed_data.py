@@ -5,7 +5,7 @@ from backend.models import (
     Warehouse, MDMMaterial, MDMCounterparty, StockItem,
     CashRegister, CashTransaction, ProductionLine, ProductionOrder,
     ProductionConsumedMaterial, Purchase, PurchaseItem, Sale, SaleItem,
-    ExchangeRate, User
+    ExchangeRate, User, Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation
 )
 
 logger = logging.getLogger(__name__)
@@ -247,10 +247,67 @@ def seed_database():
         ))
         db.commit()
 
+    # 12. Default Job Types (Piecework Catalog)
+    if not db.query(JobType).first():
+        job_types = [
+            JobType(name="Kafel saralash va navlash", unit_of_measure="m2", price_per_unit=500.0, is_active=True, created_by="Admin"),
+            JobType(name="Pechga xom kafel ortish", unit_of_measure="taglik", price_per_unit=15000.0, is_active=True, created_by="Admin"),
+            JobType(name="Gofrokartonga qadoqlash", unit_of_measure="quti", price_per_unit=800.0, is_active=True, created_by="Admin"),
+            JobType(name="Glazur va emal sepish", unit_of_measure="m2", price_per_unit=450.0, is_active=True, created_by="Admin"),
+            JobType(name="Xomashyo aralashtirish va maydalash", unit_of_measure="tonna", price_per_unit=25000.0, is_active=True, created_by="Admin"),
+            JobType(name="Tayyor kafelni omborga tashish", unit_of_measure="taglik", price_per_unit=12000.0, is_active=True, created_by="Admin"),
+        ]
+        db.add_all(job_types)
+        db.commit()
+
+    # 13. Default Employees
+    if not db.query(Employee).first():
+        employees = [
+            # Fixed Monthly Salary Employees
+            Employee(full_name="Qodirov Alisher", employee_type="fixed", position="Bosh Texnolog / Usta", phone_number="+998901234501", monthly_salary=8500000.0, standard_work_days=26, hire_date=today - timedelta(days=90), is_active=True),
+            Employee(full_name="Karimov Dilshod", employee_type="fixed", position="1-Liniya Katta Ustasi", phone_number="+998901234502", monthly_salary=6500000.0, standard_work_days=26, hire_date=today - timedelta(days=60), is_active=True),
+            Employee(full_name="Toirov Jasur", employee_type="fixed", position="Ombor Mudiri", phone_number="+998901234503", monthly_salary=5000000.0, standard_work_days=26, hire_date=today - timedelta(days=45), is_active=True),
+            Employee(full_name="Azizova Nargiza", employee_type="fixed", position="Bosh Hisobchi", phone_number="+998901234504", monthly_salary=7000000.0, standard_work_days=26, hire_date=today - timedelta(days=120), is_active=True),
+            
+            # Piecework Employees
+            Employee(full_name="Rustamov Otabek", employee_type="piecework", position="Saralash ustasi", phone_number="+998935551122", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=30), is_active=True),
+            Employee(full_name="Sultonov Bekzod", employee_type="piecework", position="Pech yuklovchisi", phone_number="+998946663344", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=40), is_active=True),
+            Employee(full_name="Yuldashev Farrux", employee_type="piecework", position="Qadoqlovchi", phone_number="+998977775566", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=20), is_active=True),
+            Employee(full_name="Mirzayev Jamshid", employee_type="piecework", position="Glazur sepuvchi", phone_number="+998908889900", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=50), is_active=True),
+        ]
+        db.add_all(employees)
+        db.commit()
+
+        # Add sample absences and work entries for current month
+        emps = {e.full_name: e for e in db.query(Employee).all()}
+        jts = {j.name: j for j in db.query(JobType).all()}
+
+        # Sample absences for fixed
+        db.add(AttendanceEntry(employee_id=emps["Karimov Dilshod"].id, date=today - timedelta(days=2), status="absent", reason="Kasal bo'lgan", entered_by="Admin"))
+        db.add(AttendanceEntry(employee_id=emps["Toirov Jasur"].id, date=today - timedelta(days=5), status="absent", reason="Oilaviy sabab", entered_by="Admin"))
+        db.add(AttendanceEntry(employee_id=emps["Toirov Jasur"].id, date=today - timedelta(days=4), status="absent", reason="Oilaviy sabab", entered_by="Admin"))
+
+        # Sample piecework entries
+        p1 = jts["Kafel saralash va navlash"]
+        p2 = jts["Pechga xom kafel ortish"]
+        p3 = jts["Gofrokartonga qadoqlash"]
+
+        db.add(WorkEntry(employee_id=emps["Rustamov Otabek"].id, job_type_id=p1.id, date=today - timedelta(days=3), quantity=2400.0, unit_price_snapshot=p1.price_per_unit, total_amount=2400.0 * p1.price_per_unit, entered_by="Admin"))
+        db.add(WorkEntry(employee_id=emps["Rustamov Otabek"].id, job_type_id=p1.id, date=today - timedelta(days=1), quantity=3100.0, unit_price_snapshot=p1.price_per_unit, total_amount=3100.0 * p1.price_per_unit, entered_by="Admin"))
+        db.add(WorkEntry(employee_id=emps["Sultonov Bekzod"].id, job_type_id=p2.id, date=today - timedelta(days=3), quantity=120.0, unit_price_snapshot=p2.price_per_unit, total_amount=120.0 * p2.price_per_unit, entered_by="Admin"))
+        db.add(WorkEntry(employee_id=emps["Sultonov Bekzod"].id, job_type_id=p2.id, date=today - timedelta(days=1), quantity=140.0, unit_price_snapshot=p2.price_per_unit, total_amount=140.0 * p2.price_per_unit, entered_by="Admin"))
+        db.add(WorkEntry(employee_id=emps["Yuldashev Farrux"].id, job_type_id=p3.id, date=today - timedelta(days=2), quantity=1800.0, unit_price_snapshot=p3.price_per_unit, total_amount=1800.0 * p3.price_per_unit, entered_by="Admin"))
+        db.commit()
+
+        # Trigger initial calculation for current month
+        from backend.services.salary_service import recalculate_all_salaries
+        recalculate_all_salaries(db, today.strftime("%Y-%m"))
+
     db.close()
     logger.info("Seed data successfully inserted into database.")
 
 if __name__ == "__main__":
     seed_database()
     print("Database seeding completed.")
+
 
