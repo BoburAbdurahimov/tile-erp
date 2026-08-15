@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Kafel Zavodi ERP | Ceramic Tile Factory ERP</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo">🏭</div>
+        <div class="brand-title">
+          <h1 data-i18n="app_title">Kafel Zavodi ERP</h1>
+          <span data-i18n="app_subtitle">Ishlab chiqarish & Boshqaruv</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a class="nav-item active" data-nav="dashboard" onclick="navigateTo('dashboard')">
+          <span class="icon">📊</span>
+          <span data-i18n="nav_dashboard">Bosh panel</span>
+        </a>
+        <a class="nav-item" data-nav="mdm" onclick="navigateTo('mdm')">
+          <span class="icon">🗂️</span>
+          <span data-i18n="nav_mdm">MDM (Spravochniklar)</span>
+        </a>
+        <a class="nav-item" data-nav="ombor" onclick="navigateTo('ombor')">
+          <span class="icon">📦</span>
+          <span data-i18n="nav_ombor">Ombor (Sklad)</span>
+        </a>
+        <a class="nav-item" data-nav="kassa" onclick="navigateTo('kassa')">
+          <span class="icon">💵</span>
+          <span data-i18n="nav_kassa">Kassa & Moliya oqimi</span>
+        </a>
+        <a class="nav-item" data-nav="production" onclick="navigateTo('production')">
+          <span class="icon">🏭</span>
+          <span data-i18n="nav_production">Ishlab chiqarish (5 Liniya)</span>
+        </a>
+        <a class="nav-item" data-nav="balances" onclick="navigateTo('balances')">
+          <span class="icon">👥</span>
+          <span data-i18n="nav_balances">Mijoz & Postavshik balansi</span>
+        </a>
+        <a class="nav-item" data-nav="purchases" onclick="navigateTo('purchases')">
+          <span class="icon">🛒</span>
+          <span data-i18n="nav_purchases">Sotib olish (Zakup)</span>
+        </a>
+        <a class="nav-item" data-nav="sales" onclick="navigateTo('sales')">
+          <span class="icon">🏷️</span>
+          <span data-i18n="nav_sales">Sotish (Realizatsiya)</span>
+        </a>
+        <a class="nav-item" data-nav="finance" onclick="navigateTo('finance')">
+          <span class="icon">📈</span>
+          <span data-i18n="nav_finance">Moliya & PnL & Oyni yopish</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-status">
+          <div class="user-avatar">KZ</div>
+          <div class="user-details">
+            <div style="font-weight: 600; color: #f8fafc;">Boshqaruvchi</div>
+            <span class="user-role-badge" id="user-role-badge">ADMIN</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper Area -->
+    <main class="main-wrapper">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h2 class="page-title" id="page-title">Bosh panel</h2>
+        </div>
+
+        <div class="header-right">
+          <!-- CBU Exchange Rate Indicator -->
+          <div class="fx-rate-pill" onclick="navigateTo('kassa')" title="Valyuta kursi">
+            <span>📈</span>
+            <span id="header-fx-rate">1$ = 12,850 UZS</span>
+          </div>
+
+          <!-- Month Status Pill -->
+          <div class="month-status-pill open" id="header-month-status">
+            🟢 Davr: Ochiq
+          </div>
+
+          <!-- RBAC Role Switcher (For Demo/Testing permissions) -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 12px; font-weight: 600; color: #64748b;" data-i18n="role_label">Rol:</label>
+            <select id="role-select" class="select-styled" onchange="onRoleChange(this.value)">
+              <option value="Admin">Admin (Barchasi)</option>
+              <option value="Ish boshqaruvchi">Ish boshqaruvchi (Moliyasiz)</option>
+              <option value="Direktor">Direktor (Moliya, Ombor, Balans)</option>
+            </select>
+          </div>
+
+          <!-- Bilingual Switcher -->
+          <select id="lang-select" class="select-styled" onchange="onLanguageChange(this.value)">
+            <option value="uz">🇺🇿 O'zbekcha</option>
+            <option value="ru">🇷🇺 Русский</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Content Body -->
+      <div class="content-body" id="module-container">
+        <!-- Injected dynamically by Router -->
+      </div>
+
+      <!-- Mobile Bottom Navigation Bar (Telegram Mini App) -->
+      <nav class="mobile-bottom-nav">
+        <a class="mob-nav-item active" data-mobnav="dashboard" onclick="navigateTo('dashboard')">
+          <span class="mob-icon">📊</span>
+          <span class="mob-label" data-i18n="nav_dashboard">Boshqaruv</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="production" onclick="navigateTo('production')">
+          <span class="mob-icon">🏭</span>
+          <span class="mob-label" data-i18n="nav_production">Ishlab chiqarish</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="ombor" onclick="navigateTo('ombor')">
+          <span class="mob-icon">📦</span>
+          <span class="mob-label" data-i18n="nav_ombor">Ombor</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="kassa" onclick="navigateTo('kassa')">
+          <span class="mob-icon">💵</span>
+          <span class="mob-label" data-i18n="nav_kassa">Kassa</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="balances" onclick="navigateTo('balances')">
+          <span class="mob-icon">👥</span>
+          <span class="mob-label" data-i18n="nav_balances">Balanslar</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="finance" onclick="navigateTo('finance')">
+          <span class="mob-icon">📈</span>
+          <span class="mob-label" data-i18n="nav_finance">Moliya</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Reusable Dynamic Modal Dialog -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content" id="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Modal Title</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="modal-footer" id="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal()">Bekor qilish</button>
+        <button type="button" class="btn btn-primary btn-sm" id="modal-confirm-btn">Saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript Scripts -->
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/modules/dashboard.js"></script>
+  <script src="/static/js/modules/mdm.js"></script>
+  <script src="/static/js/modules/ombor.js"></script>
+  <script src="/static/js/modules/kassa.js"></script>
+  <script src="/static/js/modules/ishlab_chiqarish.js"></script>
+  <script src="/static/js/modules/kontragentlar.js"></script>
+  <script src="/static/js/modules/zakup.js"></script>
+  <script src="/static/js/modules/sotish.js"></script>
+  <script src="/static/js/modules/moliya.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

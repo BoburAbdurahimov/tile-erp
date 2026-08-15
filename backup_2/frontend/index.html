@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Kafel Zavodi ERP | Ceramic Tile Factory ERP</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <!-- Login Screen Overlay -->
+  <div id="login-overlay" style="position: fixed; inset: 0; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: 'Inter', sans-serif;">
+    <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden; animation: fadeIn 0.3s ease;">
+      <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 32px 24px; text-align: center; color: #ffffff;">
+        <div style="font-size: 42px; margin-bottom: 8px;">🏭</div>
+        <h2 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Kafel Zavodi ERP</h2>
+        <p style="margin: 6px 0 0 0; opacity: 0.85; font-size: 13px;">Boshqaruv va ishlab chiqarish tizimi</p>
+      </div>
+
+      <form id="login-form" onsubmit="handleLoginSubmit(event)" style="padding: 32px 28px;">
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Login (Foydalanuvchi nomi)</label>
+          <div style="position: relative;">
+            <input type="text" id="login-username" required placeholder="Adminshox" style="width: 100%; box-sizing: border-box; padding: 12px 14px 12px 40px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'" />
+            <span style="position: absolute; left: 14px; top: 12px; font-size: 16px; color: #94a3b8;">👤</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Parol</label>
+          <div style="position: relative;">
+            <input type="password" id="login-password" required placeholder="••••••••" style="width: 100%; box-sizing: border-box; padding: 12px 14px 12px 40px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'" />
+            <span style="position: absolute; left: 14px; top: 12px; font-size: 16px; color: #94a3b8;">🔒</span>
+          </div>
+        </div>
+
+        <div id="login-error-msg" style="display: none; background: #fee2e2; color: #b91c1c; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; text-align: center; border: 1px solid #fecaca;"></div>
+
+        <button type="submit" id="login-btn" style="width: 100%; padding: 13px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); transition: background 0.2s;">
+          🚀 Tizimga kirish
+        </button>
+
+        <div style="margin-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+          Dastlabki kirish: <strong>Adminshox</strong> / <strong>test0101</strong>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-container" id="app-main-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo">🏭</div>
+        <div class="brand-title">
+          <h1 data-i18n="app_title">Kafel Zavodi ERP</h1>
+          <span data-i18n="app_subtitle">Ishlab chiqarish & Boshqaruv</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a class="nav-item active" data-nav="dashboard" onclick="navigateTo('dashboard')">
+          <span class="icon">📊</span>
+          <span data-i18n="nav_dashboard">Bosh panel</span>
+        </a>
+        <a class="nav-item" data-nav="mdm" onclick="navigateTo('mdm')">
+          <span class="icon">🗂️</span>
+          <span data-i18n="nav_mdm">MDM (Spravochniklar)</span>
+        </a>
+        <a class="nav-item" data-nav="ombor" onclick="navigateTo('ombor')">
+          <span class="icon">📦</span>
+          <span data-i18n="nav_ombor">Ombor (Sklad)</span>
+        </a>
+        <a class="nav-item" data-nav="kassa" onclick="navigateTo('kassa')">
+          <span class="icon">💵</span>
+          <span data-i18n="nav_kassa">Kassa & Moliya oqimi</span>
+        </a>
+        <a class="nav-item" data-nav="production" onclick="navigateTo('production')">
+          <span class="icon">🏭</span>
+          <span data-i18n="nav_production">Ishlab chiqarish (5 Liniya)</span>
+        </a>
+        <a class="nav-item" data-nav="balances" onclick="navigateTo('balances')">
+          <span class="icon">👥</span>
+          <span data-i18n="nav_balances">Mijoz & Postavshik balansi</span>
+        </a>
+        <a class="nav-item" data-nav="purchases" onclick="navigateTo('purchases')">
+          <span class="icon">🛒</span>
+          <span data-i18n="nav_purchases">Sotib olish (Zakup)</span>
+        </a>
+        <a class="nav-item" data-nav="sales" onclick="navigateTo('sales')">
+          <span class="icon">🏷️</span>
+          <span data-i18n="nav_sales">Sotish (Realizatsiya)</span>
+        </a>
+        <a class="nav-item" data-nav="finance" onclick="navigateTo('finance')">
+          <span class="icon">📈</span>
+          <span data-i18n="nav_finance">Moliya & PnL & Oyni yopish</span>
+        </a>
+        <!-- Admin-only Users module -->
+        <a class="nav-item" data-nav="users" id="nav-users-item" onclick="navigateTo('users')" style="display: none;">
+          <span class="icon">👥</span>
+          <span data-i18n="nav_users">Foydalanuvchilar (Admin)</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-status" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="user-avatar" id="current-user-avatar">AS</div>
+            <div class="user-details">
+              <div style="font-weight: 600; color: #f8fafc;" id="current-user-name">Adminshox</div>
+              <span class="user-role-badge" id="user-role-badge">ADMIN</span>
+            </div>
+          </div>
+          <button onclick="logout()" class="btn-logout" title="Chiqish" style="background: rgba(255,255,255,0.1); border: none; color: #f87171; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 14px;">
+            🚪
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper Area -->
+    <main class="main-wrapper">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h2 class="page-title" id="page-title">Bosh panel</h2>
+        </div>
+
+        <div class="header-right">
+          <!-- CBU Exchange Rate Indicator -->
+          <div class="fx-rate-pill" onclick="navigateTo('kassa')" title="Valyuta kursi">
+            <span>📈</span>
+            <span id="header-fx-rate">1$ = 12,850 UZS</span>
+          </div>
+
+          <!-- Month Status Pill -->
+          <div class="month-status-pill open" id="header-month-status">
+            🟢 Davr: Ochiq
+          </div>
+
+          <!-- Role Indicator -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 12px; font-weight: 600; color: #64748b;" data-i18n="role_label">Rol:</label>
+            <span id="header-role-name" style="font-size: 13px; font-weight: 700; color: #1e293b; background: #e2e8f0; padding: 4px 10px; border-radius: 6px;">Admin</span>
+          </div>
+
+          <!-- Bilingual Switcher -->
+          <select id="lang-select" class="select-styled" onchange="onLanguageChange(this.value)">
+            <option value="uz">🇺🇿 O'zbekcha</option>
+            <option value="ru">🇷🇺 Русский</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Content Body -->
+      <div class="content-body" id="module-container">
+        <!-- Injected dynamically based on active module -->
+      </div>
+
+      <!-- Telegram Mini App Mobile Bottom Navigation -->
+      <nav class="mobile-bottom-nav">
+        <a class="mob-nav-item active" data-mobnav="dashboard" onclick="navigateTo('dashboard')">
+          <span class="mob-icon">📊</span>
+          <span class="mob-label" data-i18n="nav_dashboard">Bosh</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="production" onclick="navigateTo('production')">
+          <span class="mob-icon">🏭</span>
+          <span class="mob-label" data-i18n="nav_production">Ishlab ch.</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="ombor" onclick="navigateTo('ombor')">
+          <span class="mob-icon">📦</span>
+          <span class="mob-label" data-i18n="nav_ombor">Ombor</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="kassa" onclick="navigateTo('kassa')">
+          <span class="mob-icon">💵</span>
+          <span class="mob-label" data-i18n="nav_kassa">Kassa</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="balances" onclick="navigateTo('balances')">
+          <span class="mob-icon">👥</span>
+          <span class="mob-label" data-i18n="nav_balances">Balanslar</span>
+        </a>
+        <a class="mob-nav-item" data-mobnav="finance" onclick="navigateTo('finance')">
+          <span class="mob-icon">📈</span>
+          <span class="mob-label" data-i18n="nav_finance">Moliya</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+  <!-- Reusable Dynamic Modal Dialog -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content" id="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Modal Title</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="modal-footer" id="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal()">Bekor qilish</button>
+        <button type="button" class="btn btn-primary btn-sm" id="modal-confirm-btn">Saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript Scripts with Cache Busting -->
+  <script src="/static/js/i18n.js?v=2.5"></script>
+  <script src="/static/js/api.js?v=2.5"></script>
+  <script src="/static/js/modules/dashboard.js?v=2.5"></script>
+  <script src="/static/js/modules/mdm.js?v=2.5"></script>
+  <script src="/static/js/modules/ombor.js?v=2.5"></script>
+  <script src="/static/js/modules/kassa.js?v=2.5"></script>
+  <script src="/static/js/modules/ishlab_chiqarish.js?v=2.5"></script>
+  <script src="/static/js/modules/kontragentlar.js?v=2.5"></script>
+  <script src="/static/js/modules/zakup.js?v=2.5"></script>
+  <script src="/static/js/modules/sotish.js?v=2.5"></script>
+  <script src="/static/js/modules/moliya.js?v=2.5"></script>
+  <script src="/static/js/modules/users.js?v=2.5"></script>
+  <script src="/static/js/app.js?v=2.5"></script>
+</body>
+</html>
