@@ -263,17 +263,26 @@ def seed_database():
     # 13. Default Employees
     if not db.query(Employee).first():
         employees = [
-            # Fixed Monthly Salary Employees
-            Employee(full_name="Qodirov Alisher", employee_type="fixed", position="Bosh Texnolog / Usta", phone_number="+998901234501", monthly_salary=8500000.0, standard_work_days=26, hire_date=today - timedelta(days=90), is_active=True),
-            Employee(full_name="Karimov Dilshod", employee_type="fixed", position="1-Liniya Katta Ustasi", phone_number="+998901234502", monthly_salary=6500000.0, standard_work_days=26, hire_date=today - timedelta(days=60), is_active=True),
-            Employee(full_name="Toirov Jasur", employee_type="fixed", position="Ombor Mudiri", phone_number="+998901234503", monthly_salary=5000000.0, standard_work_days=26, hire_date=today - timedelta(days=45), is_active=True),
-            Employee(full_name="Azizova Nargiza", employee_type="fixed", position="Bosh Hisobchi", phone_number="+998901234504", monthly_salary=7000000.0, standard_work_days=26, hire_date=today - timedelta(days=120), is_active=True),
+            # Ma'muriyat (Admin & Management & Warehouse Head)
+            Employee(full_name="Qodirov Alisher", department="Ma'muriyat", employee_type="fixed", position="Bosh Texnolog / Usta", phone_number="+998901234501", monthly_salary=8500000.0, standard_work_days=26, hire_date=today - timedelta(days=90), is_active=True),
+            Employee(full_name="Azizova Nargiza", department="Ma'muriyat", employee_type="fixed", position="Bosh Hisobchi", phone_number="+998901234504", monthly_salary=7000000.0, standard_work_days=26, hire_date=today - timedelta(days=120), is_active=True),
+            Employee(full_name="Toirov Jasur", department="Ma'muriyat", employee_type="fixed", position="Ombor Mudiri", phone_number="+998901234503", monthly_salary=5000000.0, standard_work_days=26, hire_date=today - timedelta(days=45), is_active=True),
             
-            # Piecework Employees
-            Employee(full_name="Rustamov Otabek", employee_type="piecework", position="Saralash ustasi", phone_number="+998935551122", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=30), is_active=True),
-            Employee(full_name="Sultonov Bekzod", employee_type="piecework", position="Pech yuklovchisi", phone_number="+998946663344", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=40), is_active=True),
-            Employee(full_name="Yuldashev Farrux", employee_type="piecework", position="Qadoqlovchi", phone_number="+998977775566", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=20), is_active=True),
-            Employee(full_name="Mirzayev Jamshid", employee_type="piecework", position="Glazur sepuvchi", phone_number="+998908889900", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=50), is_active=True),
+            # 1-Liniya (Formovka & Press)
+            Employee(full_name="Karimov Dilshod", department="1-Liniya", employee_type="fixed", position="1-Liniya Katta Ustasi", phone_number="+998901234502", monthly_salary=6500000.0, standard_work_days=26, hire_date=today - timedelta(days=60), is_active=True),
+            Employee(full_name="Nurmatov Ilhom", department="1-Liniya", employee_type="piecework", position="Press operatori", phone_number="+998912223344", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=35), is_active=True),
+            
+            # 2-Liniya (Glazurlash & Naqsh)
+            Employee(full_name="Mirzayev Jamshid", department="2-Liniya", employee_type="piecework", position="Glazur sepuvchi", phone_number="+998908889900", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=50), is_active=True),
+
+            # 3-Liniya (Pech & Kuydirish)
+            Employee(full_name="Sultonov Bekzod", department="3-Liniya", employee_type="piecework", position="Pech yuklovchisi", phone_number="+998946663344", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=40), is_active=True),
+
+            # 4-Liniya (Saralash & Sifat nazorati)
+            Employee(full_name="Rustamov Otabek", department="4-Liniya", employee_type="piecework", position="Saralash ustasi", phone_number="+998935551122", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=30), is_active=True),
+
+            # 5-Liniya (Qadoqlash & Yuklash)
+            Employee(full_name="Yuldashev Farrux", department="5-Liniya", employee_type="piecework", position="Qadoqlovchi", phone_number="+998977775566", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=20), is_active=True),
         ]
         db.add_all(employees)
         db.commit()

@@ -1,5 +1,6 @@
 const IshHaqiModule = (function () {
   let activeTab = "payroll"; // 'payroll' | 'daily' | 'employees' | 'job_types'
+  let activeDept = "all"; // 'all' | "Ma'muriyat" | "1-Liniya" | "2-Liniya" | "3-Liniya" | "4-Liniya" | "5-Liniya"
   let currentYearMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
   let currentDailyDate = new Date().toISOString().slice(0, 10); // e.g. "2026-08-15"
 
@@ -7,6 +8,16 @@ const IshHaqiModule = (function () {
   let dailyData = null;
   let employeesList = [];
   let jobTypesList = [];
+
+  const DEPARTMENTS = [
+    { id: "all", name: { uz: "Barchasi", ru: "Все отделы" }, icon: "🌐" },
+    { id: "Ma'muriyat", name: { uz: "Ma'muriyat & Ofis", ru: "Администрация & Офис" }, icon: "👑" },
+    { id: "1-Liniya", name: { uz: "1-Liniya (Formovka & Press)", ru: "1-Линия (Формовка & Пресс)" }, icon: "🏭" },
+    { id: "2-Liniya", name: { uz: "2-Liniya (Glazurlash)", ru: "2-Линия (Глазуровка)" }, icon: "🎨" },
+    { id: "3-Liniya", name: { uz: "3-Liniya (Pech & Kuydirish)", ru: "3-Линия (Печь & Обжиг)" }, icon: "🔥" },
+    { id: "4-Liniya", name: { uz: "4-Liniya (Saralash & Sifat)", ru: "4-Линия (Сортировка & Контроль)" }, icon: "🔍" },
+    { id: "5-Liniya", name: { uz: "5-Liniya (Qadoqlash & Yuklash)", ru: "5-Линия (Упаковка & Погрузка)" }, icon: "📦" }
+  ];
 
   function formatNumber(num) {
     if (num === null || num === undefined || isNaN(num)) return "0";
@@ -31,7 +42,7 @@ const IshHaqiModule = (function () {
     const isUz = isUzbek();
     return {
       title: isUz ? "Ish haqi va Xodimlar boshqaruvi" : "Управление зарплатой и персоналом",
-      subtitle: isUz ? "Fiks va ishbay oyliklar, kunlik davomat va to'lovlar hisobi" : "Окладная и сдельная оплата, табель посещаемости и выплаты",
+      subtitle: isUz ? "6 ta bo'lim (5 ta liniya + Ma'muriyat), fiks va ishbay oyliklar hisobi" : "6 отделов (5 линий + Администрация), окладный и сдельный расчет ЗП",
       tab_payroll: isUz ? "📊 Oylik hisob-kitob" : "📊 Ведомость ЗП",
       tab_daily: isUz ? "📅 Kunlik davomat & Ishlar" : "📅 Ежедневный учет",
       tab_employees: isUz ? "👥 Xodimlar ro'yxati" : "👥 Сотрудники",
@@ -43,14 +54,13 @@ const IshHaqiModule = (function () {
       kpi_paid: isUz ? "To'langan / Qoldiq" : "Выплачено / Остаток",
       
       btn_recalc: isUz ? "🔄 Qayta hisoblash" : "🔄 Пересчитать",
-      btn_finalize: isUz ? "🔒 Oyni tasdiqlash & Qulflash" : "🔒 Зафиксировать ведомость",
+      btn_finalize: isUz ? "🔒 Oyni tasdiqlash" : "🔒 Зафиксировать",
       btn_reopen: isUz ? "🔓 Qayta ochish" : "🔓 Открыть для правок",
       btn_excel: isUz ? "📥 Excel yuklab olish" : "📥 Экспорт в Excel",
-      btn_add_emp: isUz ? "➕ Yangi xodim" : "➕ Новый сотрудник",
+      btn_add_emp: isUz ? "➕ Yangi xodim qo'shish" : "➕ Добавить сотрудника",
       btn_add_job: isUz ? "➕ Yangi ish turi" : "➕ Новый вид работы",
-      btn_add_work: isUz ? "➕ Ishbay yozuv qo'shish" : "➕ Добавить наряд",
+      btn_add_work: isUz ? "➕ Ishbay naryad qo'shish" : "➕ Добавить наряд",
       btn_save_att: isUz ? "💾 Davomatni saqlash" : "💾 Сохранить табель",
-      btn_pay: isUz ? "💵 Oylik to'lash" : "💵 Выплатить ЗП",
       
       type_fixed: isUz ? "🏢 Fiksalangan" : "🏢 Оклад",
       type_piecework: isUz ? "🔨 Ishbay" : "🔨 Сдельный",
@@ -63,6 +73,40 @@ const IshHaqiModule = (function () {
     };
   }
 
+  function getDeptBadge(dept) {
+    const d = dept || "Ma'muriyat";
+    let color = "#3b82f6";
+    let bg = "#eff6ff";
+    let icon = "🏢";
+
+    if (d === "Ma'muriyat") { color = "#dc2626"; bg = "#fef2f2"; icon = "👑"; }
+    else if (d === "1-Liniya") { color = "#d97706"; bg = "#fffbeb"; icon = "🏭"; }
+    else if (d === "2-Liniya") { color = "#0284c7"; bg = "#f0f9ff"; icon = "🎨"; }
+    else if (d === "3-Liniya") { color = "#ea580c"; bg = "#fff7ed"; icon = "🔥"; }
+    else if (d === "4-Liniya") { color = "#7c3aed"; bg = "#f5f3ff"; icon = "🔍"; }
+    else if (d === "5-Liniya") { color = "#059669"; bg = "#ecfdf5"; icon = "📦"; }
+
+    return `<span class="badge" style="background:${bg}; color:${color}; border:1px solid ${color}30; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;">${icon} ${escapeHtml(d)}</span>`;
+  }
+
+  function renderDeptFilterBar() {
+    const isUz = isUzbek();
+    return `
+      <div class="tabs-nav" style="display: flex; gap: 6px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; flex-wrap: wrap; padding-bottom: 6px;">
+        ${DEPARTMENTS.map(d => {
+          const isActive = activeDept === d.id;
+          const label = isUz ? d.name.uz : d.name.ru;
+          return `
+            <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment('${d.id}')" 
+              style="padding: 6px 12px; font-size: 12.5px; font-weight: ${isActive ? '700' : '600'}; border-radius: 8px; border: ${isActive ? '1px solid #2563eb' : '1px solid #cbd5e1'}; background: ${isActive ? '#eff6ff' : '#f8fafc'}; color: ${isActive ? '#1d4ed8' : '#475569'}; cursor: pointer; transition: all 0.2s;">
+              <span>${d.icon}</span> <span>${label}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
   async function render() {
     const container = document.getElementById("salary-module");
     if (!container) return;
@@ -71,18 +115,18 @@ const IshHaqiModule = (function () {
 
     container.innerHTML = `
       <div class="card" style="margin-bottom: 16px;">
-        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2 class="card-title" style="font-size: 19px;">👷 ${t.title}</h2>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">${t.subtitle}</p>
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span>👷</span> <span>${t.title}</span>
+            </h2>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t.subtitle}</p>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <div class="tabs-nav" style="margin-bottom: 0; border-bottom: none; gap: 4px;">
-              <button class="tab-btn ${activeTab === 'payroll' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('payroll')">${t.tab_payroll}</button>
-              <button class="tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('daily')">${t.tab_daily}</button>
-              <button class="tab-btn ${activeTab === 'employees' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('employees')">${t.tab_employees}</button>
-              <button class="tab-btn ${activeTab === 'job_types' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('job_types')">${t.tab_job_types}</button>
-            </div>
+          <div class="tabs-nav" style="margin-bottom: 0; border-bottom: none; gap: 6px; flex-wrap: wrap;">
+            <button class="tab-btn ${activeTab === 'payroll' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('payroll')">${t.tab_payroll}</button>
+            <button class="tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('daily')">${t.tab_daily}</button>
+            <button class="tab-btn ${activeTab === 'employees' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('employees')">${t.tab_employees}</button>
+            <button class="tab-btn ${activeTab === 'job_types' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('job_types')">${t.tab_job_types}</button>
           </div>
         </div>
       </div>
@@ -98,13 +142,17 @@ const IshHaqiModule = (function () {
 
   async function switchTab(tabName) {
     activeTab = tabName;
-    const t = getI18n();
-    document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-    const btns = document.querySelectorAll(".tab-btn");
+    const btns = document.querySelectorAll("#salary-module .card-header .tab-btn");
+    btns.forEach(btn => btn.classList.remove("active"));
     if (tabName === "payroll" && btns[0]) btns[0].classList.add("active");
     if (tabName === "daily" && btns[1]) btns[1].classList.add("active");
     if (tabName === "employees" && btns[2]) btns[2].classList.add("active");
     if (tabName === "job_types" && btns[3]) btns[3].classList.add("active");
+    await loadActiveTabContent();
+  }
+
+  async function filterDepartment(deptId) {
+    activeDept = deptId;
     await loadActiveTabContent();
   }
 
@@ -128,7 +176,8 @@ const IshHaqiModule = (function () {
   // ===========================================================================
   async function renderPayrollTab(container) {
     const t = getI18n();
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">${isUzbek() ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
+    const isUz = isUzbek();
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
 
     try {
       payrollData = await API.getPayroll(currentYearMonth);
@@ -138,14 +187,19 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    const isUz = isUzbek();
     const isLocked = payrollData.is_all_finalized;
 
+    // Filter calculations by active department
+    let calculations = payrollData.calculations || [];
+    if (activeDept !== "all") {
+      calculations = calculations.filter(c => c.department === activeDept);
+    }
+
     let rowsHtml = "";
-    if (!payrollData.calculations || payrollData.calculations.length === 0) {
-      rowsHtml = `<tr><td colspan="10" style="text-align:center; padding: 30px; color: var(--text-muted);">${isUz ? "Ushbu oy uchun xodimlar hisob-kitobi mavjud emas." : "Нет начислений за этот месяц."}</td></tr>`;
+    if (calculations.length === 0) {
+      rowsHtml = `<tr><td colspan="10" style="text-align:center; padding: 30px; color: #94a3b8;">${isUz ? "Ushbu bo'lim uchun hisob-kitoblar topilmadi." : "Нет начислений по выбранному отделу."}</td></tr>`;
     } else {
-      payrollData.calculations.forEach((c, idx) => {
+      calculations.forEach((c, idx) => {
         const isFixed = c.employee_type === "fixed";
         const typeBadge = isFixed 
           ? `<span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">${t.type_fixed}</span>` 
@@ -161,14 +215,14 @@ const IshHaqiModule = (function () {
         }
 
         const baseOrPiece = isFixed 
-          ? `${formatNumber(c.base_salary)} <small style="color:var(--text-muted);">UZS</small>`
-          : `${formatNumber(c.piecework_total)} <small style="color:var(--text-muted);">UZS</small>`;
+          ? `${formatNumber(c.base_salary)} <small style="color:#64748b;">UZS</small>`
+          : `${formatNumber(c.piecework_total)} <small style="color:#64748b;">UZS</small>`;
 
         const absenceInfo = isFixed 
           ? (c.absent_days > 0 
               ? `<span style="color:#ef4444; font-weight:700;">-${c.absent_days} ${isUz ? "kun" : "дн"} (${formatNumber(c.deduction_amount)})</span>` 
               : `<span style="color:#10b981;">0 ${isUz ? "kun" : "дн"}</span>`)
-          : `<span style="color:var(--text-muted);">-</span>`;
+          : `<span style="color:#94a3b8;">-</span>`;
 
         const workDaysInfo = isFixed ? `${c.standard_days} ${isUz ? "kun" : "дн"}` : "-";
 
@@ -176,14 +230,15 @@ const IshHaqiModule = (function () {
           <tr>
             <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
             <td>
-              <div style="font-weight: 700; color: var(--text-main);">${escapeHtml(c.full_name)}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(c.position)}</div>
+              <div style="font-weight: 700; color: #0f172a;">${escapeHtml(c.full_name)}</div>
+              <div style="font-size: 11px; color: #64748b;">${escapeHtml(c.position)}</div>
             </td>
+            <td>${getDeptBadge(c.department)}</td>
             <td>${typeBadge}</td>
-            <td style="text-align: right; font-weight: 600; font-family: var(--font-mono);">${baseOrPiece}</td>
+            <td style="text-align: right; font-weight: 600; font-family: monospace;">${baseOrPiece}</td>
             <td style="text-align: center;">${workDaysInfo}</td>
             <td style="text-align: center;">${absenceInfo}</td>
-            <td style="text-align: right; font-weight: 800; color: #1e3a8a; font-family: var(--font-mono); font-size: 14px;">
+            <td style="text-align: right; font-weight: 800; color: #1e3a8a; font-family: monospace; font-size: 14px;">
               ${formatNumber(c.final_amount)} <small>UZS</small>
             </td>
             <td style="text-align: center;">${statusBadge}</td>
@@ -201,10 +256,10 @@ const IshHaqiModule = (function () {
 
     container.innerHTML = `
       <!-- Month & Action Controls -->
-      <div class="card" style="margin-bottom: 20px; padding: 16px 20px;">
+      <div class="card" style="margin-bottom: 16px; padding: 14px 18px;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <label style="font-size: 13px; font-weight: 700; color: var(--text-main);">${isUz ? "Hisob davri (Oy):" : "Период (Месяц):"}</label>
+            <label style="font-size: 13px; font-weight: 700; color: #0f172a;">${isUz ? "Hisob davri (Oy):" : "Период (Месяц):"}</label>
             <input type="month" id="payroll-month-select" class="form-control" value="${currentYearMonth}" onchange="IshHaqiModule.changePayrollMonth(this.value)" style="width: 170px; padding: 6px 12px; font-weight: 600;">
             ${isLocked 
               ? `<span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:6px 12px; font-size:12px;">🔒 ${isUz ? "Oy qulflangan" : "Период зафиксирован"}</span>` 
@@ -223,7 +278,7 @@ const IshHaqiModule = (function () {
       </div>
 
       <!-- 4 KPI Cards -->
-      <div class="grid-4" style="margin-bottom: 20px;">
+      <div class="grid-4" style="margin-bottom: 16px;">
         <div class="kpi-card">
           <div class="kpi-title">${t.kpi_total}</div>
           <div class="kpi-value" style="color: #2563eb;">${formatNumber(payrollData.total_payroll)} <small style="font-size: 13px;">UZS</small></div>
@@ -249,18 +304,33 @@ const IshHaqiModule = (function () {
         </div>
       </div>
 
-      <!-- Payroll Table -->
+      <!-- Payroll Table Card -->
       <div class="card">
-        <div class="card-header">
-          <div class="card-title">${isUz ? "📋 Xodimlar bo'yicha hisob-kitob vedomosti" : "📋 Расчетная ведомость по сотрудникам"}</div>
+        <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div class="card-title" style="font-size: 16px; font-weight: 700;">📋 ${isUz ? "Xodimlar bo'yicha hisob-kitob vedomosti" : "Расчетная ведомость по сотрудникам"}</div>
+            <div style="font-size: 12px; color: #64748b;">${calculations.length} ${isUz ? "ta yozuv ko'rsatilmoqda" : "записей"}</div>
+          </div>
+          ${renderDeptFilterBar()}
         </div>
+
         <div class="table-container">
-          <table class="data-table">
+          <table class="data-table" id="payroll-data-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">№</th>
-                <th>${isUz ? "Xodim (F.I.SH.)" : "Сотрудник (Ф.И.О.)"}</th>
-                <th>${isUz ? "Turi" : "Тип"}</th>
+                <th>
+                  <div>${isUz ? "Xodim (F.I.SH.)" : "Сотрудник (Ф.И.О.)"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
+                <th>
+                  <div>${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
+                <th>
+                  <div>${isUz ? "Turi" : "Тип"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
                 <th style="text-align: right;">${isUz ? "Asosiy / Ishbay" : "Оклад / Сдельно"}</th>
                 <th style="text-align: center;">${isUz ? "Reja kun" : "Раб. дней"}</th>
                 <th style="text-align: center;">${isUz ? "Kelmadi / Ushlanma" : "Невыходы / Удержание"}</th>
@@ -337,12 +407,12 @@ const IshHaqiModule = (function () {
   async function renderDailyTab(container) {
     const t = getI18n();
     const isUz = isUzbek();
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
 
     try {
       dailyData = await API.getDailySalaryData(currentDailyDate);
       jobTypesList = await API.getJobTypes(true);
-      employeesList = await API.getEmployees("piecework", true);
+      employeesList = await API.getEmployees(null, null, true);
     } catch (err) {
       showToast(err.message, "error");
       return;
@@ -350,17 +420,32 @@ const IshHaqiModule = (function () {
 
     const isLocked = dailyData.is_locked;
 
-    // Fixed employees attendance list
+    // Filter fixed employees by active department
+    let fixedEmps = dailyData.fixed_employees || [];
+    if (activeDept !== "all") {
+      fixedEmps = fixedEmps.filter(e => e.department === activeDept);
+    }
+
+    // Filter piecework entries by active department
+    let pieceEntries = dailyData.piecework_entries || [];
+    if (activeDept !== "all") {
+      pieceEntries = pieceEntries.filter(p => p.department === activeDept);
+    }
+
+    // Fixed employees attendance rows
     let fixedRows = "";
-    if (!dailyData.fixed_employees || dailyData.fixed_employees.length === 0) {
-      fixedRows = `<div style="padding: 20px; text-align: center; color: var(--text-muted);">${isUz ? "Fiksalangan xodimlar mavjud emas" : "Нет окладных сотрудников"}</div>`;
+    if (fixedEmps.length === 0) {
+      fixedRows = `<div style="padding: 20px; text-align: center; color: #94a3b8;">${isUz ? "Ushbu bo'limda fiksalangan xodimlar mavjud emas" : "Нет окладных сотрудников в этом отделе"}</div>`;
     } else {
-      dailyData.fixed_employees.forEach(emp => {
+      fixedEmps.forEach(emp => {
         fixedRows += `
-          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); gap: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; gap: 10px;">
             <div style="flex: 1;">
-              <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main);">${escapeHtml(emp.full_name)}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(emp.position)}</div>
+              <div style="font-weight: 700; font-size: 13.5px; color: #0f172a;">${escapeHtml(emp.full_name)}</div>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                ${getDeptBadge(emp.department)}
+                <span style="font-size: 11px; color: #64748b;">${escapeHtml(emp.position)}</span>
+              </div>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: ${emp.is_absent ? '#ef4444' : '#10b981'};">
@@ -374,22 +459,23 @@ const IshHaqiModule = (function () {
       });
     }
 
-    // Piecework entries table
+    // Piecework entries table rows
     let pieceRows = "";
-    if (!dailyData.piecework_entries || dailyData.piecework_entries.length === 0) {
-      pieceRows = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: var(--text-muted);">${isUz ? "Ushbu sanada bajarilgan ishlar yozilmagan" : "Нет записей о выполненных работах"}</td></tr>`;
+    if (pieceEntries.length === 0) {
+      pieceRows = `<tr><td colspan="8" style="text-align: center; padding: 25px; color: #94a3b8;">${isUz ? "Ushbu bo'limda yozuvlar yo'q" : "Нет записей"}</td></tr>`;
     } else {
-      dailyData.piecework_entries.forEach((p, idx) => {
+      pieceEntries.forEach((p, idx) => {
         pieceRows += `
           <tr>
             <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
             <td style="font-weight: 700;">${escapeHtml(p.employee_name)}</td>
+            <td>${getDeptBadge(p.department)}</td>
             <td>${escapeHtml(p.job_name)}</td>
-            <td style="text-align: right; font-family: var(--font-mono); font-weight: 600;">${formatNumber(p.quantity)} ${p.unit_of_measure}</td>
-            <td style="text-align: right; font-family: var(--font-mono); color: var(--text-muted);">${formatNumber(p.unit_price)}</td>
-            <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: #d97706;">${formatNumber(p.total_amount)} <small>UZS</small></td>
+            <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatNumber(p.quantity)} ${p.unit_of_measure}</td>
+            <td style="text-align: right; font-family: monospace; color: #64748b;">${formatNumber(p.unit_price)}</td>
+            <td style="text-align: right; font-family: monospace; font-weight: 800; color: #d97706;">${formatNumber(p.total_amount)} <small>UZS</small></td>
             <td style="text-align: center;">
-              ${!isLocked ? `<button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteWorkEntry(${p.id})">🗑️</button>` : `<span style="color:var(--text-muted);">-</span>`}
+              ${!isLocked ? `<button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteWorkEntry(${p.id})">🗑️</button>` : `<span style="color:#94a3b8;">-</span>`}
             </td>
           </tr>
         `;
@@ -397,47 +483,49 @@ const IshHaqiModule = (function () {
     }
 
     container.innerHTML = `
-      <!-- Date Picker & Status Banner -->
-      <div class="card" style="margin-bottom: 20px; padding: 16px 20px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <!-- Date Picker & Filter Header -->
+      <div class="card" style="margin-bottom: 16px; padding: 14px 18px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <label style="font-size: 13px; font-weight: 700; color: var(--text-main);">${isUz ? "Hisob sanasi:" : "Дата учета:"}</label>
+            <label style="font-size: 13px; font-weight: 700; color: #0f172a;">${isUz ? "Hisob sanasi:" : "Дата учета:"}</label>
             <input type="date" id="daily-date-select" class="form-control" value="${currentDailyDate}" onchange="IshHaqiModule.changeDailyDate(this.value)" style="width: 170px; padding: 6px 12px; font-weight: 600;">
           </div>
           ${isLocked ? `<div class="badge badge-danger" style="padding: 6px 14px; font-size: 12px;">${t.locked_warning}</div>` : ''}
         </div>
+        ${renderDeptFilterBar()}
       </div>
 
       <div class="grid-2">
         <!-- Section 1: Fixed Employees Absences -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">🏢 ${isUz ? "Fiksalangan xodimlar davomati" : "Табель окладных сотрудников"}</div>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="card-title" style="font-size: 15px; font-weight: 700;">🏢 ${isUz ? "Fiksalangan xodimlar davomati" : "Табель окладных сотрудников"}</div>
             ${!isLocked ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveAttendance()">${t.btn_save_att}</button>` : ''}
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-            ${isUz ? "Xodim ishga kelmagan bo'lsa, 'Kelmadi' katagini belgilang. Kunlik maosh avtomatik chegiriladi." : "Отметьте сотрудников, которые не вышли на работу. Дневная ставка будет автоматически удержана."}
+          <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+            ${isUz ? "Ishga kelmagan bo'lsa, 'Kelmadi' deb belgilang. Kunlik maosh avtomatik chegiriladi." : "Отметьте сотрудников, которые не вышли. Дневная ставка будет удержана."}
           </p>
-          <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+          <div style="max-height: 480px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
             ${fixedRows}
           </div>
         </div>
 
         <!-- Section 2: Piecework Jobs Entry -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">🔨 ${isUz ? "Ishbay xodimlar bajargan ishlari" : "Сдельные наряды сотрудников"}</div>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="card-title" style="font-size: 15px; font-weight: 700;">🔨 ${isUz ? "Ishbay xodimlar naryadlari" : "Сдельные наряды"}</div>
             ${!isLocked ? `<button class="btn btn-warning btn-sm" onclick="IshHaqiModule.openAddWorkModal()">${t.btn_add_work}</button>` : ''}
           </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-            ${isUz ? "Kunlik bajarilgan ishlar hajmini kiriting. Oylik hisob-kitob avtomatik yangilanadi." : "Внесите объем выполненных работ за день. Сумма сразу отобразится в ведомости."}
+          <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+            ${isUz ? "Bajarilgan ishlar hajmini kiriting. Oylik hisob-kitob avtomatik yangilanadi." : "Внесите объем работ за день. Сумма сразу отобразится в ведомости."}
           </p>
           <div class="table-container" style="max-height: 480px;">
-            <table class="data-table">
+            <table class="data-table" id="daily-piecework-table">
               <thead>
                 <tr>
                   <th style="width: 30px;">№</th>
                   <th>${isUz ? "Xodim" : "Сотрудник"}</th>
+                  <th>${isUz ? "Bo'lim" : "Отдел"}</th>
                   <th>${isUz ? "Ish turi" : "Вид работы"}</th>
                   <th style="text-align: right;">${isUz ? "Hajm" : "Объем"}</th>
                   <th style="text-align: right;">${isUz ? "Narxi" : "Тариф"}</th>
@@ -524,7 +612,7 @@ const IshHaqiModule = (function () {
   async function renderEmployeesTab(container) {
     const t = getI18n();
     const isUz = isUzbek();
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
 
     try {
       employeesList = await API.getEmployees(null, false);
@@ -533,11 +621,17 @@ const IshHaqiModule = (function () {
       return;
     }
 
+    // Filter employees by active department
+    let filteredList = employeesList;
+    if (activeDept !== "all") {
+      filteredList = filteredList.filter(e => e.department === activeDept);
+    }
+
     let rowsHtml = "";
-    if (employeesList.length === 0) {
-      rowsHtml = `<tr><td colspan="8" style="text-align: center; padding: 30px;">${isUz ? "Xodimlar mavjud emas" : "Сотрудники не найдены"}</td></tr>`;
+    if (filteredList.length === 0) {
+      rowsHtml = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #94a3b8;">${isUz ? "Ushbu bo'limda xodimlar topilmadi" : "Сотрудники не найдены в этом отделе"}</td></tr>`;
     } else {
-      employeesList.forEach((e, idx) => {
+      filteredList.forEach((e, idx) => {
         const isFixed = e.employee_type === "fixed";
         const typeBadge = isFixed 
           ? `<span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">${t.type_fixed}</span>` 
@@ -549,16 +643,17 @@ const IshHaqiModule = (function () {
 
         const salaryStr = isFixed 
           ? `${formatNumber(e.monthly_salary)} <small>UZS</small>` 
-          : `<span style="color:var(--text-muted);">${isUz ? "Tarif bo'yicha" : "По расценкам"}</span>`;
+          : `<span style="color:#64748b;">${isUz ? "Tarif bo'yicha" : "По расценкам"}</span>`;
 
         rowsHtml += `
           <tr>
             <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
-            <td style="font-weight: 700; color: var(--text-main);">${escapeHtml(e.full_name)}</td>
+            <td style="font-weight: 700; color: #0f172a;">${escapeHtml(e.full_name)}</td>
+            <td>${getDeptBadge(e.department)}</td>
             <td>${escapeHtml(e.position)}</td>
             <td>${typeBadge}</td>
-            <td style="text-align: right; font-family: var(--font-mono); font-weight: 700;">${salaryStr}</td>
-            <td style="text-align: center; color: var(--text-muted); font-size: 12px;">${e.phone_number}</td>
+            <td style="text-align: right; font-family: monospace; font-weight: 700;">${salaryStr}</td>
+            <td style="text-align: center; color: #64748b; font-size: 12px;">${e.phone_number || '-'}</td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditEmployeeModal(${e.id})">✏️ ${isUz ? "Tahrirlash" : "Изм."}</button>
@@ -573,18 +668,38 @@ const IshHaqiModule = (function () {
 
     container.innerHTML = `
       <div class="card">
-        <div class="card-header">
-          <div class="card-title">👥 ${isUz ? "Fabrika xodimlari ro'yxati" : "Штатное расписание и сотрудники"}</div>
-          <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddEmployeeModal()">${t.btn_add_emp}</button>
+        <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+              <div class="card-title" style="font-size: 16px; font-weight: 700;">👥 ${isUz ? "Fabrika xodimlari ro'yxati (6 ta bo'lim bo'yicha)" : "Штатное расписание (по 6 отделам)"}</div>
+              <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${filteredList.length} ${isUz ? "nafar xodim" : "сотрудников"}</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddEmployeeModal()">${t.btn_add_emp}</button>
+          </div>
+          ${renderDeptFilterBar()}
         </div>
+
         <div class="table-container">
-          <table class="data-table">
+          <table class="data-table" id="employees-data-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">№</th>
-                <th>${isUz ? "F.I.SH." : "Ф.И.О."}</th>
-                <th>${isUz ? "Lavozimi" : "Должность"}</th>
-                <th>${isUz ? "To'lov turi" : "Тип оплаты"}</th>
+                <th>
+                  <div>${isUz ? "F.I.SH." : "Ф.И.О."}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
+                <th>
+                  <div>${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
+                <th>
+                  <div>${isUz ? "Lavozimi" : "Должность"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
+                <th>
+                  <div>${isUz ? "To'lov turi" : "Тип оплаты"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
                 <th style="text-align: right;">${isUz ? "Oylik maosh" : "Оклад"}</th>
                 <th style="text-align: center;">${isUz ? "Telefon" : "Телефон"}</th>
                 <th style="text-align: center;">${isUz ? "Holati" : "Статус"}</th>
@@ -616,7 +731,7 @@ const IshHaqiModule = (function () {
   async function renderJobTypesTab(container) {
     const t = getI18n();
     const isUz = isUzbek();
-    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
 
     try {
       jobTypesList = await API.getJobTypes(false);
@@ -627,7 +742,7 @@ const IshHaqiModule = (function () {
 
     let rowsHtml = "";
     if (jobTypesList.length === 0) {
-      rowsHtml = `<tr><td colspan="6" style="text-align: center; padding: 30px;">${isUz ? "Ish turlari mavjud emas" : "Виды работ не добавлены"}</td></tr>`;
+      rowsHtml = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">${isUz ? "Ish turlari mavjud emas" : "Виды работ не добавлены"}</td></tr>`;
     } else {
       jobTypesList.forEach((j, idx) => {
         const statusBadge = j.is_active 
@@ -637,9 +752,9 @@ const IshHaqiModule = (function () {
         rowsHtml += `
           <tr>
             <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
-            <td style="font-weight: 700; color: var(--text-main);">${escapeHtml(j.name)}</td>
+            <td style="font-weight: 700; color: #0f172a;">${escapeHtml(j.name)}</td>
             <td style="text-align: center;"><span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(j.unit_of_measure)}</span></td>
-            <td style="text-align: right; font-weight: 800; font-family: var(--font-mono); color: #2563eb; font-size: 14px;">${formatNumber(j.price_per_unit)} <small>UZS</small></td>
+            <td style="text-align: right; font-weight: 800; font-family: monospace; color: #2563eb; font-size: 14px;">${formatNumber(j.price_per_unit)} <small>UZS</small></td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditJobTypeModal(${j.id})">✏️ ${isUz ? "Tahrirlash" : "Изм."}</button>
@@ -651,16 +766,22 @@ const IshHaqiModule = (function () {
 
     container.innerHTML = `
       <div class="card">
-        <div class="card-header">
-          <div class="card-title">🛠️ ${isUz ? "Ishbay narxlar spravochnigi" : "Справочник расценок сдельных работ"}</div>
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="card-title" style="font-size: 16px; font-weight: 700;">🛠️ ${isUz ? "Ishbay narxlar spravochnigi" : "Справочник расценок сдельных работ"}</div>
+            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${jobTypesList.length} ${isUz ? "ta ish turi" : "видов работ"}</p>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddJobTypeModal()">${t.btn_add_job}</button>
         </div>
         <div class="table-container">
-          <table class="data-table">
+          <table class="data-table" id="job-types-data-table">
             <thead>
               <tr>
                 <th style="width: 40px; text-align: center;">№</th>
-                <th>${isUz ? "Ish nomi / Operatsiya" : "Наименование работы"}</th>
+                <th>
+                  <div>${isUz ? "Ish nomi / Operatsiya" : "Наименование работы"}</div>
+                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                </th>
                 <th style="text-align: center;">${isUz ? "Birligi" : "Ед. изм."}</th>
                 <th style="text-align: right;">${isUz ? "Birlik narxi (Tarif)" : "Расценка за единицу"}</th>
                 <th style="text-align: center;">${isUz ? "Holati" : "Статус"}</th>
@@ -677,8 +798,15 @@ const IshHaqiModule = (function () {
   }
 
   // ===========================================================================
-  // MODALS HANDLERS
+  // MODALS
   // ===========================================================================
+  function getDeptOptions(selectedDept = "Ma'muriyat") {
+    const isUz = isUzbek();
+    return DEPARTMENTS.filter(d => d.id !== "all").map(d => `
+      <option value="${d.id}" ${d.id === selectedDept ? 'selected' : ''}>${d.icon} ${isUz ? d.name.uz : d.name.ru}</option>
+    `).join("");
+  }
+
   function openAddEmployeeModal() {
     const isUz = isUzbek();
     const modalHost = document.getElementById("salary-modals-host");
@@ -698,16 +826,23 @@ const IshHaqiModule = (function () {
 
               <div class="form-row">
                 <div class="form-group" style="flex: 1;">
+                  <label class="form-label">${isUz ? "Bo'lim / Ishlab chiqarish liniyasi" : "Отдел / Производственная линия"} *</label>
+                  <select id="emp-dept" class="form-control">
+                    ${getDeptOptions(activeDept !== "all" ? activeDept : "1-Liniya")}
+                  </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
                   <label class="form-label">${isUz ? "Oylik hisoblash turi" : "Тип оплаты"} *</label>
                   <select id="emp-type" class="form-control" onchange="IshHaqiModule.handleEmpTypeChange(this.value)">
                     <option value="fixed">${isUz ? "🏢 Fiksalangan oylik (Oklad)" : "🏢 Оклад (Фиксированная ЗП)"}</option>
                     <option value="piecework">${isUz ? "🔨 Ishbay (Sdelnaya)" : "🔨 Сдельная (За объем работ)"}</option>
                   </select>
                 </div>
-                <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Lavozimi" : "Должность"}</label>
-                  <input type="text" id="emp-position" class="form-control" placeholder="Masalan: Katta usta">
-                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">${isUz ? "Lavozimi" : "Должность"}</label>
+                <input type="text" id="emp-position" class="form-control" placeholder="Masalan: Katta usta, Saralovchi, Press operatori">
               </div>
 
               <div id="emp-fixed-fields">
@@ -755,6 +890,7 @@ const IshHaqiModule = (function () {
     e.preventDefault();
     const isUz = isUzbek();
     const fullName = document.getElementById("emp-fullname").value;
+    const department = document.getElementById("emp-dept").value;
     const empType = document.getElementById("emp-type").value;
     const position = document.getElementById("emp-position").value;
     const phone = document.getElementById("emp-phone").value;
@@ -765,6 +901,7 @@ const IshHaqiModule = (function () {
     try {
       await API.createEmployee({
         full_name: fullName,
+        department: department,
         employee_type: empType,
         position: position,
         phone_number: phone,
@@ -802,8 +939,10 @@ const IshHaqiModule = (function () {
 
               <div class="form-row">
                 <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Turi" : "Тип"}</label>
-                  <input type="text" class="form-control" disabled value="${emp.employee_type === 'fixed' ? (isUz ? '🏢 Fiksalangan' : '🏢 Оклад') : (isUz ? '🔨 Ishbay' : '🔨 Сдельно')}">
+                  <label class="form-label">${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</label>
+                  <select id="edit-emp-dept" class="form-control">
+                    ${getDeptOptions(emp.department || "Ma'muriyat")}
+                  </select>
                 </div>
                 <div class="form-group" style="flex: 1;">
                   <label class="form-label">${isUz ? "Lavozimi" : "Должность"}</label>
@@ -849,6 +988,7 @@ const IshHaqiModule = (function () {
     e.preventDefault();
     const isUz = isUzbek();
     const fullName = document.getElementById("edit-emp-fullname").value;
+    const department = document.getElementById("edit-emp-dept").value;
     const position = document.getElementById("edit-emp-position").value;
     const phone = document.getElementById("edit-emp-phone").value;
     const salaryInput = document.getElementById("edit-emp-salary");
@@ -857,6 +997,7 @@ const IshHaqiModule = (function () {
 
     const payload = {
       full_name: fullName,
+      department: department,
       position: position,
       phone_number: phone,
       hire_date: hireDate || null
@@ -1011,7 +1152,8 @@ const IshHaqiModule = (function () {
   // Daily Work Entry Modal
   function openAddWorkModal() {
     const isUz = isUzbek();
-    if (employeesList.length === 0) {
+    const pieceworkEmps = employeesList.filter(e => e.employee_type === "piecework");
+    if (pieceworkEmps.length === 0) {
       showToast(isUz ? "Avval ishbay xodimlarni ro'yxatga qo'shing!" : "Сначала добавьте сдельных сотрудников!", "warning");
       return;
     }
@@ -1020,7 +1162,7 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    let empOptions = employeesList.map(e => `<option value="${e.id}">${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
+    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}">[${escapeHtml(e.department || '1-Liniya')}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
     let jobOptions = jobTypesList.map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${j.unit_of_measure}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${j.unit_of_measure}</option>`).join("");
 
     const modalHost = document.getElementById("salary-modals-host");
@@ -1054,7 +1196,7 @@ const IshHaqiModule = (function () {
                 </div>
                 <div class="form-group" style="flex: 1;">
                   <label class="form-label">${isUz ? "Jami summa (Hisoblangan)" : "Итоговая сумма"}</label>
-                  <input type="text" id="work-total-preview" class="form-control" readonly style="font-weight: 800; font-family: var(--font-mono); color: #d97706; background: #fffbeb;">
+                  <input type="text" id="work-total-preview" class="form-control" readonly style="font-weight: 800; font-family: monospace; color: #d97706; background: #fffbeb;">
                 </div>
               </div>
 
@@ -1139,11 +1281,11 @@ const IshHaqiModule = (function () {
           </div>
           <form onsubmit="IshHaqiModule.handlePaySalary(event, ${calcId})">
             <div class="modal-body">
-              <div style="background: #f8fafc; padding: 14px; border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--border-color);">
-                <div style="font-size: 12px; color: var(--text-muted);">${isUz ? "Xodim:" : "Сотрудник:"}</div>
-                <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">${escapeHtml(empName)}</div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">${isUz ? "Hisoblangan to'lov summasi:" : "Сумма к выплате:"}</div>
-                <div style="font-size: 22px; font-weight: 800; color: #10b981; font-family: var(--font-mono);">${formatNumber(amount)} UZS</div>
+              <div style="background: #f8fafc; padding: 14px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+                <div style="font-size: 12px; color: #64748b;">${isUz ? "Xodim:" : "Сотрудник:"}</div>
+                <div style="font-size: 16px; font-weight: 700; color: #0f172a;">${escapeHtml(empName)}</div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 6px;">${isUz ? "Hisoblangan to'lov summasi:" : "Сумма к выплате:"}</div>
+                <div style="font-size: 22px; font-weight: 800; color: #10b981; font-family: monospace;">${formatNumber(amount)} UZS</div>
               </div>
 
               <div class="form-group">
@@ -1155,7 +1297,7 @@ const IshHaqiModule = (function () {
 
               <div class="form-group">
                 <label class="form-label">${isUz ? "To'lov summasi" : "Сумма выплаты"} *</label>
-                <input type="number" id="pay-amount" class="form-control" value="${amount}" required step="1000" style="font-weight: 700; font-family: var(--font-mono);">
+                <input type="number" id="pay-amount" class="form-control" value="${amount}" required step="1000" style="font-weight: 700; font-family: monospace;">
               </div>
 
               <div class="form-group">
@@ -1212,10 +1354,13 @@ const IshHaqiModule = (function () {
             <button class="modal-close" onclick="IshHaqiModule.closeModal('details-modal')">&times;</button>
           </div>
           <div class="modal-body">
-            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 14px;">
               <div>
-                <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">${escapeHtml(calc.full_name)}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${escapeHtml(calc.position)}</div>
+                <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(calc.full_name)}</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+                  ${getDeptBadge(calc.department)}
+                  <span style="font-size: 12px; color: #64748b;">${escapeHtml(calc.position)}</span>
+                </div>
               </div>
               <div style="text-align: right;">
                 <span class="badge" style="${isFixed ? 'background:#eff6ff; color:#1d4ed8;' : 'background:#fef3c7; color:#92400e;'} font-size:12px;">
@@ -1225,10 +1370,10 @@ const IshHaqiModule = (function () {
             </div>
 
             ${isFixed ? `
-              <div style="background: #f8fafc; border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px; border: 1px solid var(--border-color);">
+              <div style="background: #f8fafc; border-radius: 8px; padding: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                   <span>${isUz ? "Asosiy oylik maosh (Oklad):" : "Базовый оклад:"}</span>
-                  <span style="font-weight: 700; font-family: var(--font-mono);">${formatNumber(calc.base_salary)} UZS</span>
+                  <span style="font-weight: 700; font-family: monospace;">${formatNumber(calc.base_salary)} UZS</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                   <span>${isUz ? "Standart ish kunlari:" : "Рабочих дней в месяце:"}</span>
@@ -1236,29 +1381,29 @@ const IshHaqiModule = (function () {
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                   <span>${isUz ? "1 kunlik stavka (Tarif):" : "Ставка за 1 день:"}</span>
-                  <span style="font-weight: 700; font-family: var(--font-mono);">${formatNumber(calc.per_day_rate)} UZS</span>
+                  <span style="font-weight: 700; font-family: monospace;">${formatNumber(calc.per_day_rate)} UZS</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #ef4444;">
                   <span>${isUz ? "Kelmagan kunlar soni:" : "Пропущенные дни:"}</span>
                   <span style="font-weight: 700;">${calc.absent_days} ${isUz ? "kun" : "дн"}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; color: #ef4444; border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; color: #ef4444; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
                   <span>${isUz ? "Jami ushlanma (Kelmadi):" : "Итого удержание:"}</span>
-                  <span style="font-weight: 800; font-family: var(--font-mono); font-size: 14px;">-${formatNumber(calc.deduction_amount)} UZS</span>
+                  <span style="font-weight: 800; font-family: monospace; font-size: 14px;">-${formatNumber(calc.deduction_amount)} UZS</span>
                 </div>
               </div>
             ` : `
-              <div style="background: #f8fafc; border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px; border: 1px solid var(--border-color);">
+              <div style="background: #f8fafc; border-radius: 8px; padding: 14px; margin-bottom: 14px; border: 1px solid #e2e8f0;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                   <span>${isUz ? "Bajarilgan ishlar jami qiymati:" : "Сумма выполненных работ:"}</span>
-                  <span style="font-weight: 800; font-family: var(--font-mono); color: #d97706; font-size: 15px;">${formatNumber(calc.piecework_total)} UZS</span>
+                  <span style="font-weight: 800; font-family: monospace; color: #d97706; font-size: 15px;">${formatNumber(calc.piecework_total)} UZS</span>
                 </div>
               </div>
             `}
 
-            <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px;">
               <span style="font-weight: 700; font-size: 15px; color: #1e3a8a;">${isUz ? "JAMI HISOB-KITOB TO'LOVI:" : "ИТОГО К ВЫПЛАТЕ:"}</span>
-              <span style="font-weight: 900; font-size: 22px; color: #2563eb; font-family: var(--font-mono);">${formatNumber(calc.final_amount)} UZS</span>
+              <span style="font-weight: 900; font-size: 22px; color: #2563eb; font-family: monospace;">${formatNumber(calc.final_amount)} UZS</span>
             </div>
           </div>
           <div class="modal-footer">
@@ -1277,6 +1422,7 @@ const IshHaqiModule = (function () {
   return {
     render,
     switchTab,
+    filterDepartment,
     changePayrollMonth,
     recalculatePayroll,
     finalizePayroll,

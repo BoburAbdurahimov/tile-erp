@@ -20,6 +20,7 @@ router = APIRouter(prefix="/salary", tags=["Salary & HR Management"])
 
 class EmployeeCreateSchema(BaseModel):
     full_name: str
+    department: Optional[str] = "Ma'muriyat" # "Ma'muriyat", "1-Liniya", "2-Liniya", "3-Liniya", "4-Liniya", "5-Liniya"
     employee_type: str = Field(default="fixed", description="'fixed' or 'piecework'")
     position: Optional[str] = None
     phone_number: Optional[str] = None
@@ -29,6 +30,7 @@ class EmployeeCreateSchema(BaseModel):
 
 class EmployeeUpdateSchema(BaseModel):
     full_name: Optional[str] = None
+    department: Optional[str] = None
     position: Optional[str] = None
     phone_number: Optional[str] = None
     monthly_salary: Optional[float] = None
@@ -75,6 +77,7 @@ class PaySalarySchema(BaseModel):
 
 @router.get("/employees")
 def get_employees(
+    department: Optional[str] = None,
     type: Optional[str] = None,
     active_only: bool = True,
     search: Optional[str] = None,
@@ -83,16 +86,19 @@ def get_employees(
     query = db.query(Employee)
     if active_only:
         query = query.filter(Employee.is_active == True)
+    if department and department != "all":
+        query = query.filter(Employee.department == department)
     if type and type in ("fixed", "piecework"):
         query = query.filter(Employee.employee_type == type)
     if search:
         query = query.filter(Employee.full_name.ilike(f"%{search}%"))
     
-    employees = query.order_by(Employee.is_active.desc(), Employee.full_name.asc()).all()
+    employees = query.order_by(Employee.is_active.desc(), Employee.department.asc(), Employee.full_name.asc()).all()
     return [
         {
             "id": e.id,
             "full_name": e.full_name,
+            "department": e.department or "Ma'muriyat",
             "employee_type": e.employee_type,
             "position": e.position or "-",
             "phone_number": e.phone_number or "-",
@@ -113,6 +119,7 @@ def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin
     hire_date = data.hire_date or date.today()
     emp = Employee(
         full_name=data.full_name.strip(),
+        department=data.department or "Ma'muriyat",
         employee_type=data.employee_type,
         position=data.position.strip() if data.position else None,
         phone_number=data.phone_number.strip() if data.phone_number else None,
@@ -148,6 +155,8 @@ def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Que
 
     if data.full_name is not None:
         emp.full_name = data.full_name.strip()
+    if data.department is not None:
+        emp.department = data.department
     if data.position is not None:
         emp.position = data.position.strip()
     if data.phone_number is not None:
@@ -309,6 +318,7 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
         fixed_list.append({
             "employee_id": emp.id,
             "full_name": emp.full_name,
+            "department": emp.department or "Ma'muriyat",
             "position": emp.position or "-",
             "is_absent": att.status == "absent" if att else False,
             "reason": att.reason if att else ""
@@ -324,6 +334,7 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
             "id": w.id,
             "employee_id": w.employee_id,
             "employee_name": w.employee.full_name,
+            "department": w.employee.department or "Ma'muriyat",
             "job_type_id": w.job_type_id,
             "job_name": w.job_type.name,
             "unit_of_measure": w.job_type.unit_of_measure,

@@ -162,6 +162,7 @@ def get_payroll_summary(db: Session, year_month: str) -> Dict[str, Any]:
             "id": c.id,
             "employee_id": emp.id,
             "full_name": emp.full_name,
+            "department": emp.department or "Ma'muriyat",
             "employee_type": emp.employee_type,
             "position": emp.position or "-",
             "phone_number": emp.phone_number or "-",
