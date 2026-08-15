@@ -96,9 +96,9 @@ def get_employees(
     db: Session = Depends(get_db)
 ):
     query = db.query(Employee)
-    is_active = parse_bool(active_only)
-    if is_active is not None:
-        query = query.filter(Employee.is_active == is_active)
+    is_active_only = parse_bool(active_only)
+    if is_active_only is True:
+        query = query.filter(Employee.is_active == True)
     if department and department != "all":
         query = query.filter(Employee.department == department)
     if type and type in ("fixed", "piecework"):

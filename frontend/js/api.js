@@ -208,12 +208,14 @@ const API = {
   reopenMonth: (data) => apiRequest("/moliya/month-closing/reopen", "POST", data),
 
   // Salary & HR Management Module
-  getEmployees: (type = null, activeOnly = true, search = "", department = "") => {
-    const isAct = (activeOnly !== false && activeOnly !== "false" && activeOnly !== null && activeOnly !== undefined);
-    let url = `/salary/employees?active_only=${isAct}`;
-    if (type && type !== "all") url += `&type=${type}`;
-    if (department && department !== "all") url += `&department=${encodeURIComponent(department)}`;
-    if (search) url += `&search=${encodeURIComponent(search)}`;
+  getEmployees: (type = null, activeOnly = null, search = "", department = "") => {
+    let url = `/salary/employees`;
+    const params = [];
+    if (activeOnly === true || activeOnly === "true") params.push("active_only=true");
+    if (type && type !== "all") params.push(`type=${type}`);
+    if (department && department !== "all") params.push(`department=${encodeURIComponent(department)}`);
+    if (search) params.push(`search=${encodeURIComponent(search)}`);
+    if (params.length > 0) url += `?${params.join("&")}`;
     return apiRequest(url);
   },
   createEmployee: (data) => apiRequest("/salary/employees", "POST", data),
@@ -221,8 +223,9 @@ const API = {
   toggleEmployeeActive: (id) => apiRequest(`/salary/employees/${id}/toggle-active`, "PUT"),
 
   getJobTypes: (activeOnly = false) => {
-    const isAct = Boolean(activeOnly && activeOnly !== "false");
-    return apiRequest(`/salary/job-types?active_only=${isAct}`);
+    let url = "/salary/job-types";
+    if (activeOnly === true || activeOnly === "true") url += "?active_only=true";
+    return apiRequest(url);
   },
   createJobType: (data) => apiRequest("/salary/job-types", "POST", data),
   updateJobType: (id, data) => apiRequest(`/salary/job-types/${id}`, "PUT", data),

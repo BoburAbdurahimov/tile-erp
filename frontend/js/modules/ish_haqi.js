@@ -615,7 +615,7 @@ const IshHaqiModule = (function () {
     container.innerHTML = `<div style="text-align: center; padding: 40px; color: #94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div>`;
 
     try {
-      employeesList = await API.getEmployees(null, false);
+      employeesList = await API.getEmployees();
     } catch (err) {
       showToast(err.message, "error");
       return;
