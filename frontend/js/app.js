@@ -1,6 +1,21 @@
 let currentModule = "dashboard";
 let modalConfirmCallback = null;
 
+function formatNumber(num) {
+  if (num === null || num === undefined || isNaN(num)) return "0";
+  return Number(num).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).replace(/,/g, " ");
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize Telegram WebApp SDK if running inside Telegram
   if (window.Telegram && window.Telegram.WebApp) {

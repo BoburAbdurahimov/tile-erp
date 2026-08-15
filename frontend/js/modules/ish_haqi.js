@@ -8,6 +8,21 @@ const IshHaqiModule = (function () {
   let employeesList = [];
   let jobTypesList = [];
 
+  function formatNumber(num) {
+    if (num === null || num === undefined || isNaN(num)) return "0";
+    return Number(num).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).replace(/,/g, " ");
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   function isUzbek() {
     return (typeof CURRENT_LANG !== "undefined" && CURRENT_LANG === "uz");
   }
