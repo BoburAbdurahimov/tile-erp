@@ -412,7 +412,7 @@ const IshHaqiModule = (function () {
     try {
       dailyData = await API.getDailySalaryData(currentDailyDate);
       jobTypesList = await API.getJobTypes(true);
-      employeesList = await API.getEmployees(null, null, true);
+      employeesList = await API.getEmployees(null, true);
     } catch (err) {
       showToast(err.message, "error");
       return;

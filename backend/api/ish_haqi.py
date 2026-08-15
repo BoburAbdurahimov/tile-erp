@@ -79,12 +79,12 @@ class PaySalarySchema(BaseModel):
 def get_employees(
     department: Optional[str] = None,
     type: Optional[str] = None,
-    active_only: bool = True,
+    active_only: Optional[bool] = Query(True),
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Employee)
-    if active_only:
+    if active_only is True:
         query = query.filter(Employee.is_active == True)
     if department and department != "all":
         query = query.filter(Employee.department == department)

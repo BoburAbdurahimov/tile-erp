@@ -208,9 +208,11 @@ const API = {
   reopenMonth: (data) => apiRequest("/moliya/month-closing/reopen", "POST", data),
 
   // Salary & HR Management Module
-  getEmployees: (type, activeOnly = true, search = "") => {
-    let url = `/salary/employees?active_only=${activeOnly}`;
-    if (type) url += `&type=${type}`;
+  getEmployees: (type = null, activeOnly = true, search = "", department = "") => {
+    const isAct = (activeOnly !== false && activeOnly !== "false" && activeOnly !== null && activeOnly !== undefined);
+    let url = `/salary/employees?active_only=${isAct}`;
+    if (type && type !== "all") url += `&type=${type}`;
+    if (department && department !== "all") url += `&department=${encodeURIComponent(department)}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
     return apiRequest(url);
   },
