@@ -220,7 +220,10 @@ const API = {
   updateEmployee: (id, data) => apiRequest(`/salary/employees/${id}`, "PUT", data),
   toggleEmployeeActive: (id) => apiRequest(`/salary/employees/${id}/toggle-active`, "PUT"),
 
-  getJobTypes: (activeOnly = false) => apiRequest(`/salary/job-types?active_only=${activeOnly}`),
+  getJobTypes: (activeOnly = false) => {
+    const isAct = Boolean(activeOnly && activeOnly !== "false");
+    return apiRequest(`/salary/job-types?active_only=${isAct}`);
+  },
   createJobType: (data) => apiRequest("/salary/job-types", "POST", data),
   updateJobType: (id, data) => apiRequest(`/salary/job-types/${id}`, "PUT", data),
 

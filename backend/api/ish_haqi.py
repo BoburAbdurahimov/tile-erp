@@ -71,6 +71,18 @@ class PaySalarySchema(BaseModel):
     current_user: Optional[str] = "Admin"
     notes: Optional[str] = None
 
+def parse_bool(val: Any) -> Optional[bool]:
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        return val
+    s = str(val).strip().lower()
+    if s in ("1", "true", "yes", "on"):
+        return True
+    if s in ("0", "false", "no", "off"):
+        return False
+    return None
+
 # ==============================================================================
 # EMPLOYEE CRUD ENDPOINTS
 # ==============================================================================
@@ -79,13 +91,14 @@ class PaySalarySchema(BaseModel):
 def get_employees(
     department: Optional[str] = None,
     type: Optional[str] = None,
-    active_only: Optional[bool] = Query(True),
+    active_only: Optional[Any] = Query(None),
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Employee)
-    if active_only is True:
-        query = query.filter(Employee.is_active == True)
+    is_active = parse_bool(active_only)
+    if is_active is not None:
+        query = query.filter(Employee.is_active == is_active)
     if department and department != "all":
         query = query.filter(Employee.department == department)
     if type and type in ("fixed", "piecework"):
@@ -216,9 +229,10 @@ def toggle_employee_active(id: int, current_user: str = Query("Admin"), db: Sess
 # ==============================================================================
 
 @router.get("/job-types")
-def get_job_types(active_only: bool = False, db: Session = Depends(get_db)):
+def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depends(get_db)):
     query = db.query(JobType)
-    if active_only:
+    is_active = parse_bool(active_only)
+    if is_active is True:
         query = query.filter(JobType.is_active == True)
     job_types = query.order_by(JobType.is_active.desc(), JobType.name.asc()).all()
     return [
