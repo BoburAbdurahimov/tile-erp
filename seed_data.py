@@ -14,6 +14,30 @@ def seed_database():
     create_tables()
     db = SessionLocal()
     
+    # 0. PURGE ALL OLD DEMO DATA SO THE SYSTEM IS 100% BLANK FOR MANUAL USER TESTING
+    try:
+        db.query(ProductionConsumedMaterial).delete()
+        db.query(ProductionOrder).delete()
+        db.query(SaleItem).delete()
+        db.query(Sale).delete()
+        db.query(PurchaseItem).delete()
+        db.query(Purchase).delete()
+        db.query(StockItem).delete()
+        db.query(CashTransaction).delete()
+        for cr in db.query(CashRegister).all():
+            cr.balance = 0.0
+        db.query(MDMMaterial).delete()
+        db.query(MDMCounterparty).delete()
+        db.query(AttendanceEntry).delete()
+        db.query(WorkEntry).delete()
+        db.query(MonthlySalaryCalculation).delete()
+        db.query(Employee).delete()
+        db.query(JobType).delete()
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error purging demo data: {e}")
+
     # 1. Exchange Rate
     today = date.today()
     if not db.query(ExchangeRate).first():
@@ -49,7 +73,7 @@ def seed_database():
         db.add_all([cr1, cr2])
         db.commit()
 
-    # 5. Default Users (Adminshox / test0101 & Boburjon)
+    # 5. Default Admin User (Adminshox / test0101)
     from backend.auth_utils import hash_password
     admin_u = db.query(User).filter(User.username == "Adminshox").first()
     if not admin_u:
@@ -83,49 +107,9 @@ def seed_database():
         ))
         db.commit()
 
-    # 6. Default Job Types (Piecework Catalog)
-    if not db.query(JobType).first():
-        job_types = [
-            JobType(name="Kafel saralash va navlash", unit_of_measure="m2", price_per_unit=500.0, is_active=True, created_by="Admin"),
-            JobType(name="Pechga xom kafel ortish", unit_of_measure="taglik", price_per_unit=15000.0, is_active=True, created_by="Admin"),
-            JobType(name="Gofrokartonga qadoqlash", unit_of_measure="quti", price_per_unit=800.0, is_active=True, created_by="Admin"),
-            JobType(name="Glazur va emal sepish", unit_of_measure="m2", price_per_unit=450.0, is_active=True, created_by="Admin"),
-            JobType(name="Xomashyo aralashtirish va maydalash", unit_of_measure="tonna", price_per_unit=25000.0, is_active=True, created_by="Admin"),
-            JobType(name="Tayyor kafelni omborga tashish", unit_of_measure="taglik", price_per_unit=12000.0, is_active=True, created_by="Admin"),
-        ]
-        db.add_all(job_types)
-        db.commit()
-
-    # 7. Default Employees (6 Departments)
-    if not db.query(Employee).first():
-        employees = [
-            # Ma'muriyat (Admin & Management & Warehouse Head)
-            Employee(full_name="Qodirov Alisher", department="Ma'muriyat", employee_type="fixed", position="Bosh Texnolog / Usta", phone_number="+998901234501", monthly_salary=8500000.0, standard_work_days=26, hire_date=today - timedelta(days=90), is_active=True),
-            Employee(full_name="Azizova Nargiza", department="Ma'muriyat", employee_type="fixed", position="Bosh Hisobchi", phone_number="+998901234504", monthly_salary=7000000.0, standard_work_days=26, hire_date=today - timedelta(days=120), is_active=True),
-            Employee(full_name="Toirov Jasur", department="Ma'muriyat", employee_type="fixed", position="Ombor Mudiri", phone_number="+998901234503", monthly_salary=5000000.0, standard_work_days=26, hire_date=today - timedelta(days=45), is_active=True),
-            
-            # 1-Liniya (Formovka & Press)
-            Employee(full_name="Karimov Dilshod", department="1-Liniya", employee_type="fixed", position="1-Liniya Katta Ustasi", phone_number="+998901234502", monthly_salary=6500000.0, standard_work_days=26, hire_date=today - timedelta(days=60), is_active=True),
-            Employee(full_name="Nurmatov Ilhom", department="1-Liniya", employee_type="piecework", position="Press operatori", phone_number="+998912223344", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=35), is_active=True),
-            
-            # 2-Liniya (Glazurlash & Naqsh)
-            Employee(full_name="Mirzayev Jamshid", department="2-Liniya", employee_type="piecework", position="Glazur sepuvchi", phone_number="+998908889900", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=50), is_active=True),
-
-            # 3-Liniya (Pech & Kuydirish)
-            Employee(full_name="Sultonov Bekzod", department="3-Liniya", employee_type="piecework", position="Pech yuklovchisi", phone_number="+998946663344", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=40), is_active=True),
-
-            # 4-Liniya (Saralash & Sifat nazorati)
-            Employee(full_name="Rustamov Otabek", department="4-Liniya", employee_type="piecework", position="Saralash ustasi", phone_number="+998935551122", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=30), is_active=True),
-
-            # 5-Liniya (Qadoqlash & Yuklash)
-            Employee(full_name="Yuldashev Farrux", department="5-Liniya", employee_type="piecework", position="Qadoqlovchi", phone_number="+998977775566", monthly_salary=0.0, standard_work_days=26, hire_date=today - timedelta(days=20), is_active=True),
-        ]
-        db.add_all(employees)
-        db.commit()
-
     db.close()
-    logger.info("System initial configuration verified.")
+    logger.info("Database initialized in 100% clean state.")
 
 if __name__ == "__main__":
     seed_database()
-    print("Clean database seeding completed.")
+    print("Database is completely clean and initialized.")
