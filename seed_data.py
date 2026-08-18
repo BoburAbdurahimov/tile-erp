@@ -14,6 +14,19 @@ def seed_database():
     create_tables()
     db = SessionLocal()
     
+    # Run auto-migrations for postgres/sqlite
+    try:
+        from sqlalchemy import text
+        with db.bind.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(100) DEFAULT '1-Liniya';"))
+                conn.execute(text("ALTER TABLE monthly_salary_calculations ADD COLUMN IF NOT EXISTS department VARCHAR(100);"))
+                conn.commit()
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"Migration note: {e}")
+    
     # 0. PURGE ALL OLD DEMO DATA SO THE SYSTEM IS 100% BLANK FOR MANUAL USER TESTING
     try:
         db.query(ProductionConsumedMaterial).delete()
