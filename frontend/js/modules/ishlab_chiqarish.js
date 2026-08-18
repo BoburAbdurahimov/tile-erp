@@ -114,12 +114,17 @@ const ProductionModule = {
                     ${tr(o.status)}
                   </span>
                 </td>
-                <td style="text-align: right;">
+                <td style="text-align: right; white-space: nowrap;">
                   ${o.status === 'Tasdiqlandi' ? `
                     <button class="btn btn-storno btn-sm" onclick="ProductionModule.stornoOrder(${o.id}, '${o.order_number}')">
                       ↩️ ${t('btn_storno')}
                     </button>
                   ` : '<span style="color: #94a3b8; font-size: 12px;">-</span>'}
+                  ${CURRENT_ROLE === 'Admin' ? `
+                    <button class="btn btn-danger btn-sm" onclick="ProductionModule.deleteOrder(${o.id}, '${o.order_number}')" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">
+                      🗑️
+                    </button>
+                  ` : ''}
                 </td>
               </tr>
             `).join("")}
@@ -404,6 +409,19 @@ const ProductionModule = {
     try {
       await API.stornoProductionOrder(id);
       showToast(t('msg_storno_ok'), "success");
+      await this.loadLinesStats();
+      await this.loadOrders();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async deleteOrder(id, orderNumber) {
+    const isUz = CURRENT_LANG === 'uz';
+    if (!confirm(isUz ? `${orderNumber} buyurtmasini butunlay o'chirishni tasdiqlaysizmi?` : `Удалить заказ ${orderNumber} навсегда?`)) return;
+    try {
+      await API.deleteProductionOrder(id);
+      showToast(isUz ? "Buyurtma o'chirildi" : "Заказ удален", "success");
       await this.loadLinesStats();
       await this.loadOrders();
     } catch (e) {

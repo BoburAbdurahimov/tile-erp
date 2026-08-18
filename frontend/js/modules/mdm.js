@@ -99,9 +99,10 @@ const MdmModule = {
                     <td data-sort-value="${m.min_stock || 0}" style="padding: 12px 14px; text-align: right;">${m.min_stock || 0} ${tr(m.unit)}</td>
                     <td data-sort-value="${m.current_avg_price_usd || 0}" style="padding: 12px 14px; text-align: right;">$${(m.current_avg_price_usd || 0).toFixed(4)}</td>
                     <td data-sort-value="${m.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${m.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${m.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(m.is_archived ? 'Arxiv' : 'Faol')}</span></td>
-                    <td style="padding: 12px 14px; text-align: right;">
+                    <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.editMaterial(${m.id})" title="${t('btn_edit')}">✏️</button>
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.toggleArchiveMaterial(${m.id})" title="${t('btn_archive')}">${m.is_archived ? '♻️' : '📁'}</button>
+                      ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="MdmModule.deleteMaterial(${m.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">🗑️</button>` : ''}
                     </td>
                   </tr>
                 `).join("")}
@@ -150,9 +151,10 @@ const MdmModule = {
                     <td data-sort-value="${cp.initial_balance_usd || 0}" style="padding: 12px 14px; text-align: right;">$${(cp.initial_balance_usd || 0).toLocaleString()}</td>
                     <td data-sort-value="${cp.current_balance_usd || 0}" style="padding: 12px 14px; text-align: right;"><strong style="color: ${(cp.current_balance_usd || 0) >= 0 ? '#10b981' : '#ef4444'};">$${(cp.current_balance_usd || 0).toLocaleString()}</strong></td>
                     <td data-sort-value="${cp.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${cp.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${cp.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(cp.is_archived ? 'Arxiv' : 'Faol')}</span></td>
-                    <td style="padding: 12px 14px; text-align: right;">
+                    <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.editCounterparty(${cp.id})" title="${t('btn_edit')}">✏️</button>
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.toggleArchiveCp(${cp.id})" title="${t('btn_archive')}">${cp.is_archived ? '♻️' : '📁'}</button>
+                      ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="MdmModule.deleteCounterparty(${cp.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">🗑️</button>` : ''}
                     </td>
                   </tr>
                 `).join("")}
@@ -633,6 +635,30 @@ const MdmModule = {
     try {
       await API.archiveCounterparty(id);
       showToast(CURRENT_LANG === 'uz' ? "Kontragent holati o'zgartirildi" : "Статус контрагента изменен", "success");
+      await this.loadTabContent();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async deleteMaterial(id) {
+    const isUz = CURRENT_LANG === 'uz';
+    if (!confirm(isUz ? "Ushbu materialni butunlay o'chirishni tasdiqlaysizmi?" : "Удалить этот материал навсегда?")) return;
+    try {
+      await API.deleteMaterial(id);
+      showToast(isUz ? "Material o'chirildi" : "Материал удален", "success");
+      await this.loadTabContent();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async deleteCounterparty(id) {
+    const isUz = CURRENT_LANG === 'uz';
+    if (!confirm(isUz ? "Ushbu kontragentni butunlay o'chirishni tasdiqlaysizmi?" : "Удалить этого контрагента навсегда?")) return;
+    try {
+      await API.deleteCounterparty(id);
+      showToast(isUz ? "Kontragent o'chirildi" : "Контрагент удален", "success");
       await this.loadTabContent();
     } catch (e) {
       showToast(e.message, "error");

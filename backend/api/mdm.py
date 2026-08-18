@@ -5,7 +5,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from backend.database import get_db
-from backend.models import MDMMaterial, MDMCounterparty, Warehouse
+from backend.models import (
+    MDMMaterial, MDMCounterparty, Warehouse, StockItem,
+    ProductionConsumedMaterial, SaleItem, PurchaseItem,
+    CashTransaction, Sale, Purchase
+)
 from backend.schemas import (
     MaterialCreate, MaterialUpdate, MaterialResponse,
     CounterpartyCreate, CounterpartyUpdate, CounterpartyResponse,
@@ -109,6 +113,29 @@ def toggle_archive_material(
     mat.is_archived = not mat.is_archived
     db.commit()
     return {"id": mat.id, "is_archived": mat.is_archived}
+
+@router.delete("/materials/{material_id}")
+def delete_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools" if role == "Admin" else "mdm", role)
+    if role != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    mat = db.query(MDMMaterial).filter(MDMMaterial.id == material_id).first()
+    if not mat:
+        raise HTTPException(status_code=404, detail="Material topilmadi.")
+    
+    # Cascade clean dependencies
+    db.query(StockItem).filter(StockItem.material_id == material_id).delete()
+    db.query(ProductionConsumedMaterial).filter(ProductionConsumedMaterial.material_id == material_id).delete()
+    db.query(SaleItem).filter(SaleItem.material_id == material_id).delete()
+    db.query(PurchaseItem).filter(PurchaseItem.material_id == material_id).delete()
+    
+    db.delete(mat)
+    db.commit()
+    return {"success": True, "message": f"{mat.name} muvaffaqiyatli o'chirildi.", "id": material_id}
 
 # ----------------- COUNTERPARTIES (Clients & Suppliers) -----------------
 
@@ -223,6 +250,27 @@ def toggle_archive_counterparty(
     cp.is_archived = not cp.is_archived
     db.commit()
     return {"id": cp.id, "is_archived": cp.is_archived}
+
+@router.delete("/counterparties/{counterparty_id}")
+def delete_counterparty(
+    counterparty_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools" if role == "Admin" else "mdm", role)
+    if role != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == counterparty_id).first()
+    if not cp:
+        raise HTTPException(status_code=404, detail="Kontragent topilmadi.")
+    
+    # Nullify or clean related transactions
+    for tx in db.query(CashTransaction).filter(CashTransaction.counterparty_id == counterparty_id).all():
+        tx.counterparty_id = None
+    
+    db.delete(cp)
+    db.commit()
+    return {"success": True, "message": f"{cp.name} muvaffaqiyatli o'chirildi.", "id": counterparty_id}
 
 # ----------------- WAREHOUSES -----------------
 

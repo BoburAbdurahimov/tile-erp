@@ -204,6 +204,28 @@ def storno_purchase(
 
     return {"status": "success", "message": f"{purchase.purchase_number} xaridi muvaffaqiyatli storno qilindi."}
 
+@router.delete("/purchases/{purchase_id}")
+def delete_purchase(
+    purchase_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools" if role == "Admin" else "zakup", role)
+    if role != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Xarid hujjati topilmadi.")
+    
+    # Delete purchase items
+    db.query(PurchaseItem).filter(PurchaseItem.purchase_id == purchase_id).delete()
+    # Delete mirror stornos
+    db.query(Purchase).filter(Purchase.storno_ref_id == purchase_id).delete()
+
+    db.delete(purchase)
+    db.commit()
+    return {"success": True, "message": f"{purchase.purchase_number} xaridi muvaffaqiyatli o'chirildi.", "id": purchase_id}
+
 # ----------------- SALES (SOTISH) -----------------
 
 @router.get("/sales", response_model=List[SaleResponse])
@@ -385,3 +407,26 @@ def storno_sale(
     db.commit()
 
     return {"status": "success", "message": f"{sale.sale_number} sotuvi muvaffaqiyatli storno qilindi."}
+
+@router.delete("/sales/{sale_id}")
+def delete_sale(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools" if role == "Admin" else "sotish", role)
+    if role != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    sale = db.query(Sale).filter(Sale.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sotuv hujjati topilmadi.")
+    
+    # Delete sale items
+    db.query(SaleItem).filter(SaleItem.sale_id == sale_id).delete()
+    # Delete mirror stornos
+    db.query(Sale).filter(Sale.storno_ref_id == sale_id).delete()
+
+    db.delete(sale)
+    db.commit()
+    return {"success": True, "message": f"{sale.sale_number} sotuvi muvaffaqiyatli o'chirildi.", "id": sale_id}
+

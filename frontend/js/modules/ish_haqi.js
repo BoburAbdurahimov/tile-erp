@@ -657,8 +657,11 @@ const IshHaqiModule = (function () {
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditEmployeeModal(${e.id})">✏️ ${isUz ? "Tahrirlash" : "Изм."}</button>
-              <button class="btn ${e.is_active ? 'btn-danger' : 'btn-success'} btn-sm" onclick="IshHaqiModule.toggleEmployeeStatus(${e.id})" style="margin-left: 4px;">
-                ${e.is_active ? (isUz ? "📁 Arxivlash" : "📁 В архив") : (isUz ? "♻️ Tiklash" : "♻️ Восстановить")}
+              <button class="btn ${e.is_active ? 'btn-secondary' : 'btn-success'} btn-sm" onclick="IshHaqiModule.toggleEmployeeStatus(${e.id})" style="margin-left: 4px;">
+                ${e.is_active ? (isUz ? "📁 Arxiv" : "📁 В архив") : (isUz ? "♻️ Tiklash" : "♻️ Восстановить")}
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteEmployee(${e.id}, '${escapeHtml(e.full_name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">
+                🗑️
               </button>
             </td>
           </tr>
@@ -725,6 +728,18 @@ const IshHaqiModule = (function () {
     }
   }
 
+  async function deleteEmployee(id, empName) {
+    const isUz = isUzbek();
+    if (!confirm(isUz ? `${empName} xodimini butunlay o'chirishni tasdiqlaysizmi?\nUning barcha davomat va naryad yozuvlari ham o'chiriladi.` : `Удалить сотрудника ${empName} навсегда?`)) return;
+    try {
+      await API.deleteEmployee(id);
+      showToast(isUz ? "Xodim o'chirildi" : "Сотрудник удален", "success");
+      await loadActiveTabContent();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
   // ===========================================================================
   // TAB 4: JOB TYPES (PIECEWORK CATALOG)
   // ===========================================================================
@@ -756,8 +771,9 @@ const IshHaqiModule = (function () {
             <td style="text-align: center;"><span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(j.unit_of_measure)}</span></td>
             <td style="text-align: right; font-weight: 800; font-family: monospace; color: #2563eb; font-size: 14px;">${formatNumber(j.price_per_unit)} <small>UZS</small></td>
             <td style="text-align: center;">${statusBadge}</td>
-            <td style="text-align: right;">
+            <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditJobTypeModal(${j.id})">✏️ ${isUz ? "Tahrirlash" : "Изм."}</button>
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, '${escapeHtml(j.name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">🗑️</button>
             </td>
           </tr>
         `;
@@ -1149,6 +1165,18 @@ const IshHaqiModule = (function () {
     }
   }
 
+  async function deleteJobType(id, jobName) {
+    const isUz = isUzbek();
+    if (!confirm(isUz ? `${jobName} ish turini butunlay o'chirishni tasdiqlaysizmi?\nUshbu ish turiga tegishli naryad yozuvlari ham o'chiriladi.` : `Удалить вид работ ${jobName} навсегда?`)) return;
+    try {
+      await API.deleteJobType(id);
+      showToast(isUz ? "Ish turi o'chirildi" : "Вид работы удален", "success");
+      await loadActiveTabContent();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
   // Daily Work Entry Modal
   function openAddWorkModal() {
     const isUz = isUzbek();
@@ -1433,6 +1461,8 @@ const IshHaqiModule = (function () {
     saveAttendance,
     deleteWorkEntry,
     toggleEmployeeStatus,
+    deleteEmployee,
+    deleteJobType,
     openAddEmployeeModal,
     openEditEmployeeModal,
     handleEmpTypeChange,

@@ -224,6 +224,30 @@ def toggle_employee_active(id: int, current_user: str = Query("Admin"), db: Sess
 
     return {"status": "success", "is_active": emp.is_active}
 
+@router.delete("/employees/{id}")
+def delete_employee(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+    if current_user != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    emp = db.query(Employee).filter(Employee.id == id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Xodim topilmadi")
+
+    # Cascade clean employee's attendance, work entries, salary calculations
+    db.query(AttendanceEntry).filter(AttendanceEntry.employee_id == id).delete()
+    db.query(WorkEntry).filter(WorkEntry.employee_id == id).delete()
+    db.query(MonthlySalaryCalculation).filter(MonthlySalaryCalculation.employee_id == id).delete()
+
+    db.delete(emp)
+    db.add(AuditLog(
+        username=current_user,
+        action="DELETE",
+        module="Ish haqi / Xodimlar",
+        entity_id=str(id),
+        details=f"Xodim o'chirildi: {emp.full_name}"
+    ))
+    db.commit()
+    return {"status": "success", "message": f"{emp.full_name} muvaffaqiyatli o'chirildi", "id": id}
+
 # ==============================================================================
 # JOB TYPES (PIECEWORK CATALOG) ENDPOINTS
 # ==============================================================================
@@ -297,6 +321,28 @@ def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Quer
     ))
     db.commit()
     return {"status": "success", "message": "Ish turi yangilandi"}
+
+@router.delete("/job-types/{id}")
+def delete_job_type(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+    if current_user != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    jt = db.query(JobType).filter(JobType.id == id).first()
+    if not jt:
+        raise HTTPException(status_code=404, detail="Ish turi topilmadi")
+
+    # Clean work entries referencing this job type
+    db.query(WorkEntry).filter(WorkEntry.job_type_id == id).delete()
+
+    db.delete(jt)
+    db.add(AuditLog(
+        username=current_user,
+        action="DELETE",
+        module="Ish haqi / Ish turlari",
+        entity_id=str(id),
+        details=f"Ish turi o'chirildi: {jt.name}"
+    ))
+    db.commit()
+    return {"status": "success", "message": f"{jt.name} ish turi muvaffaqiyatli o'chirildi", "id": id}
 
 # ==============================================================================
 # DAILY ATTENDANCE & WORK ENTRY ENDPOINTS

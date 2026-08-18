@@ -274,3 +274,27 @@ def storno_production_order(
     db.commit()
 
     return {"status": "success", "message": f"{order.order_number} ishlab chiqarish buyurtmasi muvaffaqiyatli storno qilindi."}
+
+@router.delete("/orders/{order_id}")
+def delete_production_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools" if role == "Admin" else "ishlab_chiqarish", role)
+    if role != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Buyurtma topilmadi.")
+    
+    # Delete consumed materials first
+    db.query(ProductionConsumedMaterial).filter(ProductionConsumedMaterial.production_order_id == order_id).delete()
+    
+    # Delete mirror storno orders referencing this order
+    db.query(ProductionOrder).filter(ProductionOrder.storno_ref_id == order_id).delete()
+
+    db.delete(order)
+    db.commit()
+    return {"success": True, "message": f"{order.order_number} ishlab chiqarish buyurtmasi muvaffaqiyatli o'chirildi.", "id": order_id}
+

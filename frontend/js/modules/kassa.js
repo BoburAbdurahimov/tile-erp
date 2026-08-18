@@ -133,6 +133,7 @@ const KassaModule = {
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${t('th_total')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, false)" style="text-align: center;">${t('th_currency')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 7, false)">${t('th_description')} <span class="sort-icon">↕</span></th>
+              <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
               <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
@@ -143,6 +144,7 @@ const KassaModule = {
               <th></th>
               <th><input type="text" class="table-col-filter" data-col-idx="6" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Valyuta...' : 'Валюта...'}" /></th>
               <th><input type="text" class="table-col-filter" data-col-idx="7" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" /></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -171,6 +173,9 @@ const KassaModule = {
                     </span>
                   </td>
                   <td data-sort-value="${tx.description || ''}">${tr(tx.description) || '-'}</td>
+                  <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
+                    ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">🗑️</button>` : ''}
+                  </td>
                 </tr>
               `;
             }).join("")}
@@ -532,6 +537,19 @@ const KassaModule = {
       `).join("");
     } catch (e) {
       console.error(e);
+    }
+  },
+
+  async deleteTransaction(id) {
+    const isUz = CURRENT_LANG === 'uz';
+    if (!confirm(isUz ? "Ushbu kassa tranzaksiyasini o'chirishni tasdiqlaysizmi?" : "Удалить эту кассовую транзакцию?")) return;
+    try {
+      await API.deleteCashTransaction(id);
+      showToast(isUz ? "Tranzaksiya o'chirildi" : "Транзакция удалена", "success");
+      await this.loadRegisters();
+      await this.loadTransactions();
+    } catch (e) {
+      showToast(e.message, "error");
     }
   }
 };

@@ -187,6 +187,51 @@ def create_cash_transaction(
         created_at=tx.created_at
     )
 
+@router.delete("/transactions/{transaction_id}")
+def delete_cash_transaction(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools" if role == "Admin" else "kassa", role)
+    if role != "Admin":
+        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    tx = db.query(CashTransaction).filter(CashTransaction.id == transaction_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Tranzaksiya topilmadi.")
+    
+    # Reverse register balance
+    reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
+    if reg:
+        if tx.type.lower() == "kirim":
+            reg.balance -= tx.amount
+        else: # chiqim
+            reg.balance += tx.amount
+            
+    # Reverse counterparty balance if attached
+    if tx.counterparty_id:
+        cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == tx.counterparty_id).first()
+        if cp:
+            rate = get_exchange_rate_for_date(db, tx.date)
+            if tx.type.lower() == "kirim" and cp.type == "client":
+                if tx.currency == "USD":
+                    cp.current_balance_usd += tx.amount
+                    cp.current_balance_uzs += tx.amount * rate
+                else:
+                    cp.current_balance_uzs += tx.amount
+                    cp.current_balance_usd += tx.amount / rate if rate > 0 else 0.0
+            elif tx.type.lower() == "chiqim" and cp.type == "supplier":
+                if tx.currency == "USD":
+                    cp.current_balance_usd -= tx.amount
+                    cp.current_balance_uzs -= tx.amount * rate
+                else:
+                    cp.current_balance_uzs += tx.amount
+                    cp.current_balance_usd -= tx.amount / rate if rate > 0 else 0.0
+
+    db.delete(tx)
+    db.commit()
+    return {"success": True, "message": "Kassa tranzaksiyasi muvaffaqiyatli o'chirildi.", "id": transaction_id}
+
 # ----------------- EXCHANGE RATES -----------------
 
 @router.get("/exchange-rates", response_model=List[ExchangeRateResponse])

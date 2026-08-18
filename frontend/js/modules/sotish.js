@@ -123,12 +123,17 @@ const SalesModule = {
                     ${tr(s.status)}
                   </span>
                 </td>
-                <td style="padding: 12px 14px; text-align: right;">
+                <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                   ${s.status === 'Tasdiqlandi' ? `
                     <button class="btn btn-sm" onclick="SalesModule.stornoSale(${s.id}, '${s.sale_number}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
                       ↩️ ${t('btn_storno')}
                     </button>
                   ` : '<span style="color: #94a3b8; font-size: 12px;">-</span>'}
+                  ${CURRENT_ROLE === 'Admin' ? `
+                    <button class="btn btn-danger btn-sm" onclick="SalesModule.deleteSale(${s.id}, '${s.sale_number}')" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">
+                      🗑️
+                    </button>
+                  ` : ''}
                 </td>
               </tr>
             `}).join("")}
@@ -369,6 +374,18 @@ const SalesModule = {
     try {
       await API.stornoSale(id);
       showToast(t('msg_storno_ok'), "success");
+      await this.loadSales();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async deleteSale(id, sNum) {
+    const isUz = CURRENT_LANG === 'uz';
+    if (!confirm(isUz ? `${sNum} sotuv hujjatini butunlay o'chirishni tasdiqlaysizmi?` : `Удалить документ продажи ${sNum} навсегда?`)) return;
+    try {
+      await API.deleteSale(id);
+      showToast(isUz ? "Sotuv o'chirildi" : "Продажа удалена", "success");
       await this.loadSales();
     } catch (e) {
       showToast(e.message, "error");

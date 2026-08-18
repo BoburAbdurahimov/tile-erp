@@ -104,6 +104,7 @@ const API = {
   createMaterial: (data) => apiRequest("/mdm/materials", "POST", data),
   updateMaterial: (id, data) => apiRequest(`/mdm/materials/${id}`, "PUT", data),
   archiveMaterial: (id) => apiRequest(`/mdm/materials/${id}/archive`, "POST"),
+  deleteMaterial: (id) => apiRequest(`/mdm/materials/${id}`, "DELETE"),
   
   getCounterparties: (type, search, includeArchived = false) => {
     let url = `/mdm/counterparties?include_archived=${includeArchived}`;
@@ -113,6 +114,8 @@ const API = {
   },
   createCounterparty: (data) => apiRequest("/mdm/counterparties", "POST", data),
   updateCounterparty: (id, data) => apiRequest(`/mdm/counterparties/${id}`, "PUT", data),
+  archiveCounterparty: (id) => apiRequest(`/mdm/counterparties/${id}/archive`, "POST"),
+  deleteCounterparty: (id) => apiRequest(`/mdm/counterparties/${id}`, "DELETE"),
   getWarehouses: () => apiRequest("/mdm/warehouses"),
   createWarehouse: (data) => apiRequest("/mdm/warehouses", "POST", data),
   updateWarehouse: (id, data) => apiRequest(`/mdm/warehouses/${id}`, "PUT", data),
@@ -144,6 +147,7 @@ const API = {
     return apiRequest(url);
   },
   createCashTransaction: (data) => apiRequest("/kassa/transactions", "POST", data),
+  deleteCashTransaction: (id) => apiRequest(`/kassa/transactions/${id}`, "DELETE"),
   getExchangeRates: () => apiRequest("/kassa/exchange-rates"),
   setExchangeRate: (data) => apiRequest("/kassa/exchange-rates", "POST", data),
   syncCbuRate: () => apiRequest("/kassa/exchange-rates/fetch-cbu", "POST"),
@@ -161,6 +165,7 @@ const API = {
   },
   createProductionOrder: (data) => apiRequest("/ishlab-chiqarish/orders", "POST", data),
   stornoProductionOrder: (id) => apiRequest(`/ishlab-chiqarish/orders/${id}/storno`, "POST"),
+  deleteProductionOrder: (id) => apiRequest(`/ishlab-chiqarish/orders/${id}`, "DELETE"),
   
   // Counterparty Balances & Ledger
   getCounterpartiesSummary: (currency = "USD") => apiRequest(`/kontragentlar/summary?view_currency=${currency}`),
@@ -177,6 +182,7 @@ const API = {
   },
   createPurchase: (data) => apiRequest("/savdo/purchases", "POST", data),
   stornoPurchase: (id) => apiRequest(`/savdo/purchases/${id}/storno`, "POST"),
+  deletePurchase: (id) => apiRequest(`/savdo/purchases/${id}`, "DELETE"),
   
   getSales: (clientId, status, startDate, endDate) => {
     let url = `/savdo/sales?`;
@@ -188,6 +194,7 @@ const API = {
   },
   createSale: (data) => apiRequest("/savdo/sales", "POST", data),
   stornoSale: (id) => apiRequest(`/savdo/sales/${id}/storno`, "POST"),
+  deleteSale: (id) => apiRequest(`/savdo/sales/${id}`, "DELETE"),
   
   // Finance & Month Closing
   getPnL: (yearMonth) => {
@@ -222,6 +229,7 @@ const API = {
   createEmployee: (data) => apiRequest("/salary/employees", "POST", data),
   updateEmployee: (id, data) => apiRequest(`/salary/employees/${id}`, "PUT", data),
   toggleEmployeeActive: (id) => apiRequest(`/salary/employees/${id}/toggle-active`, "PUT"),
+  deleteEmployee: (id) => apiRequest(`/salary/employees/${id}`, "DELETE"),
 
   getJobTypes: (activeOnly = false) => {
     let url = "/salary/job-types";
@@ -230,6 +238,7 @@ const API = {
   },
   createJobType: (data) => apiRequest("/salary/job-types", "POST", data),
   updateJobType: (id, data) => apiRequest(`/salary/job-types/${id}`, "PUT", data),
+  deleteJobType: (id) => apiRequest(`/salary/job-types/${id}`, "DELETE"),
 
   getDailySalaryData: (dateStr) => apiRequest(`/salary/daily-data?date_str=${dateStr}`),
   saveDailyAttendance: (data) => apiRequest("/salary/daily-attendance", "POST", data),
