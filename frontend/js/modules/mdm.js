@@ -17,6 +17,9 @@ const MdmModule = {
             <button class="btn btn-secondary btn-sm" onclick="MdmModule.exportExcel()" style="display: flex; align-items: center; gap: 6px;">
               <span>📥</span> <span>${t('btn_export_excel')}</span>
             </button>
+            <button class="btn btn-danger btn-sm" onclick="MdmModule.confirmCleanDemoData()" style="display: flex; align-items: center; gap: 6px;">
+              <span>🧹</span> <span>${CURRENT_LANG === 'uz' ? "Demo tozalash" : "Очистить демо"}</span>
+            </button>
             <button class="btn btn-primary btn-sm" onclick="MdmModule.openCreateModal()" style="display: flex; align-items: center; gap: 6px;">
               <span>➕</span> <span>${t('btn_create')}</span>
             </button>
@@ -641,5 +644,21 @@ const MdmModule = {
     if (this.currentTab === "clients") entity = "clients";
     if (this.currentTab === "suppliers") entity = "suppliers";
     window.open(`/api/mdm/export/excel?entity=${entity}`, "_blank");
+  },
+
+  async confirmCleanDemoData() {
+    const isUz = CURRENT_LANG === 'uz';
+    const conf = confirm(isUz 
+      ? "DIQQAT! Tizimdagi barcha materiallar, mijozlar, ta'minotchilar, ombor qoldiqlari, ishlab chiqarish va kassa operatsiyalarini o'chirib 0 ga tushirasizmi?" 
+      : "ВНИМАНИЕ! Очистить все материалы, клиентов, поставщиков, остатки склада, производство и кассу?");
+    if (!conf) return;
+    try {
+      showToast(isUz ? "Tozalanmoqda..." : "Очистка...", "info");
+      const res = await API.cleanDemoData();
+      showToast(res.message || (isUz ? "Tizim tozalandi!" : "База очищена!"), "success");
+      await this.render(document.getElementById("mdm-module"));
+    } catch (err) {
+      showToast(err.message, "error");
+    }
   }
 };

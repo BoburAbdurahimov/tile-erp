@@ -93,6 +93,7 @@ const API = {
   approveTelegramUser: (id, role) => apiRequest(`/auth/telegram-users/${id}/approve`, "PUT", { role, is_approved: true }),
   updateTelegramUserRole: (id, data) => apiRequest(`/auth/telegram-users/${id}/approve`, "PUT", data),
   deleteTelegramUser: (id) => apiRequest(`/auth/telegram-users/${id}`, "DELETE"),
+  cleanDemoData: () => apiRequest("/auth/clean-demo-data", "POST"),
   
   // MDM
   getMaterials: (category, includeArchived = false) => {

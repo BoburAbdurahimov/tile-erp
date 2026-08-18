@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.models import User, TelegramUser
+from backend.models import (
+    User, TelegramUser, MDMMaterial, MDMCounterparty, StockItem,
+    ProductionConsumedMaterial, ProductionOrder, SaleItem, Sale,
+    PurchaseItem, Purchase, CashTransaction, CashRegister,
+    AttendanceEntry, WorkEntry, MonthlySalaryCalculation
+)
 from backend.auth_utils import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication & User Management"])
@@ -327,3 +332,35 @@ def delete_telegram_user(
     db.delete(user)
     db.commit()
     return {"success": True, "message": "Telegram foydalanuvchisi ro'yxatdan o'chirildi!"}
+
+@router.post("/clean-demo-data")
+def clean_demo_data(
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("admin_tools", role)
+    try:
+        db.query(ProductionConsumedMaterial).delete()
+        db.query(ProductionOrder).delete()
+        db.query(SaleItem).delete()
+        db.query(Sale).delete()
+        db.query(PurchaseItem).delete()
+        db.query(Purchase).delete()
+        db.query(StockItem).delete()
+        db.query(CashTransaction).delete()
+        for cr in db.query(CashRegister).all():
+            cr.balance = 0.0
+        db.query(MDMMaterial).delete()
+        db.query(MDMCounterparty).delete()
+        db.query(AttendanceEntry).delete()
+        db.query(WorkEntry).delete()
+        db.query(MonthlySalaryCalculation).delete()
+        db.commit()
+        return {
+            "success": True,
+            "message": "Barcha demo MDM, ombor, ishlab chiqarish, savdo va kassa ma'lumotlari tozalandi!"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ma'lumotlarni tozalashda xatolik: {str(e)}")
+
