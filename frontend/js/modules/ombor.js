@@ -1,5 +1,6 @@
 const OmborModule = {
   currentWarehouseId: null,
+  currentView: "stock",
 
   async render(container) {
     container.innerHTML = `
@@ -12,24 +13,37 @@ const OmborModule = {
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t('mod_ombor_sub')}</p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="OmborModule.openTransferModal()" style="background: #2563eb; color: #ffffff; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
+              🔄 ${CURRENT_LANG === 'uz' ? "Ombordan Omborga O'tkazish" : "Перемещение между складами"}
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="OmborModule.exportExcel()">📥 ${t('btn_export_excel')}</button>
             <button class="btn btn-warning btn-sm" onclick="OmborModule.openAdjustModal()">⚙️ ${t('btn_adjust_stock')}</button>
           </div>
         </div>
 
-        <!-- Warehouse Tabs -->
+        <!-- Main Module View Tabs -->
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+          <button id="tab-btn-stock" class="btn btn-sm" onclick="OmborModule.switchView('stock')" style="font-weight: 700; padding: 8px 16px; border-radius: 8px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+            📦 ${CURRENT_LANG === 'uz' ? 'Ombor Qoldiqlari' : 'Остатки на складах'}
+          </button>
+          <button id="tab-btn-transfers" class="btn btn-sm" onclick="OmborModule.switchView('transfers')" style="font-weight: 600; padding: 8px 16px; border-radius: 8px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+            🔄 ${CURRENT_LANG === 'uz' ? "Omborlararo O'tkazmalar Tarixi" : "История перемещений"}
+          </button>
+        </div>
+
+        <!-- Warehouse Filter Tabs (Visible in Stock view) -->
         <div class="tabs-nav" id="warehouse-tabs" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
           <button class="tab-btn active" onclick="OmborModule.filterWarehouse(null, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid #2563eb; color: #2563eb;">
             ${CURRENT_LANG === 'uz' ? 'Barcha Omborlar' : 'Все Склады'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(1, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            🏢 ${CURRENT_LANG === 'uz' ? 'Tayyor mahsulotlar' : 'Готовая продукция'}
+            🏢 ${CURRENT_LANG === 'uz' ? '1: Tayyor mahsulotlar' : '1: Готовая продукция'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(2, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            🏭 ${CURRENT_LANG === 'uz' ? 'Ishlab chiqarish materiallari' : 'Материалы для производства'}
+            🏭 ${CURRENT_LANG === 'uz' ? '2: Ishlab chiqarish materiallari' : '2: Материалы для производства'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(3, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            📦 ${CURRENT_LANG === 'uz' ? 'Aralash ombor' : 'Смешанный склад'}
+            📦 ${CURRENT_LANG === 'uz' ? '3: Aralash ombor' : '3: Смешанный склад'}
           </button>
         </div>
 
@@ -40,6 +54,41 @@ const OmborModule = {
     `;
 
     await this.loadStock();
+  },
+
+  async switchView(view) {
+    this.currentView = view;
+    const btnStock = document.getElementById("tab-btn-stock");
+    const btnTransfers = document.getElementById("tab-btn-transfers");
+    const whTabs = document.getElementById("warehouse-tabs");
+
+    if (view === "stock") {
+      if (btnStock) {
+        btnStock.style.background = "#eff6ff";
+        btnStock.style.color = "#1d4ed8";
+        btnStock.style.borderColor = "#bfdbfe";
+      }
+      if (btnTransfers) {
+        btnTransfers.style.background = "#f8fafc";
+        btnTransfers.style.color = "#64748b";
+        btnTransfers.style.borderColor = "#e2e8f0";
+      }
+      if (whTabs) whTabs.style.display = "flex";
+      await this.loadStock();
+    } else {
+      if (btnTransfers) {
+        btnTransfers.style.background = "#eff6ff";
+        btnTransfers.style.color = "#1d4ed8";
+        btnTransfers.style.borderColor = "#bfdbfe";
+      }
+      if (btnStock) {
+        btnStock.style.background = "#f8fafc";
+        btnStock.style.color = "#64748b";
+        btnStock.style.borderColor = "#e2e8f0";
+      }
+      if (whTabs) whTabs.style.display = "none";
+      await this.loadTransfers();
+    }
   },
 
   async filterWarehouse(whId, btnEl) {
@@ -149,6 +198,226 @@ const OmborModule = {
     }
   },
 
+  async loadTransfers() {
+    const tableDiv = document.getElementById("stock-table-container");
+    if (!tableDiv) return;
+
+    try {
+      const transfers = await API.getStockTransfers();
+
+      if (!transfers || transfers.length === 0) {
+        tableDiv.innerHTML = `
+          <div style="text-align: center; padding: 50px 20px; color: #64748b;">
+            <div style="font-size: 40px; margin-bottom: 10px;">🔄</div>
+            <div style="font-size: 16px; font-weight: 600;">${CURRENT_LANG === 'uz' ? "Hali omborlararo o'tkazmalar amalga oshirilmagan" : "Перемещений пока нет"}</div>
+            <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">${CURRENT_LANG === 'uz' ? "Yuqoridagi 'Ombordan Omborga O'tkazish' tugmasini bosib yangi o'tkazma yarating." : "Нажмите кнопку выше, чтобы создать новое перемещение."}</p>
+          </div>
+        `;
+        return;
+      }
+
+      tableDiv.innerHTML = `
+        <table class="data-table" id="transfers-main-table">
+          <thead>
+            <tr>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${t('th_date')} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">Hujjat № <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Qaysi Ombordan (Manba)' : 'Из склада'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)">${CURRENT_LANG === 'uz' ? 'Qaysi Omborga (Maqsad)' : 'В склад'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)">Mahsulot / Tovar <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${t('th_quantity')} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="text-align: right;">Tannarxi ($) <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 7, true)" style="text-align: right;">Jami ($) <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 8, false)">Mas'ul <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 9, false)">${t('th_description')} <span class="sort-icon">↕</span></th>
+            </tr>
+            <tr class="filter-row">
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 №..." oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Manba...' : 'Из...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Maqsad...' : 'В...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tovar...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th></th>
+              <th></th>
+              <th></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Masul...' : 'Ответственный...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transfers.map(trf => `
+              <tr>
+                <td data-sort-value="${trf.date}">${formatDate(trf.date)}</td>
+                <td data-sort-value="${trf.transfer_number}"><code>${trf.transfer_number}</code></td>
+                <td data-sort-value="${trf.from_warehouse_name}"><span class="badge" style="background: #fef2f2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📤 ${tr(trf.from_warehouse_name)}</span></td>
+                <td data-sort-value="${trf.to_warehouse_name}"><span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📥 ${tr(trf.to_warehouse_name)}</span></td>
+                <td data-sort-value="${trf.material_name}"><strong>${trf.material_name}</strong> <span style="font-size: 11px; color: #64748b;">(${trf.material_code})</span></td>
+                <td data-sort-value="${trf.quantity}" style="text-align: right;"><strong>${formatNumber(trf.quantity, 0, 2)} ${tr(trf.unit)}</strong></td>
+                <td data-sort-value="${trf.unit_cost_usd}" style="text-align: right;">$${formatNumber(trf.unit_cost_usd, 2, 4)}</td>
+                <td data-sort-value="${trf.total_cost_usd}" style="text-align: right;"><strong style="color: #2563eb;">$${formatNumber(trf.total_cost_usd, 2, 2)}</strong></td>
+                <td data-sort-value="${trf.created_by || ''}">${trf.created_by || 'Admin'}</td>
+                <td data-sort-value="${trf.description || ''}">${trf.description || '-'}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    } catch (e) {
+      tableDiv.innerHTML = `<div style="padding: 30px; text-align: center; color: #ef4444;">${t('msg_error')} ${e.message}</div>`;
+    }
+  },
+
+  openTransferModal() {
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    showModal(
+      CURRENT_LANG === 'uz' ? "🔄 Ombordan Omborga Tovarlarni O'tkazish" : "🔄 Перемещение между складами",
+      `
+        <form id="stock-transfer-form">
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📤 ${CURRENT_LANG === 'uz' ? 'Qaysi Ombordan (Manba)' : 'Из какого склада'} *</label>
+              <select id="tr-from-wh" class="form-control" required onchange="OmborModule.populateMaterialsForTransfer()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+                <option value="1">1: Tayyor mahsulotlar</option>
+                <option value="2">2: Ishlab chiqarish materiallari</option>
+                <option value="3">3: Aralash ombor</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📥 ${CURRENT_LANG === 'uz' ? 'Qaysi Omborga (Maqsad)' : 'В какой склад'} *</label>
+              <select id="tr-to-wh" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+                <option value="2" selected>2: Ishlab chiqarish materiallari</option>
+                <option value="1">1: Tayyor mahsulotlar</option>
+                <option value="3">3: Aralash ombor</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📦 O'tkaziladigan Mahsulot / Tovar *</label>
+            <select id="tr-mat" class="form-control" required onchange="OmborModule.onTransferMaterialChange()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
+              <option value="">${t('msg_loading')}</option>
+            </select>
+          </div>
+
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📊 O'tkaziladigan Miqdor *</label>
+              <input type="text" id="tr-qty" class="form-control" placeholder="0" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600;" />
+              <div id="tr-qty-hint" style="margin-top: 4px; font-size: 12px; font-weight: 600; color: #2563eb;"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📅 ${t('th_date')} *</label>
+              <input type="date" id="tr-date" class="form-control" value="${todayStr}" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📝 ${t('th_description')}</label>
+            <textarea id="tr-desc" class="form-control" rows="2" placeholder="${CURRENT_LANG === 'uz' ? "Masalan: Liniyalararo material yetkazish yoki sexga o'tkazish..." : 'Описание...'}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"></textarea>
+          </div>
+        </form>
+      `,
+      async () => {
+        const fromWh = parseInt(document.getElementById("tr-from-wh").value);
+        const toWh = parseInt(document.getElementById("tr-to-wh").value);
+        const matId = parseInt(document.getElementById("tr-mat").value);
+        const qty = parseFormattedNumber(document.getElementById("tr-qty").value);
+        const d = document.getElementById("tr-date").value;
+        const desc = document.getElementById("tr-desc").value.trim();
+
+        if (fromWh === toWh) {
+          showToast(CURRENT_LANG === 'uz' ? "Manba ombor va Maqsad ombor bir xil bo'lishi mumkin emas!" : "Исходный и целевой склад ne mogut byt odnakovymi!", "warning");
+          return false;
+        }
+
+        if (!matId || isNaN(qty) || qty <= 0) {
+          showToast(CURRENT_LANG === 'uz' ? "Iltimos, o'tkaziladigan miqdorni to'g'ri kiriting!" : "Введите корректное количество!", "warning");
+          return false;
+        }
+
+        const selOpt = document.getElementById("tr-mat").selectedOptions[0];
+        const maxStock = selOpt ? parseFloat(selOpt.getAttribute("data-max") || "0") : 0;
+        if (qty > maxStock) {
+          showToast(CURRENT_LANG === 'uz' ? `Omborda yetarli qoldiq mavjud emas! Mavjud: ${formatNumber(maxStock, 0, 2)}` : `Недостаточно остатка на складе! Доступно: ${formatNumber(maxStock, 0, 2)}`, "error");
+          return false;
+        }
+
+        try {
+          await API.createStockTransfer({
+            from_warehouse_id: fromWh,
+            to_warehouse_id: toWh,
+            material_id: matId,
+            quantity: qty,
+            date: d,
+            description: desc
+          });
+          showToast(CURRENT_LANG === 'uz' ? "Tovarlar omborlar o'rtasida muvaffaqiyatli o'tkazildi!" : "Перемещение успешно выполнено!", "success");
+          if (OmborModule.currentView === "transfers") {
+            await OmborModule.loadTransfers();
+          } else {
+            await OmborModule.loadStock();
+          }
+          return true;
+        } catch (err) {
+          showToast(err.message, "error");
+          return false;
+        }
+      }
+    );
+
+    setTimeout(() => {
+      this.populateMaterialsForTransfer();
+      const qtyInput = document.getElementById("tr-qty");
+      const qtyHint = document.getElementById("tr-qty-hint");
+      setupLiveMoneyInput(qtyInput, null, () => "");
+    }, 50);
+  },
+
+  async populateMaterialsForTransfer() {
+    const fromWhSel = document.getElementById("tr-from-wh");
+    const matSel = document.getElementById("tr-mat");
+    if (!fromWhSel || !matSel) return;
+
+    const fromWhId = parseInt(fromWhSel.value);
+    matSel.innerHTML = `<option value="">${t('msg_loading')}</option>`;
+
+    try {
+      const stock = await API.getStockBalances(fromWhId, "", "");
+      const available = (stock || []).filter(s => s.quantity > 0);
+
+      if (available.length === 0) {
+        matSel.innerHTML = `<option value="">⚠️ Tanlangan omborda birorta ham tovar qoldig'i yo'q!</option>`;
+        return;
+      }
+
+      matSel.innerHTML = available.map(s => `
+        <option value="${s.material_id}" data-max="${s.quantity}" data-unit="${tr(s.unit)}">
+          ${s.material_code} - ${s.material_name} (${tr(s.material_category)}) — Mavjud: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}
+        </option>
+      `).join("");
+
+      this.onTransferMaterialChange();
+    } catch (e) {
+      matSel.innerHTML = `<option value="">Yuklashda xatolik</option>`;
+    }
+  },
+
+  onTransferMaterialChange() {
+    const matSel = document.getElementById("tr-mat");
+    const qtyHint = document.getElementById("tr-qty-hint");
+    if (!matSel || !qtyHint) return;
+
+    const opt = matSel.selectedOptions[0];
+    if (opt && opt.value) {
+      const maxStock = parseFloat(opt.getAttribute("data-max") || "0");
+      const unit = opt.getAttribute("data-unit") || "";
+      qtyHint.innerHTML = `📌 Manba ombordagi mavjud maksimal qoldiq: <strong style="color: #15803d;">${formatNumber(maxStock, 0, 2)} ${unit}</strong>`;
+    } else {
+      qtyHint.innerHTML = "";
+    }
+  },
+
   openAdjustModal() {
     if (CURRENT_ROLE !== "Admin") {
       showToast(t('msg_admin_only'), "error");
@@ -195,7 +464,7 @@ const OmborModule = {
         }
 
         try {
-          await API.adjustStock({
+          await API.adjustStockManual({
             warehouse_id: whId,
             material_id: matId,
             new_quantity: qty,

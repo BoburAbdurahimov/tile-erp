@@ -111,6 +111,32 @@ class StockAdjustmentRequest(BaseModel):
     new_quantity: float
     reason: str
 
+class StockTransferCreate(BaseModel):
+    from_warehouse_id: int
+    to_warehouse_id: int
+    material_id: int
+    quantity: float
+    date: Optional[dt_date] = None
+    description: Optional[str] = None
+
+class StockTransferResponse(BaseModel):
+    id: int
+    transfer_number: str
+    date: str
+    from_warehouse_id: int
+    from_warehouse_name: str
+    to_warehouse_id: int
+    to_warehouse_name: str
+    material_id: int
+    material_code: str
+    material_name: str
+    unit: str
+    quantity: float
+    unit_cost_usd: float
+    total_cost_usd: float
+    description: Optional[str] = None
+    created_by: Optional[str] = None
+
 # Kassa & FX
 class CashRegisterResponse(BaseModel):
     id: int

@@ -83,6 +83,26 @@ class StockItem(Base):
 
     __table_args__ = (UniqueConstraint('warehouse_id', 'material_id', name='_warehouse_material_uc'),)
 
+class StockTransfer(Base):
+    __tablename__ = "stock_transfers"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    transfer_number = Column(String(50), unique=True, nullable=False) # e.g. TR-20260902-001
+    date = Column(Date, default=datetime.utcnow().date, nullable=False)
+    from_warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    to_warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    unit_cost_usd = Column(Float, default=0.0)
+    total_cost_usd = Column(Float, default=0.0)
+    description = Column(String(255), nullable=True)
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    from_warehouse = relationship("Warehouse", foreign_keys=[from_warehouse_id])
+    to_warehouse = relationship("Warehouse", foreign_keys=[to_warehouse_id])
+    material = relationship("MDMMaterial")
+
 class CashRegister(Base):
     __tablename__ = "cash_registers"
     

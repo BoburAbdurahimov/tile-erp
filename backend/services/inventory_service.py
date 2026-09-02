@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from backend.models import StockItem, MDMMaterial, Warehouse, AuditLog
+from backend.models import StockItem, MDMMaterial, Warehouse, AuditLog, StockTransfer
 from backend.services.currency_service import get_exchange_rate_for_date, convert_amount
 
 def get_or_create_stock_item(db: Session, warehouse_id: int, material_id: int) -> StockItem:
@@ -150,3 +150,75 @@ def adjust_stock_manual(
     db.commit()
     db.refresh(stock_item)
     return stock_item
+
+def transfer_stock_between_warehouses(
+    db: Session,
+    from_warehouse_id: int,
+    to_warehouse_id: int,
+    material_id: int,
+    quantity: float,
+    trans_date: date,
+    description: str,
+    username: str
+) -> StockTransfer:
+    """
+    Transfers stock between two warehouses with strict validation and AVG cost preservation.
+    """
+    if from_warehouse_id == to_warehouse_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Chiqim ombori va Kirim ombori bir xil bo'lishi mumkin emas!"
+        )
+    if quantity <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="O'tkazilayotgan miqdor 0 dan katta bo'lishi kerak!"
+        )
+    
+    from_wh = db.query(Warehouse).filter(Warehouse.id == from_warehouse_id).first()
+    to_wh = db.query(Warehouse).filter(Warehouse.id == to_warehouse_id).first()
+    if not from_wh or not to_wh:
+        raise HTTPException(status_code=404, detail="Manba yoki maqsad ombor topilmadi!")
+
+    mat = db.query(MDMMaterial).filter(MDMMaterial.id == material_id).first()
+    if not mat:
+        raise HTTPException(status_code=404, detail="Mahsulot/Tovar topilmadi!")
+
+    # 1. Deduct from source warehouse (validates stock availability)
+    avg_cost_usd = deduct_stock(db, from_warehouse_id, material_id, quantity)
+    
+    # 2. Add to destination warehouse
+    add_stock_with_avg_valuation(db, to_warehouse_id, material_id, quantity, avg_cost_usd, "USD", trans_date)
+    
+    # 3. Create StockTransfer record
+    count = db.query(StockTransfer).count() + 1
+    today_str = trans_date.strftime("%Y%m%d")
+    tr_num = f"TR-{today_str}-{count:03d}"
+    
+    transfer = StockTransfer(
+        transfer_number=tr_num,
+        date=trans_date,
+        from_warehouse_id=from_warehouse_id,
+        to_warehouse_id=to_warehouse_id,
+        material_id=material_id,
+        quantity=quantity,
+        unit_cost_usd=avg_cost_usd,
+        total_cost_usd=round(avg_cost_usd * quantity, 2),
+        description=description,
+        created_by=username
+    )
+    db.add(transfer)
+    
+    # Create Audit Log
+    log = AuditLog(
+        username=username,
+        action="TRANSFER_STOCK",
+        module="Ombor",
+        entity_id=tr_num,
+        details=f"O'tkazma: {from_wh.name} -> {to_wh.name}, Tovar: {mat.name}, Miqdor: {quantity} {mat.unit}"
+    )
+    db.add(log)
+    
+    db.commit()
+    db.refresh(transfer)
+    return transfer

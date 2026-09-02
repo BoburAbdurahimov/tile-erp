@@ -130,6 +130,8 @@ const API = {
     return apiRequest(url);
   },
   adjustStockManual: (data) => apiRequest("/ombor/adjust-manual", "POST", data),
+  createStockTransfer: (data) => apiRequest("/ombor/transfer", "POST", data),
+  getStockTransfers: () => apiRequest("/ombor/transfers"),
   
   // Kassa
   getCashRegisters: (targetDate) => {
