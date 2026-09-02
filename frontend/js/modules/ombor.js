@@ -170,15 +170,15 @@ const OmborModule = {
                   <td data-sort-value="${s.material_name}">${s.material_name}</td>
                   <td data-sort-value="${s.material_category}"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${tr(s.material_category)}</span></td>
                   <td data-sort-value="${s.quantity}" style="text-align: right;">
-                    <strong style="color: ${isLowStock ? '#ef4444' : 'inherit'};">
+                    <strong style="color: #1e293b;">
                       ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}
                     </strong>
-                    ${isLowStock ? '<span class="badge" style="background: #fef2f2; color: #dc2626; margin-left: 4px; padding: 2px 6px;">Kam qoldiq!</span>' : ''}
+                    ${isLowStock ? `<div style="color: #ef4444; font-size: 11px; font-weight: 600; margin-top: 2px;">${CURRENT_LANG === 'uz' ? 'Kam qoldiq!' : 'Мало!'}</div>` : ''}
                   </td>
-                  <td data-sort-value="${s.avg_cost_usd}" style="text-align: right;">$${formatNumber(s.avg_cost_usd, 2, 4)}</td>
-                  <td data-sort-value="${s.avg_cost_uzs}" style="text-align: right;">${formatNumber(s.avg_cost_uzs, 0, 2)} UZS</td>
-                  <td data-sort-value="${s.total_cost_usd}" style="text-align: right;"><strong>$${formatNumber(s.total_cost_usd, 2, 2)}</strong></td>
-                  <td data-sort-value="${s.total_cost_uzs}" style="text-align: right;">${formatNumber(Math.round(s.total_cost_uzs), 0, 2)} UZS</td>
+                  <td data-sort-value="${s.avg_cost_usd}" style="text-align: right;">${formatNumber(s.avg_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${s.avg_cost_uzs}" style="text-align: right;">${formatNumber(s.avg_cost_uzs, 2, 2)}</td>
+                  <td data-sort-value="${s.total_cost_usd}" style="text-align: right;"><strong>${formatNumber(s.total_cost_usd, 2, 2)}</strong></td>
+                  <td data-sort-value="${s.total_cost_uzs}" style="text-align: right;">${formatNumber(s.total_cost_uzs, 2, 2)}</td>
                 </tr>
               `;
             }).join("")}
@@ -186,8 +186,8 @@ const OmborModule = {
           <tfoot>
             <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #e2e8f0;">
               <td colspan="7" style="text-align: right; padding: 14px 16px; font-size: 14px;">${CURRENT_LANG === 'uz' ? 'JAMI OMBOR QIYMATI:' : 'ИТОГО СТОИМОСТЬ СКЛАДА:'}</td>
-              <td style="color: #10b981; font-size: 16px; text-align: right; padding: 14px 16px;">$${formatNumber(grandTotalUsd, 2, 2)}</td>
-              <td style="color: #2563eb; font-size: 15px; text-align: right; padding: 14px 16px;">${formatNumber(Math.round(grandTotalUzs), 0, 2)} UZS</td>
+              <td style="color: #10b981; font-size: 16px; text-align: right; padding: 14px 16px;">${formatNumber(grandTotalUsd, 2, 2)}</td>
+              <td style="color: #2563eb; font-size: 15px; text-align: right; padding: 14px 16px;">${formatNumber(grandTotalUzs, 2, 2)}</td>
             </tr>
           </tfoot>
         </table>
@@ -253,8 +253,8 @@ const OmborModule = {
                 <td data-sort-value="${trf.to_warehouse_name}"><span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📥 ${tr(trf.to_warehouse_name)}</span></td>
                 <td data-sort-value="${trf.material_name}"><strong>${trf.material_name}</strong> <span style="font-size: 11px; color: #64748b;">(${trf.material_code})</span></td>
                 <td data-sort-value="${trf.quantity}" style="text-align: right;"><strong>${formatNumber(trf.quantity, 0, 2)} ${tr(trf.unit)}</strong></td>
-                <td data-sort-value="${trf.unit_cost_usd}" style="text-align: right;">$${formatNumber(trf.unit_cost_usd, 2, 4)}</td>
-                <td data-sort-value="${trf.total_cost_usd}" style="text-align: right;"><strong style="color: #2563eb;">$${formatNumber(trf.total_cost_usd, 2, 2)}</strong></td>
+                <td data-sort-value="${trf.unit_cost_usd}" style="text-align: right;">${formatNumber(trf.unit_cost_usd, 2, 2)}</td>
+                <td data-sort-value="${trf.total_cost_usd}" style="text-align: right;"><strong style="color: #2563eb;">${formatNumber(trf.total_cost_usd, 2, 2)}</strong></td>
                 <td data-sort-value="${trf.created_by || ''}">${trf.created_by || 'Admin'}</td>
                 <td data-sort-value="${trf.description || ''}">${trf.description || '-'}</td>
               </tr>
