@@ -737,11 +737,17 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
       const cell = cells[idx];
       let val = "";
       if (cell) {
-        val = cell.getAttribute("data-sort-value") !== null 
-          ? cell.getAttribute("data-sort-value") 
-          : (cell.innerText || cell.textContent).trim().replace(/[\n\r\t]+/g, " ").replace(/\s{2,}/g, " ");
+        const divs = Array.from(cell.querySelectorAll("div"));
+        if (divs.length > 0) {
+          // Multi-item cell (e.g. list of products, quantities, prices)
+          val = divs.map(d => escapeHtml((d.innerText || d.textContent).trim())).join('<br style="mso-data-placement:same-cell;"/>');
+        } else {
+          // Single-item cell
+          const cleanText = (cell.innerText || cell.textContent).trim();
+          val = escapeHtml(cleanText);
+        }
       }
-      tableHtml += `<td style="padding: 5px 8px;">${escapeHtml(val)}</td>`;
+      tableHtml += `<td style="padding: 6px 10px; vertical-align: top;">${val}</td>`;
     });
     tableHtml += "</tr>";
   });
