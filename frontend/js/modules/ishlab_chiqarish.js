@@ -338,9 +338,9 @@ const ProductionModule = {
 
         const consumed = [];
         const rows = document.querySelectorAll("#consumed-rows-body tr");
-        rows.forEach(tr => {
-          const matInput = tr.querySelector(".row-mat-input") ? tr.querySelector(".row-mat-input").value.trim() : "";
-          const cQty = parseFloat(tr.querySelector(".row-qty").value);
+        rows.forEach(rowEl => {
+          const matInput = rowEl.querySelector(".row-mat-input") ? rowEl.querySelector(".row-mat-input").value.trim() : "";
+          const cQty = parseFloat(rowEl.querySelector(".row-qty").value);
           const matchedRaw = (ProductionModule.wh2StockItems || []).find(s => `${s.material_code} - ${s.material_name} (${tr(s.unit)})`.toLowerCase() === matInput.toLowerCase() || s.material_code.toLowerCase() === matInput.toLowerCase());
           if (matchedRaw && cQty > 0) {
             consumed.push({ material_id: matchedRaw.material_id, warehouse_id: 2, quantity: cQty });
@@ -476,9 +476,9 @@ const ProductionModule = {
 
         const items = [];
         const rows = document.querySelectorAll("#le-items-body tr");
-        rows.forEach(tr => {
-          const matInput = tr.querySelector(".le-mat-input") ? tr.querySelector(".le-mat-input").value.trim() : "";
-          const qty = parseFloat(tr.querySelector(".le-qty") ? tr.querySelector(".le-qty").value : 0);
+        rows.forEach(rowEl => {
+          const matInput = rowEl.querySelector(".le-mat-input") ? rowEl.querySelector(".le-mat-input").value.trim() : "";
+          const qty = parseFloat(rowEl.querySelector(".le-qty") ? rowEl.querySelector(".le-qty").value : 0);
           const matchedMat = availableStock.find(s => `${s.material_code} - ${s.material_name} (${tr(s.unit)})`.toLowerCase() === matInput.toLowerCase() || s.material_code.toLowerCase() === matInput.toLowerCase());
           if (matchedMat && qty > 0) {
             items.push({ material_id: matchedMat.material_id, quantity: qty });
