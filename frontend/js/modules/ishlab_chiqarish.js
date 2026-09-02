@@ -297,8 +297,7 @@ const ProductionModule = {
     const availableInStock = this.rawMaterialsList.filter(m => (stockMap[m.id] || 0) > 0);
     return availableInStock.map(m => ({
       ...m,
-      stockQty: stockMap[m.id] || 0,
-      fullStr: `${m.code} - ${m.name} (${tr(m.unit)}) — Mavjud: ${formatNumber(stockMap[m.id] || 0, 0, 2)} ${tr(m.unit)}`
+      stockQty: stockMap[m.id] || 0
     }));
   },
 
@@ -317,7 +316,7 @@ const ProductionModule = {
         rowDatalist.innerHTML = `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>`;
       } else {
         rowDatalist.innerHTML = mats.map(m => `
-          <option value="${m.fullStr}" data-id="${m.id}">${m.code} - ${m.name}</option>
+          <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
         `).join("");
       }
     }
@@ -364,7 +363,7 @@ const ProductionModule = {
     if (code) {
       const defaultMat = mats.find(m => m.code === code) || (this.rawMaterialsList || []).find(m => m.code === code);
       if (defaultMat) {
-        defaultMatText = `${defaultMat.code} - ${defaultMat.name} (${tr(defaultMat.unit)}) — Mavjud: ${formatNumber(defaultMat.stockQty || 0, 0, 2)} ${tr(defaultMat.unit)}`;
+        defaultMatText = `${defaultMat.code} - ${defaultMat.name} (${tr(defaultMat.unit)})`;
       }
     }
 
@@ -375,7 +374,7 @@ const ProductionModule = {
         <datalist id="${rowId}_datalist" class="row-mat-datalist">
           ${mats.length === 0 
             ? `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>` 
-            : mats.map(m => `<option value="${m.fullStr}" data-id="${m.id}">${m.code} - ${m.name}</option>`).join("")
+            : mats.map(m => `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>`).join("")
           }
         </datalist>
         <input 
