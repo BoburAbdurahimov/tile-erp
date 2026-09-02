@@ -246,12 +246,12 @@ const ProductionModule = {
         const consumed = [];
         const rows = document.querySelectorAll("#consumed-rows-body tr");
         rows.forEach(tr => {
-          const matInput = tr.querySelector(".row-mat-input").value.trim();
-          const whId = parseInt(tr.querySelector(".row-wh").value) || 2;
+          const matSelect = tr.querySelector(".row-mat-select");
+          const matId = matSelect ? parseInt(matSelect.value, 10) : 0;
+          const whId = parseInt(tr.querySelector(".row-wh").value, 10) || 2;
           const cQty = parseFloat(tr.querySelector(".row-qty").value);
-          const matchedRaw = ProductionModule.findRawMaterialByInput(matInput);
-          if (matchedRaw && whId && cQty > 0) {
-            consumed.push({ material_id: matchedRaw.id, warehouse_id: whId, quantity: cQty });
+          if (matId && whId && cQty > 0) {
+            consumed.push({ material_id: matId, warehouse_id: whId, quantity: cQty });
           }
         });
 
@@ -305,27 +305,21 @@ const ProductionModule = {
     const tr = whSelect.closest("tr");
     if (!tr) return;
     const whId = parseInt(whSelect.value, 10) || 2;
-    const rowMatInput = tr.querySelector(".row-mat-input");
-    const rowDatalist = tr.querySelector(".row-mat-datalist");
+    const rowMatSelect = tr.querySelector(".row-mat-select");
     
     const mats = this.getMaterialsForWarehouse(whId);
     
-    // Update datalist options and rebind list attribute to force Chrome cache refresh
-    if (rowDatalist && rowMatInput) {
-      const newDlId = 'c_dl_' + Math.random().toString(36).substr(2, 9);
-      rowDatalist.id = newDlId;
-      rowMatInput.setAttribute('list', newDlId);
-
+    if (rowMatSelect) {
       if (mats.length === 0) {
-        rowDatalist.innerHTML = `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>`;
+        rowMatSelect.innerHTML = `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>`;
       } else {
-        rowDatalist.innerHTML = mats.map(m => `
-          <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
-        `).join("");
+        rowMatSelect.innerHTML = `<option value="">🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo yoki materialni tanlang...' : 'Выберите сырье или материал...'}</option>` +
+          mats.map(m => `
+            <option value="${m.id}">${m.code} - ${m.name} (${tr(m.unit)}) — Mavjud: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
+          `).join("");
       }
-
-      rowMatInput.value = "";
-      rowMatInput.focus();
+      rowMatSelect.value = "";
+      rowMatSelect.focus();
     }
   },
 
@@ -357,36 +351,25 @@ const ProductionModule = {
     const code = (typeof defaultCode === 'string') ? defaultCode : null;
     const qty = (typeof defaultQty === 'number' || (typeof defaultQty === 'string' && defaultQty !== '')) ? defaultQty : '';
 
-    const rowId = 'c_row_' + Math.random().toString(36).substr(2, 9);
     const mats = this.getMaterialsForWarehouse(whId);
 
-    let defaultMatText = "";
+    let selectedId = "";
     if (code) {
-      const defaultMat = mats.find(m => m.code === code) || (this.rawMaterialsList || []).find(m => m.code === code);
-      if (defaultMat) {
-        defaultMatText = `${defaultMat.code} - ${defaultMat.name} (${tr(defaultMat.unit)})`;
-      }
+      const defaultMat = (this.rawMaterialsList || []).find(m => m.code === code);
+      if (defaultMat) selectedId = defaultMat.id;
     }
 
     const trEl = document.createElement("tr");
     trEl.style.borderBottom = "1px solid #f1f5f9";
     trEl.innerHTML = `
       <td style="padding: 6px 8px;">
-        <datalist id="${rowId}_datalist" class="row-mat-datalist">
+        <select class="form-control row-mat-select" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" required>
           ${mats.length === 0 
-            ? `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>` 
-            : mats.map(m => `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>`).join("")
+            ? `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>` 
+            : `<option value="">🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo yoki materialni tanlang...' : 'Выберите сырье или материал...'}</option>` +
+              mats.map(m => `<option value="${m.id}" ${selectedId === m.id ? 'selected' : ''}>${m.code} - ${m.name} (${tr(m.unit)}) — Mavjud: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>`).join("")
           }
-        </datalist>
-        <input 
-          type="text" 
-          list="${rowId}_datalist" 
-          class="form-control row-mat-input" 
-          placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
-          value="${defaultMatText}" 
-          style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
-          required 
-        />
+        </select>
       </td>
       <td style="padding: 6px 8px;">
         <select class="form-control row-wh" onchange="ProductionModule.onWarehouseChange(this)" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
