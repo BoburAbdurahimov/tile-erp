@@ -73,9 +73,7 @@ const MdmModule = {
                   <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)" style="padding: 12px 14px;">${t('th_name')} <span class="sort-icon">↕</span></th>
                   <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)" style="padding: 12px 14px;">${t('th_category')} <span class="sort-icon">↕</span></th>
                   <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)" style="padding: 12px 14px;">${t('th_unit')} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="padding: 12px 14px; text-align: right;">${CURRENT_LANG === 'uz' ? 'Min Qoldiq' : 'Мин. Остаток'} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="padding: 12px 14px; text-align: right;">${CURRENT_LANG === 'uz' ? 'AVG Tannarx ($)' : 'AVG Себестоимость ($)'} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, false)" style="padding: 12px 14px;">${t('th_status')} <span class="sort-icon">↕</span></th>
+                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)" style="padding: 12px 14px;">${t('th_status')} <span class="sort-icon">↕</span></th>
                   <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
                 </tr>
                 <tr class="filter-row">
@@ -83,9 +81,7 @@ const MdmModule = {
                   <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Birlik...' : 'Ед...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th></th>
-                  <th></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="6" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th></th>
                 </tr>
               </thead>
@@ -96,8 +92,6 @@ const MdmModule = {
                     <td data-sort-value="${m.name}" style="padding: 12px 14px;"><strong>${m.name}</strong></td>
                     <td data-sort-value="${m.category}" style="padding: 12px 14px;"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(m.category)}</span></td>
                     <td data-sort-value="${m.unit}" style="padding: 12px 14px;">${tr(m.unit)}</td>
-                    <td data-sort-value="${m.min_stock || 0}" style="padding: 12px 14px; text-align: right;">${m.min_stock || 0} ${tr(m.unit)}</td>
-                    <td data-sort-value="${m.current_avg_price_usd || 0}" style="padding: 12px 14px; text-align: right;">$${(m.current_avg_price_usd || 0).toFixed(4)}</td>
                     <td data-sort-value="${m.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${m.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${m.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(m.is_archived ? 'Arxiv' : 'Faol')}</span></td>
                     <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.editMaterial(${m.id})" title="${t('btn_edit')}">✏️</button>
