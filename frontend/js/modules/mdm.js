@@ -239,9 +239,10 @@ const MdmModule = {
                 <select id="mat-unit" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
                   <option value="kg">${CURRENT_LANG === 'uz' ? 'kg' : 'кг'}</option>
                   <option value="m2">${CURRENT_LANG === 'uz' ? 'm²' : 'м²'}</option>
-                  <option value="dona">${CURRENT_LANG === 'uz' ? 'dona' : 'шт.'}</option>
-                  <option value="litr">${CURRENT_LANG === 'uz' ? 'litr' : 'литр'}</option>
-                  <option value="tonna">${CURRENT_LANG === 'uz' ? 'tonna' : 'тонна'}</option>
+                  <option value="dona">${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</option>
+                  <option value="l">${CURRENT_LANG === 'uz' ? 'l' : 'л'}</option>
+                  <option value="t">${CURRENT_LANG === 'uz' ? 't' : 'т'}</option>
+                  <option value="rul">${CURRENT_LANG === 'uz' ? 'rul' : 'рул'}</option>
                 </select>
               </div>
             </div>
@@ -435,9 +436,10 @@ const MdmModule = {
                 <select id="edit-mat-unit" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
                   <option value="kg" ${mat.unit === 'kg' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'kg' : 'кг'}</option>
                   <option value="m2" ${mat.unit === 'm2' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'm²' : 'м²'}</option>
-                  <option value="dona" ${mat.unit === 'dona' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'dona' : 'шт.'}</option>
-                  <option value="litr" ${mat.unit === 'litr' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'litr' : 'литр'}</option>
-                  <option value="tonna" ${mat.unit === 'tonna' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'tonna' : 'тонна'}</option>
+                  <option value="dona" ${mat.unit === 'dona' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</option>
+                  <option value="l" ${mat.unit === 'l' || mat.unit === 'litr' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'l' : 'л'}</option>
+                  <option value="t" ${mat.unit === 't' || mat.unit === 'tonna' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 't' : 'т'}</option>
+                  <option value="rul" ${mat.unit === 'rul' || mat.unit === 'ru' || mat.unit === 'рулон' ? 'selected' : ''}>${CURRENT_LANG === 'uz' ? 'rul' : 'рул'}</option>
                 </select>
               </div>
             </div>
