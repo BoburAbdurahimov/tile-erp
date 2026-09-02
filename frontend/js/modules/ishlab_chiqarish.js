@@ -286,26 +286,36 @@ const ProductionModule = {
       return [];
     }
 
+    const stockMap = {};
+    (this.allStockBalances || []).forEach(s => {
+      if (s.warehouse_id === wid && s.quantity > 0) {
+        stockMap[s.material_id] = s.quantity;
+      }
+    });
+
+    let categoryFiltered = [];
     if (wid === 3) {
-      // Warehouse 3: Aralash ombor (Yordamchi, Ehtiyot qism)
-      const wh3Mats = this.rawMaterialsList.filter(m => 
+      categoryFiltered = this.rawMaterialsList.filter(m => 
         m.category === 'Yordamchi' || 
         m.category === 'Ehtiyot qism' || 
         m.code.startsWith('Box') || 
         m.code.startsWith('Blt')
       );
-      return wh3Mats.length > 0 ? wh3Mats : this.rawMaterialsList;
     } else if (wid === 2) {
-      // Warehouse 2: Ishlab chiqarish materiallari (Xomashyo / Siryo)
-      const wh2Mats = this.rawMaterialsList.filter(m => 
+      categoryFiltered = this.rawMaterialsList.filter(m => 
         m.category === 'Xomashyo' || 
         m.category === 'Siryo' ||
         ['Smt60', 'Qum01', 'Kao01', 'Fld01', 'Glz01', 'Pgm01'].includes(m.code)
       );
-      return wh2Mats.length > 0 ? wh2Mats : this.rawMaterialsList;
     }
+    if (categoryFiltered.length === 0) categoryFiltered = this.rawMaterialsList;
 
-    return this.rawMaterialsList;
+    // Filter ONLY materials that have quantity > 0 in warehouse wid!
+    const availableInStock = categoryFiltered.filter(m => (stockMap[m.id] || 0) > 0);
+    return availableInStock.map(m => ({
+      ...m,
+      stockQty: stockMap[m.id] || 0
+    }));
   },
 
   onWarehouseChange(whSelect) {
@@ -319,9 +329,13 @@ const ProductionModule = {
     
     // Update datalist options
     if (rowDatalist) {
-      rowDatalist.innerHTML = mats.map(m => `
-        <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${m.code} - ${m.name}</option>
-      `).join("");
+      if (mats.length === 0) {
+        rowDatalist.innerHTML = `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>`;
+      } else {
+        rowDatalist.innerHTML = mats.map(m => `
+          <option value="${m.code} - ${m.name} (${tr(m.unit)}) — Mavjud: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}" data-id="${m.id}">${m.code} - ${m.name}</option>
+        `).join("");
+      }
     }
 
     // Clear input so user chooses from newly selected warehouse

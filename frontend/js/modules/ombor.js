@@ -109,7 +109,8 @@ const OmborModule = {
     if (!tableDiv) return;
 
     try {
-      const stock = await API.getStockBalances(this.currentWarehouseId, "", "");
+      const rawStock = await API.getStockBalances(this.currentWarehouseId, "", "");
+      const stock = (rawStock || []).filter(s => s.quantity > 0);
       
       let grandTotalUsd = 0;
       let grandTotalUzs = 0;
