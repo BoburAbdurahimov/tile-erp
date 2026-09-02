@@ -438,10 +438,9 @@ const OmborModule = {
         </option>
       `).join("");
 
-      if (this.transferMaterialsList.length > 0) {
-        inputEl.value = this.transferMaterialsList[0].fullStr;
-        this.onTransferMaterialInputChange();
-      }
+      inputEl.value = "";
+      if (idEl) idEl.value = "";
+      if (qtyHint) qtyHint.innerHTML = "";
     } catch (e) {
       inputEl.placeholder = "Yuklashda xatolik";
     }
