@@ -737,7 +737,7 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
       const cell = cells[idx];
       let val = "";
       if (cell) {
-        const divs = Array.from(cell.querySelectorAll("div"));
+        const divs = Array.from(cell.querySelectorAll("div")).filter(d => d.querySelectorAll("div").length === 0);
         if (divs.length > 0) {
           // Multi-item cell (e.g. list of products, quantities, prices)
           val = divs.map(d => escapeHtml((d.innerText || d.textContent).trim())).join('<br style="mso-data-placement:same-cell;"/>');
