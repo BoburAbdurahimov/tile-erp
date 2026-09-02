@@ -294,10 +294,20 @@ const OmborModule = {
           </div>
 
           <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📦 O'tkaziladigan Mahsulot / Tovar *</label>
-            <select id="tr-mat" class="form-control" required onchange="OmborModule.onTransferMaterialChange()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-              <option value="">${t('msg_loading')}</option>
-            </select>
+            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📦 O'tkaziladigan Mahsulot / Tovar (Yozish yoki tanlash) *</label>
+            <datalist id="tr-mat-datalist"></datalist>
+            <input 
+              type="text" 
+              id="tr-mat-input" 
+              list="tr-mat-datalist" 
+              class="form-control" 
+              placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tovar kodi yoki nomini yozing...' : 'Поиск товара по коду или наименованию...'}" 
+              oninput="OmborModule.onTransferMaterialInputChange()" 
+              onchange="OmborModule.onTransferMaterialInputChange()"
+              style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"
+              required 
+            />
+            <input type="hidden" id="tr-mat-id" value="" />
           </div>
 
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
@@ -321,7 +331,7 @@ const OmborModule = {
       async () => {
         const fromWh = parseInt(document.getElementById("tr-from-wh").value);
         const toWh = parseInt(document.getElementById("tr-to-wh").value);
-        const matId = parseInt(document.getElementById("tr-mat").value);
+        const matId = parseInt(document.getElementById("tr-mat-id").value);
         const qty = parseFormattedNumber(document.getElementById("tr-qty").value);
         const d = document.getElementById("tr-date").value;
         const desc = document.getElementById("tr-desc").value.trim();
@@ -331,13 +341,18 @@ const OmborModule = {
           return false;
         }
 
-        if (!matId || isNaN(qty) || qty <= 0) {
+        if (!matId) {
+          showToast(CURRENT_LANG === 'uz' ? "Iltimos, o'tkaziladigan tovarni ro'yxatdan tanlang yoki nomini yozing!" : "Выберите товар из списка!", "warning");
+          return false;
+        }
+
+        if (isNaN(qty) || qty <= 0) {
           showToast(CURRENT_LANG === 'uz' ? "Iltimos, o'tkaziladigan miqdorni to'g'ri kiriting!" : "Введите корректное количество!", "warning");
           return false;
         }
 
-        const selOpt = document.getElementById("tr-mat").selectedOptions[0];
-        const maxStock = selOpt ? parseFloat(selOpt.getAttribute("data-max") || "0") : 0;
+        const matchedMat = (OmborModule.transferMaterialsList || []).find(m => m.id === matId);
+        const maxStock = matchedMat ? matchedMat.quantity : 0;
         if (qty > maxStock) {
           showToast(CURRENT_LANG === 'uz' ? `Omborda yetarli qoldiq mavjud emas! Mavjud: ${formatNumber(maxStock, 0, 2)}` : `Недостаточно остатка на складе! Доступно: ${formatNumber(maxStock, 0, 2)}`, "error");
           return false;
@@ -368,18 +383,25 @@ const OmborModule = {
     setTimeout(() => {
       this.populateMaterialsForTransfer();
       const qtyInput = document.getElementById("tr-qty");
-      const qtyHint = document.getElementById("tr-qty-hint");
       setupLiveMoneyInput(qtyInput, null, () => "");
     }, 50);
   },
 
+  transferMaterialsList: [],
+
   async populateMaterialsForTransfer() {
     const fromWhSel = document.getElementById("tr-from-wh");
-    const matSel = document.getElementById("tr-mat");
-    if (!fromWhSel || !matSel) return;
+    const datalist = document.getElementById("tr-mat-datalist");
+    const inputEl = document.getElementById("tr-mat-input");
+    const idEl = document.getElementById("tr-mat-id");
+    const qtyHint = document.getElementById("tr-qty-hint");
+    if (!fromWhSel || !datalist || !inputEl) return;
 
     const fromWhId = parseInt(fromWhSel.value);
-    matSel.innerHTML = `<option value="">${t('msg_loading')}</option>`;
+    datalist.innerHTML = "";
+    inputEl.value = "";
+    if (idEl) idEl.value = "";
+    if (qtyHint) qtyHint.innerHTML = "";
 
     try {
       const [materials, stock] = await Promise.all([
@@ -393,40 +415,68 @@ const OmborModule = {
       });
 
       if (!materials || materials.length === 0) {
-        matSel.innerHTML = `<option value="">⚠️ Birorta ham tovar topilmadi</option>`;
+        inputEl.placeholder = "⚠️ Birorta ham tovar topilmadi";
         return;
       }
 
       // Sort materials: items with positive stock first, then others
       const sorted = materials.slice().sort((a, b) => (stockMap[b.id] || 0) - (stockMap[a.id] || 0));
 
-      matSel.innerHTML = sorted.map(m => {
-        const qty = stockMap[m.id] || 0;
-        return `
-          <option value="${m.id}" data-max="${qty}" data-unit="${tr(m.unit)}">
-            ${m.code} - ${m.name} (${tr(m.category)}) — Mavjud: ${formatNumber(qty, 0, 2)} ${tr(m.unit)}
-          </option>
-        `;
-      }).join("");
+      this.transferMaterialsList = sorted.map(m => ({
+        id: m.id,
+        code: m.code,
+        name: m.name,
+        category: m.category,
+        unit: m.unit,
+        quantity: stockMap[m.id] || 0,
+        fullStr: `${m.code} - ${m.name} (${tr(m.category)}) — Mavjud: ${formatNumber(stockMap[m.id] || 0, 0, 2)} ${tr(m.unit)}`
+      }));
 
-      this.onTransferMaterialChange();
+      datalist.innerHTML = this.transferMaterialsList.map(m => `
+        <option value="${m.fullStr}">
+          ${m.code} - ${m.name}
+        </option>
+      `).join("");
+
+      if (this.transferMaterialsList.length > 0) {
+        inputEl.value = this.transferMaterialsList[0].fullStr;
+        this.onTransferMaterialInputChange();
+      }
     } catch (e) {
-      matSel.innerHTML = `<option value="">Yuklashda xatolik</option>`;
+      inputEl.placeholder = "Yuklashda xatolik";
     }
   },
 
-  onTransferMaterialChange() {
-    const matSel = document.getElementById("tr-mat");
+  onTransferMaterialInputChange() {
+    const inputEl = document.getElementById("tr-mat-input");
+    const idEl = document.getElementById("tr-mat-id");
     const qtyHint = document.getElementById("tr-qty-hint");
-    if (!matSel || !qtyHint) return;
+    if (!inputEl || !idEl || !qtyHint) return;
 
-    const opt = matSel.selectedOptions[0];
-    if (opt && opt.value) {
-      const maxStock = parseFloat(opt.getAttribute("data-max") || "0");
-      const unit = opt.getAttribute("data-unit") || "";
-      qtyHint.innerHTML = `📌 Manba ombordagi mavjud maksimal qoldiq: <strong style="color: #15803d;">${formatNumber(maxStock, 0, 2)} ${unit}</strong>`;
-    } else {
+    const val = inputEl.value.trim().toLowerCase();
+    if (!val) {
+      idEl.value = "";
       qtyHint.innerHTML = "";
+      return;
+    }
+
+    const list = this.transferMaterialsList || [];
+    let matched = list.find(m => m.fullStr.toLowerCase() === val);
+    if (!matched) {
+      matched = list.find(m => 
+        m.code.toLowerCase() === val || 
+        m.name.toLowerCase() === val || 
+        `${m.code} - ${m.name}`.toLowerCase() === val ||
+        m.fullStr.toLowerCase().includes(val)
+      );
+    }
+
+    if (matched) {
+      idEl.value = matched.id;
+      qtyHint.innerHTML = `📌 Manba ombordagi mavjud maksimal qoldiq: <strong style="color: #15803d;">${formatNumber(matched.quantity, 0, 2)} ${tr(matched.unit)}</strong>`;
+    } else {
+      idEl.value = "";
+      qtyHint.innerHTML = `<span style="color: #dc2626;">⚠️ Topilmadi! Iltimos, ro'yxatdan tovar tanlang.</span>`;
     }
   },
 
