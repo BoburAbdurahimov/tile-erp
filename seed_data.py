@@ -171,6 +171,189 @@ def seed_database():
         db.commit()
         logger.info("Seeded 10 Clients & 10 Suppliers into MDM.")
 
+    # 8. SEED 57 EMPLOYEES & HR SALARY DATA FOR ALL 6 DEPARTMENTS (5 IDENTICAL TILE FACTORY LINES + ADMIN)
+    if db.query(Employee).count() < 50:
+        db.query(WorkEntry).delete()
+        db.query(AttendanceEntry).delete()
+        db.query(MonthlySalaryCalculation).delete()
+        db.query(JobType).delete()
+        db.query(Employee).delete()
+        db.commit()
+
+        # A. Job Types (Ish turlari va narxlar)
+        job_types = [
+            JobType(name="Pressovka va Formovka (30x30)", unit_of_measure="dona", price_per_unit=15.0),
+            JobType(name="Pressovka va Formovka (60x60)", unit_of_measure="dona", price_per_unit=25.0),
+            JobType(name="Pressovka va Formovka (60x120)", unit_of_measure="dona", price_per_unit=45.0),
+            JobType(name="Pressovka va Formovka (40x40)", unit_of_measure="dona", price_per_unit=20.0),
+            JobType(name="Pressovka va Formovka (80x80)", unit_of_measure="dona", price_per_unit=50.0),
+            JobType(name="Glazurlash va Linya Bo'yoq", unit_of_measure="dona", price_per_unit=12.0),
+            JobType(name="Pechda Kuydirish Nazorati", unit_of_measure="dona", price_per_unit=10.0),
+            JobType(name="Saralash va Sifat Nazorati", unit_of_measure="dona", price_per_unit=8.0),
+            JobType(name="Qadoqlash va Poddon Yig'ish", unit_of_measure="poddon", price_per_unit=3500.0)
+        ]
+        db.add_all(job_types)
+        db.commit()
+        jt_map = {jt.name: jt for jt in db.query(JobType).all()}
+
+        # B. 57 Employees
+        raw_employees = [
+            # --- Ma'muriyat & Ofis (7 xodim) ---
+            ("Boburov Shaxzodbek", "Ma'muriyat", "Bosh Direktor", "fixed", 25000000.0),
+            ("Abdurahimov Bobur", "Ma'muriyat", "Texnik Direktor", "fixed", 20000000.0),
+            ("Ismoilova Feruza", "Ma'muriyat", "Bosh Buxgalter", "fixed", 18000000.0),
+            ("Karimov Sardor", "Ma'muriyat", "Moliya Menejeri", "fixed", 15000000.0),
+            ("Mirzayeva Malika", "Ma'muriyat", "HR va Xodimlar Menejeri", "fixed", 12000000.0),
+            ("Narzullayev Otabek", "Ma'muriyat", "Sotuv Boshlig'i", "fixed", 14000000.0),
+            ("Xoliqov Jasur", "Ma'muriyat", "IT va Tizim Admini", "fixed", 13000000.0),
+
+            # --- 1-Liniya (30x30 Standart Zavod) (10 xodim) ---
+            ("Axmedov Rustam", "1-Liniya", "Zavod Liniya Masteri", "fixed", 10000000.0),
+            ("Yusupov Botir", "1-Liniya", "Press Operatori", "piecework", 0.0),
+            ("Raximov Sherzod", "1-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Zokirov Anvar", "1-Liniya", "Glazur Master", "piecework", 0.0),
+            ("Ergashev Umid", "1-Liniya", "Pech Operatori", "piecework", 0.0),
+            ("Toshmatov Dilshod", "1-Liniya", "Kafel Saralovchi", "piecework", 0.0),
+            ("Qodirov Baxodir", "1-Liniya", "Qadoqlovchi", "piecework", 0.0),
+            ("Sulaymonov Alisher", "1-Liniya", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("Meliyev Javoxir", "1-Liniya", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Umarov Sanjar", "1-Liniya", "Elektrik", "fixed", 7500000.0),
+
+            # --- 2-Liniya (60x60 Katta Zavod) (10 xodim) ---
+            ("Sobirov Farrux", "2-Liniya", "Zavod Liniya Masteri", "fixed", 10500000.0),
+            ("Xamidov Abror", "2-Liniya", "Press Operatori", "piecework", 0.0),
+            ("Botirov Jamshid", "2-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Nazarov Eldor", "2-Liniya", "Glazur Master", "piecework", 0.0),
+            ("Usmonov Timur", "2-Liniya", "Pech Operatori", "piecework", 0.0),
+            ("Jo'rayev Olim", "2-Liniya", "Kafel Saralovchi", "piecework", 0.0),
+            ("Xakimov Nodir", "2-Liniya", "Qadoqlovchi", "piecework", 0.0),
+            ("Ortiqov Shohrux", "2-Liniya", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("G'ofurov Bunyod", "2-Liniya", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Bozorov Ilhom", "2-Liniya", "Elektrik", "fixed", 7500000.0),
+
+            # --- 3-Liniya (60x120 Granit Zavod) (10 xodim) ---
+            ("Oripov Akmal", "3-Liniya", "Zavod Liniya Masteri", "fixed", 11000000.0),
+            ("Kamilov Bekzod", "3-Liniya", "Press Operatori", "piecework", 0.0),
+            ("Raimov Azamat", "3-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Valiyev Sarvar", "3-Liniya", "Glazur Master", "piecework", 0.0),
+            ("Xursandov Sherali", "3-Liniya", "Pech Operatori", "piecework", 0.0),
+            ("Niyazov Farxod", "3-Liniya", "Kafel Saralovchi", "piecework", 0.0),
+            ("Matniyazov Mansur", "3-Liniya", "Qadoqlovchi", "piecework", 0.0),
+            ("Isroilov Zafar", "3-Liniya", "Karoxona Haydovchisi", "fixed", 6800000.0),
+            ("Nurmamatov Xurshid", "3-Liniya", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
+            ("Turdiyev Shahram", "3-Liniya", "Elektrik", "fixed", 7800000.0),
+
+            # --- 4-Liniya (40x40 Premium Zavod) (10 xodim) ---
+            ("Davronov Jalol", "4-Liniya", "Zavod Liniya Masteri", "fixed", 10000000.0),
+            ("Xolmatov Muzaffar", "4-Liniya", "Press Operatori", "piecework", 0.0),
+            ("Mirzayev Otabek", "4-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Yoqubov Laziz", "4-Liniya", "Glazur Master", "piecework", 0.0),
+            ("Shamsiyev Kamron", "4-Liniya", "Pech Operatori", "piecework", 0.0),
+            ("Sotvoldiyev Ulug'bek", "4-Liniya", "Kafel Saralovchi", "piecework", 0.0),
+            ("G'aniyev Ravshan", "4-Liniya", "Qadoqlovchi", "piecework", 0.0),
+            ("Eshonqulov Xikmat", "4-Liniya", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("Vahobov Murod", "4-Liniya", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Sultonov Jamol", "4-Liniya", "Elektrik", "fixed", 7500000.0),
+
+            # --- 5-Liniya (80x80 Keramogranit Zavod) (10 xodim) ---
+            ("Murodov Bobomurod", "5-Liniya", "Zavod Liniya Masteri", "fixed", 11500000.0),
+            ("Norboyev Komil", "5-Liniya", "Press Operatori", "piecework", 0.0),
+            ("Jumayev Rustam", "5-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Ro'ziyev Sardor", "5-Liniya", "Glazur Master", "piecework", 0.0),
+            ("Xudoyberdiyev Elbek", "5-Liniya", "Pech Operatori", "piecework", 0.0),
+            ("Yo'ldoshev Faxriddin", "5-Liniya", "Kafel Saralovchi", "piecework", 0.0),
+            ("Allabergenov Doniyor", "5-Liniya", "Qadoqlovchi", "piecework", 0.0),
+            ("Tangriberdiyev Oybek", "5-Liniya", "Karoxona Haydovchisi", "fixed", 6800000.0),
+            ("Mamirov Shavkat", "5-Liniya", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
+            ("Xaitov Bahrom", "5-Liniya", "Elektrik", "fixed", 7800000.0)
+        ]
+
+        emp_objects = []
+        for name, dept, pos, stype, msal in raw_employees:
+            emp_objects.append(Employee(
+                full_name=name,
+                department=dept,
+                position=pos,
+                employee_type=stype,
+                monthly_salary=msal,
+                standard_work_days=26,
+                hire_date=date(2026, 1, 1),
+                is_active=True
+            ))
+        db.add_all(emp_objects)
+        db.commit()
+        logger.info(f"Seeded {len(emp_objects)} employees for all 6 departments.")
+
+        # C. Generate Attendance and Daily Work Entries for 2026-08 and 2026-09
+        from backend.services.salary_service import recalculate_all_salaries
+        
+        all_emps = db.query(Employee).all()
+        job_press_30 = jt_map.get("Pressovka va Formovka (30x30)")
+        job_press_60 = jt_map.get("Pressovka va Formovka (60x60)")
+        job_press_120 = jt_map.get("Pressovka va Formovka (60x120)")
+        job_press_40 = jt_map.get("Pressovka va Formovka (40x40)")
+        job_press_80 = jt_map.get("Pressovka va Formovka (80x80)")
+        job_glaze = jt_map.get("Glazurlash va Linya Bo'yoq")
+        job_kiln = jt_map.get("Pechda Kuydirish Nazorati")
+        job_sort = jt_map.get("Saralash va Sifat Nazorati")
+        job_pack = jt_map.get("Qadoqlash va Poddon Yig'ish")
+
+        dept_job_mapping = {
+            "1-Liniya": (job_press_30, 800.0),
+            "2-Liniya": (job_press_60, 600.0),
+            "3-Liniya": (job_press_120, 350.0),
+            "4-Liniya": (job_press_40, 700.0),
+            "5-Liniya": (job_press_80, 300.0),
+        }
+
+        # Days to seed in 2026-08 (1 to 26)
+        for day in range(1, 27):
+            d_aug = date(2026, 8, day)
+            d_sep = date(2026, 9, min(day, 2))
+            
+            for emp in all_emps:
+                status = "absent" if (day in [7, 14, 21]) else "present"
+                db.add(AttendanceEntry(employee_id=emp.id, date=d_aug, status=status, entered_by="Admin"))
+                if day <= 2:
+                    db.add(AttendanceEntry(employee_id=emp.id, date=d_sep, status="present", entered_by="Admin"))
+
+                if emp.employee_type == "piecework" and status == "present" and emp.department in dept_job_mapping:
+                    jtype, base_qty = dept_job_mapping[emp.department]
+                    if jtype:
+                        if "Press" in emp.position:
+                            target_jt = jtype
+                            qty = base_qty
+                        elif "Glazur" in emp.position:
+                            target_jt = job_glaze
+                            qty = base_qty * 0.95
+                        elif "Pech" in emp.position:
+                            target_jt = job_kiln
+                            qty = base_qty * 0.92
+                        elif "Saral" in emp.position:
+                            target_jt = job_sort
+                            qty = base_qty * 0.90
+                        else:
+                            target_jt = job_pack
+                            qty = round(base_qty / 40.0, 1)
+
+                        amt = qty * target_jt.price_per_unit
+                        db.add(WorkEntry(
+                            employee_id=emp.id,
+                            job_type_id=target_jt.id,
+                            date=d_aug,
+                            quantity=qty,
+                            unit_price_snapshot=target_jt.price_per_unit,
+                            total_amount=amt,
+                            entered_by="Admin"
+                        ))
+
+        db.commit()
+
+        # Recalculate monthly salaries for 2026-08 & 2026-09
+        recalculate_all_salaries(db, "2026-08")
+        recalculate_all_salaries(db, "2026-09")
+        logger.info("Seeded 57 employees, attendance, work entries & calculated salaries for 2026-08 & 2026-09.")
+
     db.close()
     logger.info("Database initialized successfully.")
 

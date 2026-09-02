@@ -12,11 +12,11 @@ const IshHaqiModule = (function () {
   const DEPARTMENTS = [
     { id: "all", name: { uz: "Barchasi", ru: "Все отделы" }, icon: "🌐" },
     { id: "Ma'muriyat", name: { uz: "Ma'muriyat & Ofis", ru: "Администрация & Офис" }, icon: "👑" },
-    { id: "1-Liniya", name: { uz: "1-Liniya (Formovka & Press)", ru: "1-Линия (Формовка & Пресс)" }, icon: "🏭" },
-    { id: "2-Liniya", name: { uz: "2-Liniya (Glazurlash)", ru: "2-Линия (Глазуровка)" }, icon: "🎨" },
-    { id: "3-Liniya", name: { uz: "3-Liniya (Pech & Kuydirish)", ru: "3-Линия (Печь & Обжиг)" }, icon: "🔥" },
-    { id: "4-Liniya", name: { uz: "4-Liniya (Saralash & Sifat)", ru: "4-Линия (Сортировка & Контроль)" }, icon: "🔍" },
-    { id: "5-Liniya", name: { uz: "5-Liniya (Qadoqlash & Yuklash)", ru: "5-Линия (Упаковка & Погрузка)" }, icon: "📦" }
+    { id: "1-Liniya", name: { uz: "1-Liniya (30x30 Standart Zavod)", ru: "1-Линия (30x30 Стандарт Завод)" }, icon: "🏭" },
+    { id: "2-Liniya", name: { uz: "2-Liniya (60x60 Katta Zavod)", ru: "2-Линия (60x60 Большой Завод)" }, icon: "🏭" },
+    { id: "3-Liniya", name: { uz: "3-Liniya (60x120 Granit Zavod)", ru: "3-Линия (60x120 Гранит Завод)" }, icon: "🏭" },
+    { id: "4-Liniya", name: { uz: "4-Liniya (40x40 Premium Zavod)", ru: "4-Линия (40x40 Премиум Завод)" }, icon: "🏭" },
+    { id: "5-Liniya", name: { uz: "5-Liniya (80x80 Keramogranit Zavod)", ru: "5-Линия (80x80 Керамогранит Завод)" }, icon: "🏭" }
   ];
 
   function formatNumber(num) {
@@ -255,6 +255,14 @@ const IshHaqiModule = (function () {
       });
     }
 
+    // Calculate department-specific KPI metrics
+    const deptPayroll = calculations.reduce((acc, c) => acc + c.final_amount, 0);
+    const deptFixed = calculations.filter(c => c.employee_type === "fixed").reduce((acc, c) => acc + c.final_amount, 0);
+    const deptPiecework = calculations.filter(c => c.employee_type === "piecework").reduce((acc, c) => acc + c.final_amount, 0);
+    const deptPaid = calculations.filter(c => c.status === "paid").reduce((acc, c) => acc + c.final_amount, 0);
+    const deptUnpaid = deptPayroll - deptPaid;
+    const deptCount = calculations.length;
+
     container.innerHTML = `
       <!-- Month & Action Controls -->
       <div class="card" style="margin-bottom: 16px; padding: 14px 18px;">
@@ -282,26 +290,26 @@ const IshHaqiModule = (function () {
       <div class="grid-4" style="margin-bottom: 16px;">
         <div class="kpi-card">
           <div class="kpi-title">${t.kpi_total}</div>
-          <div class="kpi-value" style="color: #2563eb;">${formatNumber(payrollData.total_payroll)} <small style="font-size: 13px;">UZS</small></div>
-          <div class="kpi-sub">${payrollData.total_employees} ${isUz ? "nafar xodim" : "сотрудников"}</div>
+          <div class="kpi-value" style="color: #2563eb;">${formatNumber(deptPayroll)} <small style="font-size: 13px;">UZS</small></div>
+          <div class="kpi-sub">${deptCount} ${isUz ? "nafar xodim" : "сотрудников"}</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-title">${t.kpi_fixed}</div>
-          <div class="kpi-value" style="color: #0f172a;">${formatNumber(payrollData.total_fixed)} <small style="font-size: 13px;">UZS</small></div>
+          <div class="kpi-value" style="color: #0f172a;">${formatNumber(deptFixed)} <small style="font-size: 13px;">UZS</small></div>
           <div class="kpi-sub">${isUz ? "Oylik fiks shtat" : "Окладный штат"}</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-title">${t.kpi_piecework}</div>
-          <div class="kpi-value" style="color: #d97706;">${formatNumber(payrollData.total_piecework)} <small style="font-size: 13px;">UZS</small></div>
+          <div class="kpi-value" style="color: #d97706;">${formatNumber(deptPiecework)} <small style="font-size: 13px;">UZS</small></div>
           <div class="kpi-sub">${isUz ? "Bajarilgan ishlar hajmi" : "Сдельные объемы"}</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-title">${t.kpi_paid}</div>
-          <div class="kpi-value" style="color: #10b981;">${formatNumber(payrollData.total_paid)} <small style="font-size: 13px;">UZS</small></div>
-          <div class="kpi-sub" style="color: #ef4444 !important;">${isUz ? "Qoldiq:" : "Остаток:"} ${formatNumber(payrollData.total_unpaid)} UZS</div>
+          <div class="kpi-value" style="color: #10b981;">${formatNumber(deptPaid)} <small style="font-size: 13px;">UZS</small></div>
+          <div class="kpi-sub" style="color: #ef4444 !important;">${isUz ? "Qoldiq:" : "Остаток:"} ${formatNumber(deptUnpaid)} UZS</div>
         </div>
       </div>
 
