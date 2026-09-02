@@ -2,17 +2,18 @@ from datetime import date
 from typing import Dict, List, Any
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
-from backend.models import ProductionOrder, ProductionLine, CashTransaction, MDMMaterial
+from backend.models import ProductionOrder, ProductionLine, CashTransaction, MDMMaterial, LineExpense
 from backend.services.currency_service import convert_amount
 
 def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -> Dict[str, Any]:
     """
     Calculates:
     1. Total production volume per line for the month.
-    2. Total indirect costs (Bilvosita xarajatlar) from Kassa in USD.
-    3. Proportionate allocation of indirect costs to each line:
+    2. Direct raw materials cost per line (Warehouse 2).
+    3. Target-line allocation of equipment spare parts & consumables (LineExpense from Warehouse 3).
+    4. Proportionate allocation of general indirect costs to each line:
        Allocated Line Indirect = Total Indirect Costs * (Line Volume / Total Factory Volume)
-    4. Unit cost breakdown per line ($/m2 = Direct Materials + Allocated Indirect Overhead).
+    5. Comprehensive unit cost breakdown per line ($/dona = Direct Materials + Line Equipment Expenses + Allocated Overhead).
     """
     try:
         year, month = map(int, year_month.split("-"))
@@ -36,7 +37,8 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
             "line_name": l.name,
             "spec_tile_size": l.spec_tile_size,
             "volume_m2": 0.0,
-            "direct_materials_cost_usd": 0.0
+            "direct_materials_cost_usd": 0.0,
+            "line_equipment_expenses_usd": 0.0
         }
 
     total_factory_volume_m2 = 0.0
@@ -49,6 +51,33 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
             line_data[lid]["direct_materials_cost_usd"] += order.direct_cost_usd
             total_factory_volume_m2 += order.quantity
             total_direct_materials_cost_usd += order.direct_cost_usd
+
+    # 2b. Fetch & allocate Line Expenses (Spare parts / Consumables from Warehouse 3) to selected target lines
+    line_expenses = db.query(LineExpense).filter(
+        extract('year', LineExpense.date) == year,
+        extract('month', LineExpense.date) == month,
+        LineExpense.status == "Tasdiqlandi"
+    ).all()
+
+    total_line_equipment_expenses_usd = 0.0
+    for le in line_expenses:
+        total_line_equipment_expenses_usd += le.total_cost_usd
+        raw_ids = (le.line_ids_str or "").split(",")
+        target_lids = [int(x.strip()) for x in raw_ids if x.strip().isdigit() and int(x.strip()) in line_data]
+
+        if not target_lids:
+            continue
+
+        target_volume = sum(line_data[lid]["volume_m2"] for lid in target_lids)
+        if target_volume > 0:
+            for lid in target_lids:
+                portion = le.total_cost_usd * (line_data[lid]["volume_m2"] / target_volume)
+                line_data[lid]["line_equipment_expenses_usd"] += portion
+        else:
+            # If production volume is 0 for all target lines, split cost equally among selected target lines
+            equal_share = le.total_cost_usd / len(target_lids)
+            for lid in target_lids:
+                line_data[lid]["line_equipment_expenses_usd"] += equal_share
 
     # 3. Fetch all indirect expenses (Bilvosita xarajatlar) from CashTransactions for the month converted to USD
     INDIRECT_CATEGORIES = [
@@ -87,15 +116,15 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         usd_amount = convert_amount(tx.amount, tx.currency, "USD", tx.date, db)
         total_admin_expenses_usd += usd_amount
 
-    # 5. Allocate indirect expenses proportionally across the 5 lines
+    # 5. Build line summaries with direct materials, line equipment expenses & allocated indirect overhead
     line_summaries = []
     for lid, d in line_data.items():
         vol = d["volume_m2"]
         vol_pct = (vol / total_factory_volume_m2 * 100.0) if total_factory_volume_m2 > 0 else 0.0
         
-        # Proportionate allocation
+        # Proportionate allocation of general indirect factory overhead
         allocated_indirect = (total_indirect_expenses_usd * (vol / total_factory_volume_m2)) if total_factory_volume_m2 > 0 else 0.0
-        total_mfg_cost = d["direct_materials_cost_usd"] + allocated_indirect
+        total_mfg_cost = d["direct_materials_cost_usd"] + d["line_equipment_expenses_usd"] + allocated_indirect
         unit_cost = (total_mfg_cost / vol) if vol > 0 else 0.0
 
         line_summaries.append({
@@ -106,6 +135,7 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
             "production_volume_m2": round(vol, 2),
             "volume_percentage": round(vol_pct, 2),
             "direct_materials_cost_usd": round(d["direct_materials_cost_usd"], 2),
+            "line_equipment_expenses_usd": round(d["line_equipment_expenses_usd"], 2),
             "allocated_indirect_cost_usd": round(allocated_indirect, 2),
             "total_manufacturing_cost_usd": round(total_mfg_cost, 2),
             "unit_cost_usd_per_m2": round(unit_cost, 4)
@@ -115,6 +145,7 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         "year_month": year_month,
         "total_factory_volume_m2": round(total_factory_volume_m2, 2),
         "total_direct_materials_cost_usd": round(total_direct_materials_cost_usd, 2),
+        "total_line_equipment_expenses_usd": round(total_line_equipment_expenses_usd, 2),
         "total_indirect_expenses_usd": round(total_indirect_expenses_usd, 2),
         "total_admin_expenses_usd": round(total_admin_expenses_usd, 2),
         "lines": line_summaries

@@ -30,8 +30,9 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     # 2. Production Cost Allocation for the 5 Lines
     alloc = calculate_monthly_production_cost_allocation(db, year_month)
     direct_materials_cogs = alloc["total_direct_materials_cost_usd"]
+    line_expenses_cogs = alloc["total_line_equipment_expenses_usd"]
     indirect_expenses_cogs = alloc["total_indirect_expenses_usd"]
-    total_cogs_usd = direct_materials_cogs + indirect_expenses_cogs
+    total_cogs_usd = direct_materials_cogs + line_expenses_cogs + indirect_expenses_cogs
 
     gross_profit_usd = total_revenue_usd - total_cogs_usd
     admin_expenses_usd = alloc["total_admin_expenses_usd"]
@@ -46,6 +47,7 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "currency": "USD",
         "revenue_usd": round(total_revenue_usd, 2),
         "cogs_direct_materials_usd": round(direct_materials_cogs, 2),
+        "cogs_line_expenses_usd": round(line_expenses_cogs, 2),
         "cogs_indirect_expenses_usd": round(indirect_expenses_cogs, 2),
         "total_cogs_usd": round(total_cogs_usd, 2),
         "gross_profit_usd": round(gross_profit_usd, 2),

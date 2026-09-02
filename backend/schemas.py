@@ -374,6 +374,7 @@ class LineCostSummary(BaseModel):
     production_volume_m2: float
     volume_percentage: float
     direct_materials_cost_usd: float
+    line_equipment_expenses_usd: float = 0.0
     allocated_indirect_cost_usd: float
     total_manufacturing_cost_usd: float
     unit_cost_usd_per_m2: float
@@ -383,6 +384,7 @@ class PnLReportResponse(BaseModel):
     currency: str = "USD"
     revenue_usd: float
     cogs_direct_materials_usd: float
+    cogs_line_expenses_usd: float = 0.0
     cogs_indirect_expenses_usd: float
     total_cogs_usd: float
     gross_profit_usd: float
