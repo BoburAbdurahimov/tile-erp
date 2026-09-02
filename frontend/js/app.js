@@ -732,24 +732,70 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
     if (tr.style.display === "none") return;
     visibleCount++;
     const cells = Array.from(tr.children);
-    tableHtml += "<tr>";
-    validColIndices.forEach(idx => {
+
+    // Get leaf div elements for each valid column
+    const colSubDivs = validColIndices.map(idx => {
       const cell = cells[idx];
-      let val = "";
-      if (cell) {
-        const divs = Array.from(cell.querySelectorAll("div")).filter(d => d.querySelectorAll("div").length === 0);
-        if (divs.length > 0) {
-          // Multi-item cell (e.g. list of products, quantities, prices)
-          val = divs.map(d => escapeHtml((d.innerText || d.textContent).trim())).join('<br style="mso-data-placement:same-cell;"/>');
-        } else {
-          // Single-item cell
-          const cleanText = (cell.innerText || cell.textContent).trim();
-          val = escapeHtml(cleanText);
-        }
-      }
-      tableHtml += `<td style="padding: 6px 10px; vertical-align: top;">${val}</td>`;
+      if (!cell) return [];
+      return Array.from(cell.querySelectorAll("div")).filter(d => d.querySelectorAll("div").length === 0);
     });
-    tableHtml += "</tr>";
+
+    const maxSubRows = Math.max(1, ...colSubDivs.map(arr => arr.length));
+
+    if (maxSubRows <= 1) {
+      // Normal single-item row
+      tableHtml += "<tr>";
+      validColIndices.forEach(idx => {
+        const cell = cells[idx];
+        let val = cell ? (cell.innerText || cell.textContent).trim() : "";
+        tableHtml += `<td style="padding: 6px 10px; vertical-align: middle;">${escapeHtml(val)}</td>`;
+      });
+      tableHtml += "</tr>";
+    } else {
+      // Multi-item document row: expand into individual Excel rows for each item
+      for (let i = 0; i < maxSubRows; i++) {
+        tableHtml += "<tr>";
+        validColIndices.forEach((idx, cIdx) => {
+          const cell = cells[idx];
+          const subDivs = colSubDivs[cIdx];
+          const colHeader = (headers[cIdx] || "").toLowerCase();
+
+          let val = "";
+          if (subDivs.length > 0) {
+            const leaf = subDivs[i] || subDivs[0];
+            val = leaf ? (leaf.innerText || leaf.textContent).trim() : "";
+          } else {
+            val = cell ? (cell.innerText || cell.textContent).trim() : "";
+          }
+
+          // If this is the Total/Summa column for a multi-item row, calculate specific item total (qty * price) if available
+          if (colHeader.includes("итого") || colHeader.includes("summa") || colHeader.includes("jami")) {
+            const qtyDiv = colSubDivs.find((arr, k) => {
+              const h = (headers[k] || "").toLowerCase();
+              return h.includes("miqdor") || h.includes("количество") || h.includes("объем");
+            })?.[i];
+            
+            const priceDiv = colSubDivs.find((arr, k) => {
+              const h = (headers[k] || "").toLowerCase();
+              return h.includes("narx") || h.includes("цена");
+            })?.[i];
+
+            if (qtyDiv && priceDiv) {
+              const qText = (qtyDiv.innerText || qtyDiv.textContent).replace(/[^0-9.]/g, "");
+              const pText = (priceDiv.innerText || priceDiv.textContent).replace(/[^0-9.]/g, "");
+              const qVal = parseFloat(qText) || 0;
+              const pVal = parseFloat(pText) || 0;
+              if (qVal > 0 && pVal > 0) {
+                val = formatNumber(qVal * pVal, 2, 2);
+              }
+            }
+          }
+
+          tableHtml += `<td style="padding: 6px 10px; vertical-align: middle;">${escapeHtml(val)}</td>`;
+        });
+        tableHtml += "</tr>";
+      }
+    }
   });
 
   tableHtml += `</tbody></table></body></html>`;
