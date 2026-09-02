@@ -92,12 +92,12 @@ const PurchasesModule = {
                 : `<div style="display: flex; flex-direction: column; gap: 3px;">${itemsList.map(it => `<div>${it.material_name}</div>`).join('')}</div>`;
 
               const qtyCellHtml = itemsList.length <= 1
-                ? `<span>${(itemsList[0]?.quantity || 0).toLocaleString()} ${tr(itemsList[0]?.unit || '')}</span>`
-                : `<div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">${itemsList.map(it => `<div>${it.quantity.toLocaleString()} ${tr(it.unit)}</div>`).join('')}</div>`;
+                ? `<span>${formatNumber(itemsList[0]?.quantity || 0, 0, 2)} ${tr(itemsList[0]?.unit || '')}</span>`
+                : `<div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">${itemsList.map(it => `<div>${formatNumber(it.quantity, 0, 2)} ${tr(it.unit)}</div>`).join('')}</div>`;
 
               const priceCellHtml = itemsList.length <= 1
-                ? `${(itemsList[0]?.unit_price || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
-                : `<div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">${itemsList.map(it => `<div>${it.unit_price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>`).join('')}</div>`;
+                ? `${formatNumber(itemsList[0]?.unit_price || 0, 2, 2)}`
+                : `<div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">${itemsList.map(it => `<div>${formatNumber(it.unit_price, 2, 2)}</div>`).join('')}</div>`;
 
               return `
               <tr class="${p.status === 'Storno' ? 'storno-row' : ''}" style="border-bottom: 1px solid #f1f5f9; ${p.status === 'Storno' ? 'opacity: 0.6; background: #fff1f2;' : ''}">
@@ -110,7 +110,7 @@ const PurchasesModule = {
                 <td data-sort-value="${itemsList[0]?.unit_price || 0}" style="padding: 12px 14px; text-align: right;">${priceCellHtml}</td>
                 <td data-sort-value="${p.total_amount}" style="padding: 12px 14px; text-align: right;">
                   <span style="color: #ef4444; font-size: 13px; font-weight: 600;">
-                    ${p.total_amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    ${formatNumber(p.total_amount, 2, 2)}
                   </span>
                 </td>
                 <td data-sort-value="${p.currency}" style="padding: 12px 14px; text-align: center;">

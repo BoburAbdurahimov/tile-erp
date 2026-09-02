@@ -1,9 +1,28 @@
 let currentModule = "dashboard";
 let modalConfirmCallback = null;
 
-function formatNumber(num) {
+function formatNumber(num, minDec = 0, maxDec = 2) {
   if (num === null || num === undefined || isNaN(num)) return "0";
-  return Number(num).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).replace(/,/g, " ");
+  const n = Number(num);
+  const fixed = n.toFixed(maxDec);
+  const parts = fixed.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  
+  if (maxDec === 0) {
+    return parts[0];
+  }
+  
+  if (parts[1]) {
+    if (minDec === 0) {
+      const trimmed = parts[1].replace(/0+$/, "");
+      return trimmed.length > 0 ? parts[0] + "." + trimmed : parts[0];
+    } else {
+      let dec = parts[1];
+      while (dec.length < minDec) dec += "0";
+      return parts[0] + "." + dec;
+    }
+  }
+  return parts[0];
 }
 
 function escapeHtml(str) {

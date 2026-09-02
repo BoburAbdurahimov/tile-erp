@@ -148,8 +148,8 @@ const MdmModule = {
                     <td data-sort-value="${cp.region || ''}" style="padding: 12px 14px;">${cp.region || '-'}</td>
                     <td data-sort-value="${cp.is_resident ? 'Rezident' : 'Norezident'}" style="padding: 12px 14px;"><span class="badge" style="background: ${cp.is_resident ? '#dcfce7' : '#fef3c7'}; color: ${cp.is_resident ? '#166534' : '#b45309'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(cp.is_resident ? 'Rezident' : 'Norezident')}</span></td>
                     <td data-sort-value="${cp.phone || ''}" style="padding: 12px 14px;">${cp.phone || '-'}</td>
-                    <td data-sort-value="${cp.initial_balance_usd || 0}" style="padding: 12px 14px; text-align: right;">$${(cp.initial_balance_usd || 0).toLocaleString()}</td>
-                    <td data-sort-value="${cp.current_balance_usd || 0}" style="padding: 12px 14px; text-align: right;"><strong style="color: ${(cp.current_balance_usd || 0) >= 0 ? '#10b981' : '#ef4444'};">$${(cp.current_balance_usd || 0).toLocaleString()}</strong></td>
+                    <td data-sort-value="${cp.initial_balance_usd || 0}" style="padding: 12px 14px; text-align: right;">$${formatNumber(cp.initial_balance_usd || 0, 2, 2)}</td>
+                    <td data-sort-value="${cp.current_balance_usd || 0}" style="padding: 12px 14px; text-align: right;"><strong style="color: ${(cp.current_balance_usd || 0) >= 0 ? '#10b981' : '#ef4444'};">$${formatNumber(cp.current_balance_usd || 0, 2, 2)}</strong></td>
                     <td data-sort-value="${cp.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${cp.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${cp.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(cp.is_archived ? 'Arxiv' : 'Faol')}</span></td>
                     <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.editCounterparty(${cp.id})" title="${t('btn_edit')}">✏️</button>

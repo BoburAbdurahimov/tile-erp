@@ -69,10 +69,10 @@ const KassaModule = {
           </div>
           <div style="text-align: right;">
             <div style="font-size: 22px; font-weight: 800; color: ${r.currency === 'USD' ? '#10b981' : '#2563eb'};">
-              ${r.currency === 'USD' ? '$' + r.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : r.balance.toLocaleString() + ' UZS'}
+              ${r.currency === 'USD' ? '$' + formatNumber(r.balance, 2, 2) : formatNumber(r.balance, 0, 2) + ' UZS'}
             </div>
             <div style="font-size: 13px; color: #94a3b8; font-weight: 500; margin-top: 2px;">
-              ≈ ${r.currency === 'USD' ? Math.round(r.balance_in_other_currency).toLocaleString() + ' UZS' : '$' + r.balance_in_other_currency.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              ≈ ${r.currency === 'USD' ? formatNumber(Math.round(r.balance_in_other_currency), 0, 2) + ' UZS' : '$' + formatNumber(r.balance_in_other_currency, 2, 2)}
             </div>
           </div>
         </div>
@@ -93,7 +93,7 @@ const KassaModule = {
         <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px;">
           <div>
             <span style="font-size: 12px; color: #1e40af; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${t('kassa_rate_official')}</span>
-            <div style="font-size: 28px; font-weight: 800; color: #1d4ed8; margin-top: 2px;">${latest.rate_usd_uzs.toLocaleString()} UZS</div>
+            <div style="font-size: 28px; font-weight: 800; color: #1d4ed8; margin-top: 2px;">${formatNumber(latest.rate_usd_uzs, 0, 2)} UZS</div>
           </div>
           <div>
             <span class="badge ${latest.is_manual_override ? 'badge-warning' : 'badge-success'}" style="padding: 6px 12px; font-size: 12px; font-weight: 600;">
@@ -105,7 +105,7 @@ const KassaModule = {
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           ${rates.slice(0, 4).map(r => `
             <span class="badge badge-primary" style="font-size: 12px; padding: 6px 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
-              ${formatDate(r.date)}: <strong>${r.rate_usd_uzs.toLocaleString()} UZS</strong>
+              ${formatDate(r.date)}: <strong>${formatNumber(r.rate_usd_uzs, 0, 2)} UZS</strong>
             </span>
           `).join("")}
         </div>
@@ -164,7 +164,7 @@ const KassaModule = {
                   <td data-sort-value="${tx.counterparty_name || ''}">${tx.counterparty_name || '-'}</td>
                   <td data-sort-value="${tx.amount}" style="text-align: right;">
                     <strong style="color: ${isKirim ? '#10b981' : '#ef4444'}; font-size: 14px;">
-                      ${isKirim ? '+' : '-'}${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      ${isKirim ? '+' : '-'}${formatNumber(tx.amount, 2, 2)}
                     </strong>
                   </td>
                   <td data-sort-value="${tx.currency}" style="text-align: center;">
@@ -468,8 +468,10 @@ const KassaModule = {
                 ${group.items.map(item => `
                   <div 
                     class="cat-picker-item" 
+                    data-key="${escapeHtml(item.key)}"
+                    data-label="${escapeHtml(item.label)}"
                     data-search="${item.key.toLowerCase()} ${item.label.toLowerCase()}"
-                    onclick="KassaModule.selectCategory('${item.key}', '${item.label.replace(/'/g, "\\'")}')"
+                    onclick="KassaModule.selectCategoryFromElement(this)"
                     style="padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.15s;"
                     onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#3b82f6'; this.style.transform='translateY(-1px)';"
                     onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0'; this.style.transform='none';"
@@ -512,6 +514,13 @@ const KassaModule = {
         g.style.display = "block";
       }
     });
+  },
+
+  selectCategoryFromElement(el) {
+    if (!el) return;
+    const catKey = el.getAttribute("data-key");
+    const catLabel = el.getAttribute("data-label");
+    this.selectCategory(catKey, catLabel);
   },
 
   selectCategory(catKey, catLabel) {
