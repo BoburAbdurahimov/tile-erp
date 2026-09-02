@@ -127,6 +127,7 @@ const IshHaqiModule = (function () {
             <button class="tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('daily')">${t.tab_daily}</button>
             <button class="tab-btn ${activeTab === 'employees' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('employees')">${t.tab_employees}</button>
             <button class="tab-btn ${activeTab === 'job_types' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('job_types')">${t.tab_job_types}</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px; padding: 6px 12px; font-weight: 600;">📊 ${isUzbek() ? 'Excel yuklash' : 'Экспорт в Excel'}</button>
           </div>
         </div>
       </div>

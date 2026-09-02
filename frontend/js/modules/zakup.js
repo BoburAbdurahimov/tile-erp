@@ -15,7 +15,7 @@ const PurchasesModule = {
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('purchases-table', 'xaridlar_zakup')" style="display: flex; align-items: center; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('purchases-main-table', 'xaridlar_zakup')" style="display: flex; align-items: center; gap: 6px;">
               <span>📊</span> <span>${t('btn_export_excel')}</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="PurchasesModule.openNewPurchaseModal()" style="display: flex; align-items: center; gap: 6px;">

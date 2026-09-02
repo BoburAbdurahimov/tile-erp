@@ -656,10 +656,8 @@ const MdmModule = {
   },
 
   exportExcel() {
-    let entity = "materials";
-    if (this.currentTab === "clients") entity = "clients";
-    if (this.currentTab === "suppliers") entity = "suppliers";
-    window.open(`/api/mdm/export/excel?entity=${entity}`, "_blank");
+    const filename = `spravochnik_${this.currentTab}`;
+    exportTableToExcel(null, filename);
   },
 
   async confirmCleanDemoData() {

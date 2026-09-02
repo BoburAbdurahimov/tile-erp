@@ -686,8 +686,21 @@ document.addEventListener("input", (e) => {
 
 // Universal Excel Exporter Utility
 function exportTableToExcel(tableRef, filename = "hisobot") {
-  const table = typeof tableRef === "string" ? document.getElementById(tableRef) : tableRef;
-  if (!table) return;
+  let table = null;
+  if (typeof tableRef === "string") {
+    table = document.getElementById(tableRef);
+    if (!table) {
+      // Fallback: search for data-table in active module or container
+      table = document.querySelector("#module-container table.data-table") || document.querySelector("table.data-table");
+    }
+  } else {
+    table = tableRef;
+  }
+
+  if (!table) {
+    showToast(CURRENT_LANG === 'uz' ? "Eksport qilish uchun jadval topilmadi!" : "Таблица для экспорта не найдена!", "error");
+    return;
+  }
 
   const theadThs = Array.from(table.querySelectorAll("thead tr:first-child th"));
   const headers = [];
@@ -696,7 +709,7 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
   theadThs.forEach((th, idx) => {
     const text = th.textContent.replace(/[↕▲▼]/g, "").trim();
     const lower = text.toLowerCase();
-    if (text && lower !== "amallar" && lower !== "действия" && lower !== "actions") {
+    if (text && lower !== "amallar" && lower !== "действия" && lower !== "actions" && lower !== "amal") {
       headers.push(text);
       validColIndices.push(idx);
     }
@@ -709,7 +722,7 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
   <table border="1">
     <thead style="background-color: #f1f5f9; font-weight: bold;">
       <tr>
-        ${headers.map(h => `<th style="background-color: #e2e8f0; padding: 6px 10px;">${h}</th>`).join("")}
+        ${headers.map(h => `<th style="background-color: #e2e8f0; padding: 6px 10px;">${escapeHtml(h)}</th>`).join("")}
       </tr>
     </thead>
     <tbody>`;
@@ -722,8 +735,13 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
     tableHtml += "<tr>";
     validColIndices.forEach(idx => {
       const cell = cells[idx];
-      let val = cell ? (cell.getAttribute("data-sort-value") || cell.textContent).trim().replace(/[\n\r\t]+/g, " ").replace(/\s{2,}/g, " ") : "";
-      tableHtml += `<td style="padding: 5px 8px;">${val}</td>`;
+      let val = "";
+      if (cell) {
+        val = cell.getAttribute("data-sort-value") !== null 
+          ? cell.getAttribute("data-sort-value") 
+          : (cell.innerText || cell.textContent).trim().replace(/[\n\r\t]+/g, " ").replace(/\s{2,}/g, " ");
+      }
+      tableHtml += `<td style="padding: 5px 8px;">${escapeHtml(val)}</td>`;
     });
     tableHtml += "</tr>";
   });
@@ -735,7 +753,8 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
     return;
   }
 
-  const blob = new Blob([tableHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  // Add UTF-8 BOM (\ufeff) to guarantee proper character rendering in Excel
+  const blob = new Blob(["\ufeff" + tableHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.setAttribute("href", url);

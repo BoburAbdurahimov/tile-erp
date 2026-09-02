@@ -10,6 +10,9 @@ const ProductionModule = {
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div class="card-title" style="font-size: 20px; font-weight: 700;">🏭 ${t('mod_prod_title')}</div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="ProductionModule.exportExcel()" style="font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <span>📊</span> <span>${t('btn_export_excel')}</span>
+            </button>
             <button class="btn btn-warning" onclick="ProductionModule.openLineExpenseModal()" style="font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 5px rgba(234, 179, 8, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer; background: #eab308; color: #ffffff; border: none;">
               <span>⚙️</span> <span>${CURRENT_LANG === 'uz' ? '+ Sarf materiallari (Aralash ombor)' : '+ Расход материалов (Оборудование)'}</span>
             </button>
@@ -591,5 +594,11 @@ const ProductionModule = {
     } catch (e) {
       showToast(e.message, "error");
     }
+  },
+
+  exportExcel() {
+    const tableId = this.activeTab === 'orders' ? 'prod-orders-table' : 'line-expenses-table';
+    const filename = this.activeTab === 'orders' ? 'ishlab_chiqarish_buyurtmalari' : 'liniyalar_sarf_materiallari';
+    exportTableToExcel(tableId, filename);
   }
 };

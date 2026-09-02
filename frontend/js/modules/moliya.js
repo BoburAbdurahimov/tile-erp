@@ -26,6 +26,9 @@ const FinanceModule = {
           <div style="display: flex; gap: 12px; align-items: center;">
             <label style="font-size: 13px; font-weight: 600;">${isUz ? "Hisobot davri:" : "Отчетный период:"}</label>
             <input type="month" id="finance-month-picker" class="form-control" style="width: 170px;" value="${this.currentPeriod}" onchange="FinanceModule.changePeriod(this.value)" />
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('moliya-lines-table', 'pnl_tannarx_taqsimoti')" style="display: flex; align-items: center; gap: 6px;">
+              <span>📊</span> <span>${t('btn_export_excel')}</span>
+            </button>
             <div id="month-action-buttons">
               <!-- Rendered dynamically (Close / Reopen) -->
             </div>

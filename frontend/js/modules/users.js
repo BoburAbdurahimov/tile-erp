@@ -111,6 +111,9 @@ const UsersModule = (() => {
           </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onclick="exportTableToExcel(null, 'foydalanuvchilar_royxati')" style="display: flex; align-items: center; gap: 6px;">
+            <span>📊</span> <span>${t('btn_export_excel')}</span>
+          </button>
           <button class="btn btn-primary" id="btn-create-user" onclick="UsersModule.openCreateUserModal()" style="display: flex; align-items: center; gap: 8px;">
             <span>➕</span> <span>${isUz ? "Yangi foydalanuvchi yaratish" : "Создать пользователя"}</span>
           </button>

@@ -559,6 +559,8 @@ const OmborModule = {
   },
 
   exportExcel() {
-    window.open(`/api/ombor/export/excel?warehouse_id=${this.currentWarehouseId || ''}`, "_blank");
+    const tableId = this.currentView === 'stock' ? 'stock-main-table' : 'transfers-main-table';
+    const filename = this.currentView === 'stock' ? 'ombor_qoldiqlari' : 'omborlararo_otkazmalar';
+    exportTableToExcel(tableId, filename);
   }
 };

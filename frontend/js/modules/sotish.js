@@ -15,7 +15,7 @@ const SalesModule = {
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('sales-table', 'sotuvlar_realizatsiya')" style="display: flex; align-items: center; gap: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('sales-main-table', 'sotuvlar_realizatsiya')" style="display: flex; align-items: center; gap: 6px;">
               <span>📊</span> <span>${t('btn_export_excel')}</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="SalesModule.openNewSaleModal()" style="display: flex; align-items: center; gap: 6px;">
