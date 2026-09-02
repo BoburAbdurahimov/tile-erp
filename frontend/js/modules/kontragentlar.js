@@ -217,7 +217,7 @@ const BalancesModule = {
           </div>
         `,
         null, // No submit button, only close
-        "modal-lg"
+        "modal-xl"
       );
     } catch (e) {
       showToast(e.message, "error");

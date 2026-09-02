@@ -850,17 +850,51 @@ body {
 .modal-content {
   background-color: var(--bg-card);
   border-radius: var(--radius-xl);
-  width: 90%;
-  max-width: 620px;
-  max-height: 88vh;
+  width: 95%;
+  max-width: 780px;
+  max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
   border: 1px solid rgba(255, 255, 255, 0.8);
   animation: modalIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
+.modal-content.modal-md {
+  width: 95%;
+  max-width: 980px;
+}
+
 .modal-content.modal-lg {
-  max-width: 840px;
+  width: 96%;
+  max-width: 1380px;
+}
+
+.modal-content.modal-xl,
+.modal-content.modal-full {
+  width: 98%;
+  max-width: 1650px;
+}
+
+/* Modal Table Responsive Enhancements (No forced horizontal scrollbars) */
+.modal-content .table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.modal-content table.data-table,
+.modal-content table.basket-table {
+  width: 100% !important;
+  table-layout: auto;
+}
+
+.modal-content table.data-table th,
+.modal-content table.data-table td,
+.modal-content table.basket-table th,
+.modal-content table.basket-table td {
+  white-space: normal;
+  word-break: break-word;
+  padding: 10px 12px;
 }
 
 .modal-header {
