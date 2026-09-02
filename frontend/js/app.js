@@ -22,7 +22,44 @@ function formatNumber(num, minDec = 0, maxDec = 2) {
       return parts[0] + "." + dec;
     }
   }
-  return parts[0];
+function parseFormattedNumber(val) {
+  if (!val) return 0;
+  const clean = String(val).replace(/\s+/g, '').replace(',', '.');
+  const n = parseFloat(clean);
+  return isNaN(n) ? 0 : n;
+}
+
+function setupLiveMoneyInput(inputEl, hintEl = null, getCurrency = () => '') {
+  if (!inputEl) return;
+  inputEl.type = "text";
+  inputEl.inputMode = "decimal";
+  
+  const handleFormat = () => {
+    let raw = inputEl.value.replace(/[^0-9.]/g, '');
+    const parts = raw.split('.');
+    if (parts.length > 2) {
+      raw = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    const formattedInt = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const formatted = parts.length > 1 ? formattedInt + '.' + parts[1] : formattedInt;
+    
+    inputEl.value = formatted;
+    
+    if (hintEl) {
+      const num = parseFloat(raw);
+      if (!isNaN(num) && num > 0) {
+        const curr = typeof getCurrency === 'function' ? getCurrency() : getCurrency;
+        hintEl.innerHTML = `💡 <strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
+        hintEl.style.display = "block";
+      } else {
+        hintEl.style.display = "none";
+      }
+    }
+  };
+
+  inputEl.addEventListener("input", handleFormat);
+  inputEl.addEventListener("keyup", handleFormat);
 }
 
 function escapeHtml(str) {

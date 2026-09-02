@@ -280,7 +280,8 @@ const KassaModule = {
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('kassa_amount')}</label>
-              <input type="number" step="any" id="tx-amount" class="form-control" placeholder="0.00" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" />
+              <input type="text" id="tx-amount" class="form-control" placeholder="0" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600;" />
+              <div id="tx-amount-hint" style="margin-top: 4px; font-size: 13px; font-weight: 700; color: #2563eb; display: none;"></div>
             </div>
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('kassa_category')}</label>
@@ -320,7 +321,7 @@ const KassaModule = {
       async () => {
         const regId = parseInt(document.getElementById("tx-register").value);
         const d = document.getElementById("tx-date").value;
-        const amt = parseFloat(document.getElementById("tx-amount").value);
+        const amt = parseFormattedNumber(document.getElementById("tx-amount").value);
         const cat = document.getElementById("tx-category").value;
         const cpInput = document.getElementById("tx-counterparty-input").value.trim();
         const desc = document.getElementById("tx-desc").value.trim();
@@ -365,6 +366,21 @@ const KassaModule = {
     );
 
     this.populateCounterpartiesForTx();
+    setTimeout(() => {
+      const amtInput = document.getElementById("tx-amount");
+      const amtHint = document.getElementById("tx-amount-hint");
+      const regSelect = document.getElementById("tx-register");
+      setupLiveMoneyInput(amtInput, amtHint, () => regSelect.value === "1" ? "USD" : "UZS");
+      regSelect.addEventListener("change", () => {
+        if (amtInput.value) {
+          const num = parseFormattedNumber(amtInput.value);
+          if (num > 0 && amtHint) {
+            const curr = regSelect.value === "1" ? "USD" : "UZS";
+            amtHint.innerHTML = `💡 <strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
+          }
+        }
+      });
+    }, 50);
   },
 
   openCategoryPicker(type) {
