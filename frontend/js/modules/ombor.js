@@ -185,9 +185,9 @@ const OmborModule = {
           </tbody>
           <tfoot>
             <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #e2e8f0;">
-              <td colspan="7" style="text-align: right; padding: 14px 16px; font-size: 14px;">${CURRENT_LANG === 'uz' ? 'JAMI OMBOR QIYMATI:' : 'ИТОГО СТОИМОСТЬ СКЛАДА:'}</td>
-              <td style="color: #10b981; font-size: 16px; text-align: right; padding: 14px 16px;">${formatNumber(grandTotalUsd, 2, 2)}</td>
-              <td style="color: #2563eb; font-size: 15px; text-align: right; padding: 14px 16px;">${formatNumber(grandTotalUzs, 2, 2)}</td>
+              <td colspan="7" style="text-align: right; padding: 14px 16px; font-size: 14px; white-space: nowrap;">${CURRENT_LANG === 'uz' ? 'JAMI OMBOR QIYMATI:' : 'ИТОГО СТОИМОСТЬ СКЛАДА:'}</td>
+              <td style="color: #10b981; font-size: 16px; text-align: right; padding: 14px 16px; white-space: nowrap;">${formatNumber(grandTotalUsd, 2, 2)}</td>
+              <td style="color: #2563eb; font-size: 15px; text-align: right; padding: 14px 16px; white-space: nowrap;">${formatNumber(grandTotalUzs, 2, 2)}</td>
             </tr>
           </tfoot>
         </table>
