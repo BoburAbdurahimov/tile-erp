@@ -293,28 +293,12 @@ const ProductionModule = {
       }
     });
 
-    let categoryFiltered = [];
-    if (wid === 3) {
-      categoryFiltered = this.rawMaterialsList.filter(m => 
-        m.category === 'Yordamchi' || 
-        m.category === 'Ehtiyot qism' || 
-        m.code.startsWith('Box') || 
-        m.code.startsWith('Blt')
-      );
-    } else if (wid === 2) {
-      categoryFiltered = this.rawMaterialsList.filter(m => 
-        m.category === 'Xomashyo' || 
-        m.category === 'Siryo' ||
-        ['Smt60', 'Qum01', 'Kao01', 'Fld01', 'Glz01', 'Pgm01'].includes(m.code)
-      );
-    }
-    if (categoryFiltered.length === 0) categoryFiltered = this.rawMaterialsList;
-
-    // Filter ONLY materials that have quantity > 0 in warehouse wid!
-    const availableInStock = categoryFiltered.filter(m => (stockMap[m.id] || 0) > 0);
+    // Filter ALL materials that have quantity > 0 in warehouse wid (no category restrictions!)
+    const availableInStock = this.rawMaterialsList.filter(m => (stockMap[m.id] || 0) > 0);
     return availableInStock.map(m => ({
       ...m,
-      stockQty: stockMap[m.id] || 0
+      stockQty: stockMap[m.id] || 0,
+      fullStr: `${m.code} - ${m.name} (${tr(m.unit)}) — Mavjud: ${formatNumber(stockMap[m.id] || 0, 0, 2)} ${tr(m.unit)}`
     }));
   },
 
@@ -333,7 +317,7 @@ const ProductionModule = {
         rowDatalist.innerHTML = `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>`;
       } else {
         rowDatalist.innerHTML = mats.map(m => `
-          <option value="${m.code} - ${m.name} (${tr(m.unit)}) — Mavjud: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}" data-id="${m.id}">${m.code} - ${m.name}</option>
+          <option value="${m.fullStr}" data-id="${m.id}">${m.code} - ${m.name}</option>
         `).join("");
       }
     }
@@ -350,7 +334,7 @@ const ProductionModule = {
     const lower = inputVal.toLowerCase().trim();
     return (this.finishedMaterialsList || []).find(m => {
       const full = `${m.code} - ${m.name} (${tr(m.unit)})`.toLowerCase();
-      return full === lower || m.code.toLowerCase() === lower || m.name.toLowerCase() === lower || full.includes(lower);
+      return full === lower || m.code.toLowerCase() === lower || m.name.toLowerCase() === lower || full.includes(lower) || lower.includes(m.code.toLowerCase());
     }) || null;
   },
 
@@ -359,7 +343,9 @@ const ProductionModule = {
     const lower = inputVal.toLowerCase().trim();
     return (this.rawMaterialsList || []).find(m => {
       const full = `${m.code} - ${m.name} (${tr(m.unit)})`.toLowerCase();
-      return full === lower || m.code.toLowerCase() === lower || m.name.toLowerCase() === lower || full.includes(lower);
+      const code = m.code.toLowerCase();
+      const name = m.name.toLowerCase();
+      return full === lower || code === lower || name === lower || lower.includes(code) || full.includes(lower);
     }) || null;
   },
 
@@ -378,7 +364,7 @@ const ProductionModule = {
     if (code) {
       const defaultMat = mats.find(m => m.code === code) || (this.rawMaterialsList || []).find(m => m.code === code);
       if (defaultMat) {
-        defaultMatText = `${defaultMat.code} - ${defaultMat.name} (${tr(defaultMat.unit)})`;
+        defaultMatText = `${defaultMat.code} - ${defaultMat.name} (${tr(defaultMat.unit)}) — Mavjud: ${formatNumber(defaultMat.stockQty || 0, 0, 2)} ${tr(defaultMat.unit)}`;
       }
     }
 
@@ -387,7 +373,10 @@ const ProductionModule = {
     trEl.innerHTML = `
       <td style="padding: 6px 8px;">
         <datalist id="${rowId}_datalist" class="row-mat-datalist">
-          ${mats.map(m => `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${m.code} - ${m.name}</option>`).join("")}
+          ${mats.length === 0 
+            ? `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>` 
+            : mats.map(m => `<option value="${m.fullStr}" data-id="${m.id}">${m.code} - ${m.name}</option>`).join("")
+          }
         </datalist>
         <input 
           type="text" 
