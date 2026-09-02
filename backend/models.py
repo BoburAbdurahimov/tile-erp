@@ -188,6 +188,38 @@ class ProductionConsumedMaterial(Base):
     material = relationship("MDMMaterial")
     warehouse = relationship("Warehouse")
 
+class LineExpense(Base):
+    __tablename__ = "line_expenses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    expense_number = Column(String(50), unique=True, nullable=False)
+    date = Column(Date, nullable=False, default=date.today)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False, default=3)
+    line_ids_str = Column(String(100), nullable=False) # E.g. "1,2,3"
+    total_cost_usd = Column(Float, default=0.0)
+    total_cost_uzs = Column(Float, default=0.0)
+    status = Column(String(20), default="Tasdiqlandi") # "Tasdiqlandi", "Storno"
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    warehouse = relationship("Warehouse")
+    items = relationship("LineExpenseItem", back_populates="expense", cascade="all, delete-orphan")
+
+class LineExpenseItem(Base):
+    __tablename__ = "line_expense_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    expense_id = Column(Integer, ForeignKey("line_expenses.id"), nullable=False)
+    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    unit_cost_usd = Column(Float, default=0.0)
+    unit_cost_uzs = Column(Float, default=0.0)
+    total_cost_usd = Column(Float, default=0.0)
+    total_cost_uzs = Column(Float, default=0.0)
+    
+    expense = relationship("LineExpense", back_populates="items")
+    material = relationship("MDMMaterial")
+
 class Purchase(Base):
     __tablename__ = "purchases"
     

@@ -7,11 +7,11 @@ from sqlalchemy import func
 from backend.database import get_db
 from backend.models import (
     ProductionOrder, ProductionConsumedMaterial, ProductionLine,
-    MDMMaterial, Warehouse, StockItem
+    MDMMaterial, Warehouse, StockItem, LineExpense, LineExpenseItem
 )
 from backend.schemas import (
     ProductionOrderCreate, ProductionOrderResponse, ProductionLineResponse,
-    ConsumedMaterialResponse
+    ConsumedMaterialResponse, LineExpenseCreate, LineExpenseResponse, LineExpenseItemResponse
 )
 from backend.api.auth import get_current_user_role, check_permission
 from backend.services.inventory_service import (
@@ -172,14 +172,15 @@ def create_production_order(
     for c in payload.consumed_materials:
         if c.quantity <= 0:
             continue
-        # Deduct from warehouse
-        unit_cost = deduct_stock(db, c.warehouse_id, c.material_id, c.quantity)
+        # Direct production consumed materials strictly deduct from Warehouse 2 (Ishlab chiqarish materiallari)
+        wh_id = 2
+        unit_cost = deduct_stock(db, wh_id, c.material_id, c.quantity)
         line_cost = c.quantity * unit_cost
         direct_cost_usd += line_cost
         
         consumed_records.append(ProductionConsumedMaterial(
             material_id=c.material_id,
-            warehouse_id=c.warehouse_id,
+            warehouse_id=wh_id,
             quantity=c.quantity,
             unit_cost_usd=unit_cost,
             total_cost_usd=line_cost
@@ -202,24 +203,225 @@ def create_production_order(
         consumed_materials=consumed_records
     )
     db.add(order)
-    db.flush()
-
-    # Add finished product to Warehouse 1 (Tayyor mahsulotlar)
+    
+    # Increase finished goods stock in Warehouse 1 (Tayyor mahsulotlar)
     add_stock_with_avg_valuation(
         db=db,
-        warehouse_id=1, # Tayyor mahsulotlar
+        warehouse_id=1,
         material_id=payload.output_material_id,
         quantity=payload.quantity,
         unit_price=unit_direct_cost,
         currency="USD",
         trans_date=payload.date
     )
-
+    
     db.commit()
     db.refresh(order)
+
+    # Return full response
+    consumed_list = [
+        ConsumedMaterialResponse(
+            material_id=c.material_id,
+            material_code=c.material.code if c.material else "",
+            material_name=c.material.name if c.material else "",
+            warehouse_id=c.warehouse_id,
+            warehouse_name=c.warehouse.name if c.warehouse else "",
+            quantity=c.quantity,
+            unit=c.material.unit if c.material else "",
+            unit_cost_usd=round(c.unit_cost_usd, 4),
+            total_cost_usd=round(c.total_cost_usd, 2)
+        ) for c in order.consumed_materials
+    ]
+
+    return ProductionOrderResponse(
+        id=order.id,
+        order_number=order.order_number,
+        line_id=order.line_id,
+        line_name=order.line.name if order.line else "",
+        line_number=order.line.line_number if order.line else 1,
+        output_material_id=order.output_material_id,
+        output_material_code=order.output_material.code if order.output_material else "",
+        output_material_name=order.output_material.name if order.output_material else "",
+        quantity=round(order.quantity, 2),
+        unit=order.output_material.unit if order.output_material else "m2",
+        date=order.date,
+        status=order.status,
+        direct_cost_usd=round(order.direct_cost_usd, 2),
+        allocated_indirect_cost_usd=round(order.allocated_indirect_cost_usd, 2),
+        total_cost_usd=round(order.total_cost_usd, 2),
+        unit_cost_usd=round(order.unit_cost_usd, 4),
+        storno_ref_id=order.storno_ref_id,
+        notes=order.notes,
+        consumed_materials=consumed_list,
+        created_at=order.created_at
+    )
+
+@router.get("/line-expenses", response_model=List[LineExpenseResponse])
+def get_line_expenses(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("ishlab_chiqarish", role)
+    query = db.query(LineExpense)
+    if start_date:
+        query = query.filter(LineExpense.date >= start_date)
+    if end_date:
+        query = query.filter(LineExpense.date <= end_date)
+        
+    expenses = query.order_by(LineExpense.date.desc(), LineExpense.id.desc()).all()
     
-    # Return formatted response
-    return get_production_orders(status=None, line_id=order.line_id, start_date=order.date, end_date=order.date, db=db, role=role)[0]
+    lines_map = {l.id: l.name for l in db.query(ProductionLine).all()}
+    wh_map = {w.id: w.name for w in db.query(Warehouse).all()}
+
+    result = []
+    for e in expenses:
+        line_ids = [int(x) for x in e.line_ids_str.split(",") if x.strip().isdigit()]
+        line_names = [lines_map.get(lid, f"Liniya {lid}") for lid in line_ids]
+
+        items_list = []
+        for it in e.items:
+            items_list.append(LineExpenseItemResponse(
+                id=it.id,
+                material_id=it.material_id,
+                material_code=it.material.code if it.material else "",
+                material_name=it.material.name if it.material else "",
+                unit=it.material.unit if it.material else "",
+                quantity=it.quantity,
+                unit_cost_usd=round(it.unit_cost_usd, 4),
+                total_cost_usd=round(it.total_cost_usd, 2)
+            ))
+
+        result.append(LineExpenseResponse(
+            id=e.id,
+            expense_number=e.expense_number,
+            date=e.date,
+            warehouse_id=e.warehouse_id,
+            warehouse_name=wh_map.get(e.warehouse_id, "Aralash ombor"),
+            line_ids=line_ids,
+            line_names=line_names,
+            total_cost_usd=round(e.total_cost_usd, 2),
+            status=e.status,
+            notes=e.notes,
+            items=items_list,
+            created_at=e.created_at
+        ))
+    return result
+
+@router.post("/line-expenses", response_model=LineExpenseResponse)
+def create_line_expense(
+    payload: LineExpenseCreate,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("ishlab_chiqarish", role)
+    assert_month_open(db, payload.date)
+
+    if not payload.line_ids or len(payload.line_ids) == 0:
+        raise HTTPException(status_code=400, detail="Kamida bitta liniyani tanlang.")
+
+    if not payload.items or len(payload.items) == 0:
+        raise HTTPException(status_code=400, detail="Kamida bitta sarf materialini kiritishingiz shart.")
+
+    count = db.query(func.count(LineExpense.id)).scalar() or 0
+    exp_num = f"LINE-EXP-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    line_ids_str = ",".join(str(lid) for lid in payload.line_ids)
+
+    total_cost_usd = 0.0
+    items_records = []
+
+    # Deduct items strictly from Warehouse 3 (Aralash ombor)
+    for it in payload.items:
+        if it.quantity <= 0:
+            continue
+        unit_cost = deduct_stock(db, 3, it.material_id, it.quantity)
+        line_cost = it.quantity * unit_cost
+        total_cost_usd += line_cost
+
+        items_records.append(LineExpenseItem(
+            material_id=it.material_id,
+            quantity=it.quantity,
+            unit_cost_usd=unit_cost,
+            total_cost_usd=line_cost
+        ))
+
+    expense = LineExpense(
+        expense_number=exp_num,
+        date=payload.date,
+        warehouse_id=3,
+        line_ids_str=line_ids_str,
+        total_cost_usd=total_cost_usd,
+        status="Tasdiqlandi",
+        notes=payload.notes,
+        items=items_records
+    )
+    db.add(expense)
+    db.commit()
+    db.refresh(expense)
+
+    lines_map = {l.id: l.name for l in db.query(ProductionLine).all()}
+    line_names = [lines_map.get(lid, f"Liniya {lid}") for lid in payload.line_ids]
+
+    items_list = []
+    for it in expense.items:
+        items_list.append(LineExpenseItemResponse(
+            id=it.id,
+            material_id=it.material_id,
+            material_code=it.material.code if it.material else "",
+            material_name=it.material.name if it.material else "",
+            unit=it.material.unit if it.material else "",
+            quantity=it.quantity,
+            unit_cost_usd=round(it.unit_cost_usd, 4),
+            total_cost_usd=round(it.total_cost_usd, 2)
+        ))
+
+    return LineExpenseResponse(
+        id=expense.id,
+        expense_number=expense.expense_number,
+        date=expense.date,
+        warehouse_id=3,
+        warehouse_name="Aralash ombor",
+        line_ids=payload.line_ids,
+        line_names=line_names,
+        total_cost_usd=round(total_cost_usd, 2),
+        status=expense.status,
+        notes=expense.notes,
+        items=items_list,
+        created_at=expense.created_at
+    )
+
+@router.post("/line-expenses/{expense_id}/storno")
+def storno_line_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    check_permission("ishlab_chiqarish", role)
+    expense = db.query(LineExpense).filter(LineExpense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Hujjat topilmadi.")
+
+    if expense.status == "Storno":
+        raise HTTPException(status_code=400, detail="Ushbu hujjat allaqachon storno qilingan.")
+
+    assert_month_open(db, expense.date)
+
+    # Return materials back to Warehouse 3
+    for it in expense.items:
+        add_stock_with_avg_valuation(
+            db=db,
+            warehouse_id=3,
+            material_id=it.material_id,
+            quantity=it.quantity,
+            unit_price=it.unit_cost_usd,
+            currency="USD",
+            trans_date=expense.date
+        )
+
+    expense.status = "Storno"
+    db.commit()
+    return {"status": "success", "message": f"{expense.expense_number} muvaffaqiyatli storno qilindi."}
 
 @router.post("/orders/{order_id}/storno")
 def storno_production_order(
@@ -230,13 +432,14 @@ def storno_production_order(
     check_permission("ishlab_chiqarish", role)
     order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
     if not order:
-        raise HTTPException(status_code=404, detail="Buyurtma topilmadi.")
+        raise HTTPException(status_code=404, detail="Ishlab chiqarish buyurtmasi topilmadi.")
+        
     if order.status == "Storno":
-        raise HTTPException(status_code=400, detail="Ushbu buyurtma allaqachon storno qilingan.")
+        raise HTTPException(status_code=400, detail="Ushbu buyurtma allaqachon STORNO qilingan.")
         
     assert_month_open(db, order.date)
 
-    # 1. Deduct finished goods from Warehouse 1
+    # 1. Deduct output finished goods from Warehouse 1
     deduct_stock(db, 1, order.output_material_id, order.quantity)
 
     # 2. Return consumed raw materials back to warehouses
@@ -252,7 +455,6 @@ def storno_production_order(
         )
 
     # 3. Create mirrored negative record
-    count = db.query(func.count(ProductionOrder.id)).scalar() or 0
     mirror_order = ProductionOrder(
         order_number=f"STORNO-{order.order_number}",
         line_id=order.line_id,
@@ -297,4 +499,3 @@ def delete_production_order(
     db.delete(order)
     db.commit()
     return {"success": True, "message": f"{order.order_number} ishlab chiqarish buyurtmasi muvaffaqiyatli o'chirildi.", "id": order_id}
-

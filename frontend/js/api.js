@@ -168,6 +168,14 @@ const API = {
   createProductionOrder: (data) => apiRequest("/ishlab-chiqarish/orders", "POST", data),
   stornoProductionOrder: (id) => apiRequest(`/ishlab-chiqarish/orders/${id}/storno`, "POST"),
   deleteProductionOrder: (id) => apiRequest(`/ishlab-chiqarish/orders/${id}`, "DELETE"),
+  getLineExpenses: (startDate, endDate) => {
+    let url = `/ishlab-chiqarish/line-expenses?`;
+    if (startDate) url += `start_date=${startDate}&`;
+    if (endDate) url += `end_date=${endDate}&`;
+    return apiRequest(url);
+  },
+  createLineExpense: (data) => apiRequest("/ishlab-chiqarish/line-expenses", "POST", data),
+  stornoLineExpense: (id) => apiRequest(`/ishlab-chiqarish/line-expenses/${id}/storno`, "POST"),
   
   // Counterparty Balances & Ledger
   getCounterpartiesSummary: (currency = "USD") => apiRequest(`/kontragentlar/summary?view_currency=${currency}`),

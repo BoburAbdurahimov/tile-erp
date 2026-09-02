@@ -196,8 +196,42 @@ class ProductionLineResponse(BaseModel):
 # Production Order
 class ConsumedMaterialInput(BaseModel):
     material_id: int
-    warehouse_id: int # Default: 2 (Ishlab chiqarish uchun materiallar) or 3 (Aralash ombor)
+    warehouse_id: int = 2 # Fixed to 2 (Ishlab chiqarish uchun materiallar)
     quantity: float
+
+class LineExpenseItemInput(BaseModel):
+    material_id: int
+    quantity: float
+
+class LineExpenseCreate(BaseModel):
+    date: dt_date = Field(default_factory=dt_date.today)
+    line_ids: List[int]
+    items: List[LineExpenseItemInput]
+    notes: Optional[str] = None
+
+class LineExpenseItemResponse(BaseModel):
+    id: int
+    material_id: int
+    material_code: str
+    material_name: str
+    unit: str
+    quantity: float
+    unit_cost_usd: float
+    total_cost_usd: float
+
+class LineExpenseResponse(BaseModel):
+    id: int
+    expense_number: str
+    date: dt_date
+    warehouse_id: int
+    warehouse_name: str
+    line_ids: List[int]
+    line_names: List[str]
+    total_cost_usd: float
+    status: str
+    notes: Optional[str]
+    items: List[LineExpenseItemResponse]
+    created_at: dt_datetime
 
 class ProductionOrderCreate(BaseModel):
     line_id: int
