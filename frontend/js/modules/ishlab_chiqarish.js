@@ -304,25 +304,26 @@ const ProductionModule = {
   onWarehouseChange(whSelect) {
     const tr = whSelect.closest("tr");
     if (!tr) return;
-    const whId = parseInt(whSelect.value) || 2;
+    const whId = parseInt(whSelect.value, 10) || 2;
     const rowMatInput = tr.querySelector(".row-mat-input");
     const rowDatalist = tr.querySelector(".row-mat-datalist");
     
     const mats = this.getMaterialsForWarehouse(whId);
     
-    // Update datalist options
-    if (rowDatalist) {
+    // Update datalist options and rebind list attribute to force Chrome cache refresh
+    if (rowDatalist && rowMatInput) {
+      const newDlId = 'c_dl_' + Math.random().toString(36).substr(2, 9);
+      rowDatalist.id = newDlId;
+      rowMatInput.setAttribute('list', newDlId);
+
       if (mats.length === 0) {
-        rowDatalist.innerHTML = `<option value="">⚠️ Omborda birorta ham sarf qoldig'i yo'q</option>`;
+        rowDatalist.innerHTML = `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>`;
       } else {
         rowDatalist.innerHTML = mats.map(m => `
           <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
         `).join("");
       }
-    }
 
-    // Clear input so user chooses from newly selected warehouse
-    if (rowMatInput) {
       rowMatInput.value = "";
       rowMatInput.focus();
     }
