@@ -117,9 +117,7 @@ const MdmModule = {
                   <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)" style="padding: 12px 14px;">${t('th_region')} <span class="sort-icon">↕</span></th>
                   <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)" style="padding: 12px 14px;">${t('th_resident')} <span class="sort-icon">↕</span></th>
                   <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)" style="padding: 12px 14px;">${t('th_phone')} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="padding: 12px 14px; text-align: right;">${t('th_init_bal')} ($) <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="padding: 12px 14px; text-align: right;">${t('th_curr_bal')} ($) <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 7, false)" style="padding: 12px 14px;">${t('th_status')} <span class="sort-icon">↕</span></th>
+                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, false)" style="padding: 12px 14px;">${t('th_status')} <span class="sort-icon">↕</span></th>
                   <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
                 </tr>
                 <tr class="filter-row">
@@ -128,9 +126,7 @@ const MdmModule = {
                   <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Viloyat...' : 'Регион...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Rezident...' : 'Резидент...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tel...' : 'Тел...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th></th>
-                  <th></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="7" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th></th>
                 </tr>
               </thead>
@@ -142,8 +138,6 @@ const MdmModule = {
                     <td data-sort-value="${cp.region || ''}" style="padding: 12px 14px;">${cp.region || '-'}</td>
                     <td data-sort-value="${cp.is_resident ? 'Rezident' : 'Norezident'}" style="padding: 12px 14px;"><span class="badge" style="background: ${cp.is_resident ? '#dcfce7' : '#fef3c7'}; color: ${cp.is_resident ? '#166534' : '#b45309'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(cp.is_resident ? 'Rezident' : 'Norezident')}</span></td>
                     <td data-sort-value="${cp.phone || ''}" style="padding: 12px 14px;">${cp.phone || '-'}</td>
-                    <td data-sort-value="${cp.initial_balance_usd || 0}" style="padding: 12px 14px; text-align: right;">$${formatNumber(cp.initial_balance_usd || 0, 2, 2)}</td>
-                    <td data-sort-value="${cp.current_balance_usd || 0}" style="padding: 12px 14px; text-align: right;"><strong style="color: ${(cp.current_balance_usd || 0) >= 0 ? '#10b981' : '#ef4444'};">$${formatNumber(cp.current_balance_usd || 0, 2, 2)}</strong></td>
                     <td data-sort-value="${cp.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${cp.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${cp.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(cp.is_archived ? 'Arxiv' : 'Faol')}</span></td>
                     <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                       <button class="btn btn-secondary btn-sm" onclick="MdmModule.editCounterparty(${cp.id})" title="${t('btn_edit')}">✏️</button>
