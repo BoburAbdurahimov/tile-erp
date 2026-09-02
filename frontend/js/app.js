@@ -22,6 +22,9 @@ function formatNumber(num, minDec = 0, maxDec = 2) {
       return parts[0] + "." + dec;
     }
   }
+  return parts[0];
+}
+
 function parseFormattedNumber(val) {
   if (!val) return 0;
   const clean = String(val).replace(/\s+/g, '').replace(',', '.');
