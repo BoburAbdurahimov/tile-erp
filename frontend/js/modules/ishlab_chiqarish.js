@@ -301,42 +301,88 @@ const ProductionModule = {
     }));
   },
 
-  onWarehouseChange(whSelect) {
-    const tr = whSelect.closest("tr");
+  renderCustomMatPopup(inputEl) {
+    const tr = inputEl.closest("tr");
     if (!tr) return;
-    const whId = parseInt(whSelect.value, 10) || 2;
+    const whSelect = tr.querySelector(".row-wh");
+    const whId = whSelect ? (parseInt(whSelect.value, 10) || 2) : 2;
     const tdMat = tr.children[0];
     
-    const mats = this.getMaterialsForWarehouse(whId);
-    const newDlId = 'c_dl_' + Math.random().toString(36).substr(2, 9);
+    let popup = tdMat.querySelector(".custom-mat-popup");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.className = "custom-mat-popup";
+      popup.style.cssText = "position: absolute; left: 6px; right: 6px; top: 100%; max-height: 220px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 99999; padding: 4px 0;";
+      tdMat.style.position = "relative";
+      tdMat.appendChild(popup);
+    }
 
-    let optionsHtml = "";
-    if (mats.length === 0) {
-      optionsHtml = `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>`;
+    const mats = this.getMaterialsForWarehouse(whId);
+    const filterLower = inputEl.value.trim().toLowerCase();
+
+    const filtered = mats.filter(m => {
+      if (!filterLower) return true;
+      const code = m.code.toLowerCase();
+      const name = m.name.toLowerCase();
+      const full = `${m.code} - ${m.name}`.toLowerCase();
+      return code.includes(filterLower) || name.includes(filterLower) || full.includes(filterLower);
+    });
+
+    if (filtered.length === 0) {
+      popup.innerHTML = `<div style="padding: 10px 14px; font-size: 12px; color: #94a3b8; text-align: center;">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda mos keladigan sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</div>`;
     } else {
-      optionsHtml = mats.map(m => `
-        <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
+      popup.innerHTML = filtered.map(m => `
+        <div 
+          class="custom-dl-item" 
+          onmousedown="ProductionModule.selectMatItem(this, '${m.code} - ${m.name} (${tr(m.unit)})')"
+          style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background 0.15s;"
+          onmouseover="this.style.background='#f8fafc'"
+          onmouseout="this.style.background='transparent'"
+        >
+          <div style="font-weight: 600; font-size: 13px; color: #1e293b;">${m.code} - ${m.name} (${tr(m.unit)})</div>
+          <div style="font-size: 11.5px; color: #2563eb; font-weight: 500; margin-top: 2px;">📦 ${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</div>
+        </div>
       `).join("");
     }
 
-    if (tdMat) {
-      tdMat.innerHTML = `
-        <datalist id="${newDlId}" class="row-mat-datalist">
-          ${optionsHtml}
-        </datalist>
-        <input 
-          type="text" 
-          list="${newDlId}" 
-          class="form-control row-mat-input" 
-          placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
-          value="" 
-          style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
-          required 
-        />
-      `;
+    popup.style.display = "block";
+  },
 
-      const newInput = tdMat.querySelector(".row-mat-input");
-      if (newInput) newInput.focus();
+  onMatInputFocus(inputEl) {
+    this.renderCustomMatPopup(inputEl);
+  },
+
+  onMatInputInput(inputEl) {
+    this.renderCustomMatPopup(inputEl);
+  },
+
+  onMatInputBlur(inputEl) {
+    setTimeout(() => {
+      const tr = inputEl.closest("tr");
+      if (tr) {
+        const popup = tr.querySelector(".custom-mat-popup");
+        if (popup) popup.style.display = "none";
+      }
+    }, 200);
+  },
+
+  selectMatItem(itemEl, matText) {
+    const tr = itemEl.closest("tr");
+    if (!tr) return;
+    const inputEl = tr.querySelector(".row-mat-input");
+    const popup = tr.querySelector(".custom-mat-popup");
+    if (inputEl) inputEl.value = matText;
+    if (popup) popup.style.display = "none";
+  },
+
+  onWarehouseChange(whSelect) {
+    const tr = whSelect.closest("tr");
+    if (!tr) return;
+    const rowMatInput = tr.querySelector(".row-mat-input");
+    if (rowMatInput) {
+      rowMatInput.value = "";
+      this.renderCustomMatPopup(rowMatInput);
+      rowMatInput.focus();
     }
   },
 
@@ -368,9 +414,6 @@ const ProductionModule = {
     const code = (typeof defaultCode === 'string') ? defaultCode : null;
     const qty = (typeof defaultQty === 'number' || (typeof defaultQty === 'string' && defaultQty !== '')) ? defaultQty : '';
 
-    const dlId = 'c_dl_' + Math.random().toString(36).substr(2, 9);
-    const mats = this.getMaterialsForWarehouse(whId);
-
     let defaultMatText = "";
     if (code) {
       const defaultMat = (this.rawMaterialsList || []).find(m => m.code === code);
@@ -382,22 +425,20 @@ const ProductionModule = {
     const trEl = document.createElement("tr");
     trEl.style.borderBottom = "1px solid #f1f5f9";
     trEl.innerHTML = `
-      <td style="padding: 6px 8px;">
-        <datalist id="${dlId}" class="row-mat-datalist">
-          ${mats.length === 0 
-            ? `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>` 
-            : mats.map(m => `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>`).join("")
-          }
-        </datalist>
+      <td style="padding: 6px 8px; position: relative;">
         <input 
           type="text" 
-          list="${dlId}" 
           class="form-control row-mat-input" 
           placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
           value="${defaultMatText}" 
+          onfocus="ProductionModule.onMatInputFocus(this)"
+          oninput="ProductionModule.onMatInputInput(this)"
+          onblur="ProductionModule.onMatInputBlur(this)"
           style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
+          autocomplete="off"
           required 
         />
+        <div class="custom-mat-popup" style="display: none; position: absolute; left: 6px; right: 6px; top: 100%; max-height: 220px; overflow-y: auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 99999; padding: 4px 0;"></div>
       </td>
       <td style="padding: 6px 8px;">
         <select class="form-control row-wh" onchange="ProductionModule.onWarehouseChange(this)" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
