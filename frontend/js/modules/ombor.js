@@ -353,10 +353,9 @@ const OmborModule = {
             description: desc
           });
           showToast(CURRENT_LANG === 'uz' ? "Tovarlar omborlar o'rtasida muvaffaqiyatli o'tkazildi!" : "Перемещение успешно выполнено!", "success");
+          await OmborModule.loadStock();
           if (OmborModule.currentView === "transfers") {
             await OmborModule.loadTransfers();
-          } else {
-            await OmborModule.loadStock();
           }
           return true;
         } catch (err) {
@@ -383,19 +382,32 @@ const OmborModule = {
     matSel.innerHTML = `<option value="">${t('msg_loading')}</option>`;
 
     try {
-      const stock = await API.getStockBalances(fromWhId, "", "");
-      const available = (stock || []).filter(s => s.quantity > 0);
+      const [materials, stock] = await Promise.all([
+        API.getMaterials(),
+        API.getStockBalances(fromWhId, "", "")
+      ]);
 
-      if (available.length === 0) {
-        matSel.innerHTML = `<option value="">⚠️ Tanlangan omborda birorta ham tovar qoldig'i yo'q!</option>`;
+      const stockMap = {};
+      (stock || []).forEach(s => {
+        stockMap[s.material_id] = s.quantity;
+      });
+
+      if (!materials || materials.length === 0) {
+        matSel.innerHTML = `<option value="">⚠️ Birorta ham tovar topilmadi</option>`;
         return;
       }
 
-      matSel.innerHTML = available.map(s => `
-        <option value="${s.material_id}" data-max="${s.quantity}" data-unit="${tr(s.unit)}">
-          ${s.material_code} - ${s.material_name} (${tr(s.material_category)}) — Mavjud: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}
-        </option>
-      `).join("");
+      // Sort materials: items with positive stock first, then others
+      const sorted = materials.slice().sort((a, b) => (stockMap[b.id] || 0) - (stockMap[a.id] || 0));
+
+      matSel.innerHTML = sorted.map(m => {
+        const qty = stockMap[m.id] || 0;
+        return `
+          <option value="${m.id}" data-max="${qty}" data-unit="${tr(m.unit)}">
+            ${m.code} - ${m.name} (${tr(m.category)}) — Mavjud: ${formatNumber(qty, 0, 2)} ${tr(m.unit)}
+          </option>
+        `;
+      }).join("");
 
       this.onTransferMaterialChange();
     } catch (e) {
