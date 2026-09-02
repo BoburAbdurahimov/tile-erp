@@ -73,7 +73,7 @@ const DashboardModule = {
         kpiGrid.innerHTML = `
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "7 kunlik hajm" : "Объем за 7 дней"}</span>
-            <span class="kpi-value">${stats7d.total_7d_volume_m2.toLocaleString()} m²</span>
+            <span class="kpi-value">${formatNumber(stats7d.total_7d_volume_m2, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
             <span class="kpi-sub">${CURRENT_LANG === 'uz' ? "5 ta liniya bo'yicha" : "По 5 линиям"}</span>
           </div>
           <div class="kpi-card">
@@ -202,7 +202,7 @@ const DashboardModule = {
       ctx.fillStyle = "#94a3b8";
       ctx.font = "10px Inter";
       ctx.textAlign = "right";
-      ctx.fillText(`${val}m²`, padding - 6, y + 3);
+      ctx.fillText(`${val} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}`, padding - 6, y + 3);
     }
 
     // Draw Gradient Area

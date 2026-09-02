@@ -134,12 +134,12 @@ const FinanceModule = {
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${isUz ? "Liniya №" : "Линия №"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">${isUz ? "Liniya Nomi" : "Наименование линии"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${isUz ? "Kafel O'lchami" : "Размер плитки"} <span class="sort-icon">↕</span></th>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, true)" style="text-align: right;">${isUz ? "Hajmi (m²)" : "Объем (м²)"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, true)" style="text-align: right;">${isUz ? "Hajmi (dona)" : "Объем (шт)"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${isUz ? "Ulush (%)" : "Доля (%)"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${isUz ? "To'g'ridan-to'g'ri ($)" : "Прямые ($)"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="text-align: right;">${isUz ? "Bilvosita ($)" : "Косвенные ($)"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 7, true)" style="text-align: right;">${isUz ? "Jami ($)" : "Итого ($)"} <span class="sort-icon">↕</span></th>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 8, true)" style="text-align: right;">${isUz ? "1 m² Tannarx ($/m²)" : "Себестоимость 1 м² ($/м²)"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 8, true)" style="text-align: right;">${isUz ? "1 dona Tannarx ($/dona)" : "Себестоимость 1 шт ($/шт)"} <span class="sort-icon">↕</span></th>
               </tr>
             </thead>
             <tbody>
@@ -148,24 +148,24 @@ const FinanceModule = {
                   <td data-sort-value="${l.line_number}">${isUz ? `Liniya ${l.line_number}` : `Линия ${l.line_number}`}</td>
                   <td data-sort-value="${l.line_name}">${tr(l.line_name)}</td>
                   <td data-sort-value="${l.spec_tile_size}"><span class="badge badge-info">${l.spec_tile_size}</span></td>
-                  <td data-sort-value="${l.production_volume_m2}" style="text-align: right;">${l.production_volume_m2.toLocaleString()} m²</td>
+                  <td data-sort-value="${l.production_volume_m2}" style="text-align: right;">${formatNumber(l.production_volume_m2, 0, 2)} ${isUz ? 'dona' : 'шт'}</td>
                   <td data-sort-value="${l.volume_percentage}" style="text-align: right;">${l.volume_percentage}%</td>
-                  <td data-sort-value="${l.direct_materials_cost_usd}" style="text-align: right;">$${l.direct_materials_cost_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td data-sort-value="${l.allocated_indirect_cost_usd}" style="text-align: right;">$${l.allocated_indirect_cost_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td data-sort-value="${l.total_manufacturing_cost_usd}" style="text-align: right;">$${l.total_manufacturing_cost_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td data-sort-value="${l.unit_cost_usd_per_m2}" style="text-align: right;"><span style="color: #2563eb; font-size: 13px; font-weight: 600;">$${l.unit_cost_usd_per_m2.toFixed(4)} / m²</span></td>
+                  <td data-sort-value="${l.direct_materials_cost_usd}" style="text-align: right;">$${formatNumber(l.direct_materials_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${l.allocated_indirect_cost_usd}" style="text-align: right;">$${formatNumber(l.allocated_indirect_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${l.total_manufacturing_cost_usd}" style="text-align: right;">$${formatNumber(l.total_manufacturing_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${l.unit_cost_usd_per_m2}" style="text-align: right;"><span style="color: #2563eb; font-size: 13px; font-weight: 600;">$${l.unit_cost_usd_per_m2.toFixed(4)} / ${isUz ? 'dona' : 'шт'}</span></td>
                 </tr>
               `).join("")}
             </tbody>
             <tfoot>
               <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #e2e8f0;">
                 <td colspan="3" style="text-align: right; padding: 12px 14px;">${isUz ? "JAMI ZAVOD BO'YICHA:" : "ИТОГО ПО ЗАВОДУ:"}</td>
-                <td style="text-align: right; padding: 12px 14px;">${pnl.total_factory_volume_m2.toLocaleString()} m²</td>
+                <td style="text-align: right; padding: 12px 14px;">${formatNumber(pnl.total_factory_volume_m2, 0, 2)} ${isUz ? 'dona' : 'шт'}</td>
                 <td style="text-align: right; padding: 12px 14px;">100%</td>
-                <td style="text-align: right; padding: 12px 14px;">$${pnl.cogs_direct_materials_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="text-align: right; padding: 12px 14px;">$${pnl.cogs_indirect_expenses_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="color: #ef4444; text-align: right; padding: 12px 14px;">$${pnl.total_cogs_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="text-align: right; padding: 12px 14px;">$${pnl.total_factory_volume_m2 > 0 ? (pnl.total_cogs_usd / pnl.total_factory_volume_m2).toFixed(4) : 0} / m²</td>
+                <td style="text-align: right; padding: 12px 14px;">$${formatNumber(pnl.cogs_direct_materials_usd, 2, 2)}</td>
+                <td style="text-align: right; padding: 12px 14px;">$${formatNumber(pnl.cogs_indirect_expenses_usd, 2, 2)}</td>
+                <td style="color: #ef4444; text-align: right; padding: 12px 14px;">$${formatNumber(pnl.total_cogs_usd, 2, 2)}</td>
+                <td style="text-align: right; padding: 12px 14px;">$${pnl.total_factory_volume_m2 > 0 ? (pnl.total_cogs_usd / pnl.total_factory_volume_m2).toFixed(4) : 0} / ${isUz ? 'dona' : 'шт'}</td>
               </tr>
             </tfoot>
           </table>

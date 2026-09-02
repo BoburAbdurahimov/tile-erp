@@ -55,7 +55,7 @@ const ProductionModule = {
             </div>
             <div style="font-size: 26px; font-weight: 800; color: #0f172a; text-align: center; width: 100%; display: flex; align-items: baseline; justify-content: center; gap: 6px;">
               <span>${lineVol.toLocaleString()}</span>
-              <span style="font-size: 16px; font-weight: 600; color: #64748b;">m²</span>
+              <span style="font-size: 16px; font-weight: 600; color: #64748b;">${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
             </div>
           </div>
         `;
@@ -81,9 +81,9 @@ const ProductionModule = {
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">${t('th_doc_num')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Liniya' : 'Линия'} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)">${CURRENT_LANG === 'uz' ? 'Tayyor mahsulot' : 'Готовая продукция'} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${t('th_quantity')} (m²) <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${t('th_quantity')} (${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}) <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? "Tannarx ($)" : "Себестоимость ($)"} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? "Birlik ($/m²)" : "За единицу ($/м²)"} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? "Birlik ($/dona)" : "За единицу ($/шт)"} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 7, false)">${t('th_status')} <span class="sort-icon">↕</span></th>
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
@@ -190,7 +190,7 @@ const ProductionModule = {
               />
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Chiqarilgan hajm (m²) *' : 'Объем выпуска (м²) *'}</label>
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Chiqarilgan hajm (dona) *' : 'Объем выпуска (шт) *'}</label>
               <input type="number" step="any" id="po-quantity" class="form-control" placeholder="1000" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
             </div>
           </div>
