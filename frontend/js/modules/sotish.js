@@ -147,14 +147,16 @@ const SalesModule = {
 
   async openNewSaleModal() {
     const todayStr = new Date().toISOString().split("T")[0];
-    const [clients, materials, warehouses] = await Promise.all([
+    const [clients, materials, warehouses, stockBalances] = await Promise.all([
       API.getCounterparties("client"),
       API.getMaterials("Tayyor mahsulot"),
-      API.getWarehouses()
+      API.getWarehouses(),
+      API.getStockBalances()
     ]);
 
     this.clientsList = clients || [];
     this.finishedProductsList = materials || [];
+    this.stockBalances = stockBalances || [];
 
     const isUz = CURRENT_LANG === 'uz';
 
@@ -168,7 +170,7 @@ const SalesModule = {
           </datalist>
 
           <datalist id="sale-materials-datalist">
-            ${this.finishedProductsList.map(m => `<option value="${m.code} - ${m.name} (${m.unit})" data-id="${m.id}">${m.code} - ${m.name}</option>`).join("")}
+            <!-- Dynamically populated with stock balances -->
           </datalist>
 
           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
@@ -200,7 +202,7 @@ const SalesModule = {
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">
                 ${isUz ? 'Chiqariladigan ombor *' : 'Склад отгрузки *'}
               </label>
-              <select id="sale-warehouse" class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" required>
+              <select id="sale-warehouse" class="form-control" onchange="SalesModule.onWarehouseChange(this)" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" required>
                 ${warehouses.map(w => `<option value="${w.id}" ${w.id === 1 ? 'selected' : ''}>${tr(w.name)}</option>`).join("")}
               </select>
             </div>
@@ -297,7 +299,32 @@ const SalesModule = {
       "modal-lg"
     );
 
+    this.updateMaterialDatalist(1);
     this.addSaleItemRow();
+  },
+
+  updateMaterialDatalist(whId = 1) {
+    const datalist = document.getElementById("sale-materials-datalist");
+    if (!datalist) return;
+    
+    const selectedWh = whId ? parseInt(whId, 10) : 1;
+    const stockMap = {};
+
+    (this.stockBalances || []).forEach(s => {
+      if (!selectedWh || s.warehouse_id === selectedWh) {
+        stockMap[s.material_id] = (stockMap[s.material_id] || 0) + s.quantity;
+      }
+    });
+
+    datalist.innerHTML = (this.finishedProductsList || []).map(m => {
+      const qty = stockMap[m.id] || 0;
+      return `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(qty, 0, 2)} ${tr(m.unit)}</option>`;
+    }).join("");
+  },
+
+  onWarehouseChange(whSelect) {
+    const whId = whSelect ? whSelect.value : 1;
+    this.updateMaterialDatalist(whId);
   },
 
   findClientByInput(inputVal) {

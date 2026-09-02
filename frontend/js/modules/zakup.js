@@ -147,14 +147,16 @@ const PurchasesModule = {
 
   async openNewPurchaseModal() {
     const todayStr = new Date().toISOString().split("T")[0];
-    const [suppliers, materials, warehouses] = await Promise.all([
+    const [suppliers, materials, warehouses, stockBalances] = await Promise.all([
       API.getCounterparties("supplier"),
       API.getMaterials(),
-      API.getWarehouses()
+      API.getWarehouses(),
+      API.getStockBalances()
     ]);
 
     this.suppliersList = suppliers || [];
     this.rawMaterialsList = materials || [];
+    this.stockBalances = stockBalances || [];
 
     const isUz = CURRENT_LANG === 'uz';
 
@@ -168,7 +170,7 @@ const PurchasesModule = {
           </datalist>
 
           <datalist id="pur-materials-datalist">
-            ${this.rawMaterialsList.map(m => `<option value="${m.code} - ${m.name} (${m.unit})" data-id="${m.id}" data-price="${m.current_avg_price_usd || 0}">${m.code} - ${m.name}</option>`).join("")}
+            <!-- Dynamically populated with stock balances -->
           </datalist>
 
           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
@@ -200,7 +202,7 @@ const PurchasesModule = {
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">
                 ${isUz ? 'Qabul qiluvchi ombor *' : 'Склад поступления *'}
               </label>
-              <select id="pur-warehouse" class="form-control" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" required>
+              <select id="pur-warehouse" class="form-control" onchange="PurchasesModule.onWarehouseChange(this)" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" required>
                 ${warehouses.map(w => `<option value="${w.id}" ${w.id === 2 ? 'selected' : ''}>${tr(w.name)}</option>`).join("")}
               </select>
             </div>
@@ -297,7 +299,32 @@ const PurchasesModule = {
       "modal-lg"
     );
 
+    this.updateMaterialDatalist(2);
     this.addPurchaseItemRow();
+  },
+
+  updateMaterialDatalist(whId = 2) {
+    const datalist = document.getElementById("pur-materials-datalist");
+    if (!datalist) return;
+    
+    const selectedWh = whId ? parseInt(whId, 10) : 2;
+    const stockMap = {};
+
+    (this.stockBalances || []).forEach(s => {
+      if (!selectedWh || s.warehouse_id === selectedWh) {
+        stockMap[s.material_id] = (stockMap[s.material_id] || 0) + s.quantity;
+      }
+    });
+
+    datalist.innerHTML = (this.rawMaterialsList || []).map(m => {
+      const qty = stockMap[m.id] || 0;
+      return `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}" data-price="${m.current_avg_price_usd || 0}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(qty, 0, 2)} ${tr(m.unit)}</option>`;
+    }).join("");
+  },
+
+  onWarehouseChange(whSelect) {
+    const whId = whSelect ? whSelect.value : 2;
+    this.updateMaterialDatalist(whId);
   },
 
   findSupplierByInput(inputVal) {
