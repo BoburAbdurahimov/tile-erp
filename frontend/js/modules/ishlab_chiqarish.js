@@ -305,34 +305,38 @@ const ProductionModule = {
     const tr = whSelect.closest("tr");
     if (!tr) return;
     const whId = parseInt(whSelect.value, 10) || 2;
-    const rowMatInput = tr.querySelector(".row-mat-input");
-    const oldDatalist = tr.querySelector(".row-mat-datalist");
+    const tdMat = tr.children[0];
     
     const mats = this.getMaterialsForWarehouse(whId);
-    
-    if (rowMatInput) {
-      const newDlId = 'c_dl_' + Math.random().toString(36).substr(2, 9);
-      const newDatalist = document.createElement("datalist");
-      newDatalist.id = newDlId;
-      newDatalist.className = "row-mat-datalist";
+    const newDlId = 'c_dl_' + Math.random().toString(36).substr(2, 9);
 
-      if (mats.length === 0) {
-        newDatalist.innerHTML = `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>`;
-      } else {
-        newDatalist.innerHTML = mats.map(m => `
-          <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
-        `).join("");
-      }
+    let optionsHtml = "";
+    if (mats.length === 0) {
+      optionsHtml = `<option value="">⚠️ ${CURRENT_LANG === 'uz' ? 'Bu omborda birorta ham sarf qoldig\'i yo\'q' : 'В этом складе нет остатков'}</option>`;
+    } else {
+      optionsHtml = mats.map(m => `
+        <option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(m.stockQty, 0, 2)} ${tr(m.unit)}</option>
+      `).join("");
+    }
 
-      if (oldDatalist) {
-        oldDatalist.replaceWith(newDatalist);
-      } else {
-        tr.querySelector("td").appendChild(newDatalist);
-      }
+    if (tdMat) {
+      tdMat.innerHTML = `
+        <datalist id="${newDlId}" class="row-mat-datalist">
+          ${optionsHtml}
+        </datalist>
+        <input 
+          type="text" 
+          list="${newDlId}" 
+          class="form-control row-mat-input" 
+          placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
+          value="" 
+          style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
+          required 
+        />
+      `;
 
-      rowMatInput.setAttribute("list", newDlId);
-      rowMatInput.value = "";
-      rowMatInput.focus();
+      const newInput = tdMat.querySelector(".row-mat-input");
+      if (newInput) newInput.focus();
     }
   },
 
