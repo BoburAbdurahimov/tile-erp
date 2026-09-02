@@ -246,6 +246,8 @@ def record_daily_attendance(
 
     db.commit()
 
+    db.commit()
+
     # Recalculate salaries for affected fixed employees
     fixed_employees = db.query(Employee).filter(
         Employee.employee_type == "fixed",
@@ -253,6 +255,12 @@ def record_daily_attendance(
     ).all()
     for emp in fixed_employees:
         calculate_employee_salary(db, emp.id, year_month, current_user=current_user)
+
+    # Sync piecework earnings for present workers on all 5 production lines based on actual daily production volume
+    from backend.models import ProductionLine
+    lines = db.query(ProductionLine).all()
+    for l in lines:
+        sync_piecework_from_production(db, l.id, entry_date)
 
     db.add(AuditLog(
         username=current_user,
@@ -263,6 +271,115 @@ def record_daily_attendance(
     ))
     db.commit()
     return True
+
+def sync_piecework_from_production(db: Session, line_id: int, date_val: date, total_output_qty: float = None):
+    """
+    Automatically syncs piecework earnings for present workers on a production line and date
+    based on the actual production volume output (e.g. 170-meter kiln run / tile output).
+    """
+    from backend.models import ProductionLine, ProductionOrder
+    
+    line = db.query(ProductionLine).filter(ProductionLine.id == line_id).first()
+    if not line:
+        return
+
+    if total_output_qty is None:
+        total_output_qty = db.query(func.sum(ProductionOrder.quantity)).filter(
+            ProductionOrder.line_id == line_id,
+            ProductionOrder.date == date_val,
+            ProductionOrder.status == "Tasdiqlandi"
+        ).scalar() or 0.0
+
+    dept_name = f"{line.line_number}-Liniya"
+    
+    piecework_emps = db.query(Employee).filter(
+        Employee.department == dept_name,
+        Employee.employee_type == "piecework",
+        Employee.is_active == True
+    ).all()
+
+    if not piecework_emps:
+        return
+
+    absent_emp_ids = set(
+        a.employee_id for a in db.query(AttendanceEntry).filter(
+            AttendanceEntry.date == date_val,
+            AttendanceEntry.status == "absent",
+            AttendanceEntry.employee_id.in_([e.id for e in piecework_emps])
+        ).all()
+    )
+
+    job_types = db.query(JobType).filter(JobType.is_active == True).all()
+    jt_map = {jt.name: jt for jt in job_types}
+
+    year_month = date_val.strftime("%Y-%m")
+
+    for emp in piecework_emps:
+        if emp.id in absent_emp_ids or total_output_qty <= 0:
+            # Absent worker or 0 production output -> delete work entries on this date
+            db.query(WorkEntry).filter(
+                WorkEntry.employee_id == emp.id,
+                WorkEntry.date == date_val
+            ).delete()
+            calculate_employee_salary(db, emp.id, year_month)
+            continue
+
+        # Worker is PRESENT and line produced output!
+        target_jt = None
+        qty = total_output_qty
+
+        pos = (emp.position or "").lower()
+        if "press" in pos:
+            tile_size = (line.spec_tile_size or "30x30").split()[0]
+            target_jt = jt_map.get(f"Pressovka va Formovka ({tile_size})") or jt_map.get("Pressovka va Formovka (30x30)")
+        elif "glazur" in pos:
+            target_jt = jt_map.get("Glazurlash va Linya Bo'yoq")
+            qty = total_output_qty * 0.95
+        elif "pech" in pos:
+            target_jt = jt_map.get("Pechda Kuydirish Nazorati")
+            qty = total_output_qty * 0.92
+        elif "saral" in pos:
+            target_jt = jt_map.get("Saralash va Sifat Nazorati")
+            qty = total_output_qty * 0.90
+        else: # Qadoqlovchi / Poddon
+            target_jt = jt_map.get("Qadoqlash va Poddon Yig'ish")
+            qty = round(total_output_qty / 40.0, 1)
+
+        if not target_jt:
+            continue
+
+        rate = target_jt.price_per_unit
+        total_amt = round(qty * rate, 2)
+
+        we = db.query(WorkEntry).filter(
+            WorkEntry.employee_id == emp.id,
+            WorkEntry.job_type_id == target_jt.id,
+            WorkEntry.date == date_val
+        ).first()
+
+        note_text = f"Liniya #{line.line_number} ({total_output_qty:,.0f} dona/m2 ishlab chiqarishdan avto-hisoblandi)"
+
+        if not we:
+            we = WorkEntry(
+                employee_id=emp.id,
+                job_type_id=target_jt.id,
+                date=date_val,
+                quantity=qty,
+                unit_price_snapshot=rate,
+                total_amount=total_amt,
+                notes=note_text,
+                entered_by="System (Avto-ishlab chiqarish)"
+            )
+            db.add(we)
+        else:
+            we.quantity = qty
+            we.unit_price_snapshot = rate
+            we.total_amount = total_amt
+            we.notes = note_text
+
+        calculate_employee_salary(db, emp.id, year_month)
+
+    db.commit()
 
 def record_daily_work_entry(
     db: Session,

@@ -218,6 +218,13 @@ def create_production_order(
     db.commit()
     db.refresh(order)
 
+    # Auto-sync piecework salary for present workers on this line based on production output quantity
+    try:
+        from backend.services.salary_service import sync_piecework_from_production
+        sync_piecework_from_production(db, order.line_id, order.date)
+    except Exception as e:
+        pass
+
     # Return full response
     consumed_list = [
         ConsumedMaterialResponse(
