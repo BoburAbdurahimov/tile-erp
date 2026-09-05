@@ -5,6 +5,13 @@ const I18N = {
     
     // Nav
     nav_dashboard: "Bosh panel",
+    // Short labels for the Telegram Mini App bottom bar (long ones wrap on 375px screens)
+    nav_dashboard_short: "Bosh",
+    nav_production_short: "Ishlab ch.",
+    nav_ombor_short: "Ombor",
+    nav_kassa_short: "Kassa",
+    nav_balances_short: "Balans",
+    nav_finance_short: "Moliya",
     nav_mdm: "MDM",
     nav_ombor: "Ombor",
     nav_kassa: "Kassa",
@@ -124,6 +131,12 @@ const I18N = {
     
     // Nav
     nav_dashboard: "Дашборд",
+    nav_dashboard_short: "Главная",
+    nav_production_short: "Произв.",
+    nav_ombor_short: "Склад",
+    nav_kassa_short: "Касса",
+    nav_balances_short: "Баланс",
+    nav_finance_short: "Финансы",
     nav_mdm: "MDM",
     nav_ombor: "Склад",
     nav_kassa: "Касса",

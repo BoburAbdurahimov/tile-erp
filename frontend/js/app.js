@@ -330,6 +330,27 @@ async function navigateTo(moduleName) {
     default:
       await DashboardModule.render(container);
   }
+
+  makeTablesScrollable(container);
+}
+
+// Wide ERP tables must scroll inside their own box; without this they widen the
+// whole page on a phone, which matters most in the Telegram Mini App. Modules
+// that already wrap their table in a scroll container are left alone.
+function makeTablesScrollable(root) {
+  if (!root) return;
+  root.querySelectorAll("table.data-table").forEach(table => {
+    const parent = table.parentElement;
+    if (!parent || parent.classList.contains("table-scroll")) return;
+
+    const parentScrolls = getComputedStyle(parent).overflowX;
+    if (parentScrolls === "auto" || parentScrolls === "scroll") return;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "table-scroll";
+    parent.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+  });
 }
 
 async function updateHeaderFxRate() {

@@ -1,0 +1,23 @@
+# Secrets - never upload
+.env
+.env.*
+!.env.example
+
+# Local database
+*.db
+*.sqlite
+*.sqlite3
+
+# Stale local copies
+backup_2/
+backup_project/
+
+# Working backups and caches
+*.bak
+__pycache__/
+*.py[cod]
+
+# Local-only launcher deps (bot runs on your machine, not on Vercel)
+test_erp.py
+test_salary.py
+.vercel/

@@ -1182,3 +1182,136 @@ body {
     margin: 10px auto;
   }
 }
+
+/* ==========================================================================
+   Role badge cells
+   `.data-table td` sets `white-space: nowrap`, so a cell holding many role
+   badges overflowed its `max-width` and painted over the neighbouring status
+   and date columns. Re-enable wrapping for these cells only.
+   ========================================================================== */
+
+.data-table td.roles-cell {
+  white-space: normal;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Actions column stays reachable when a wide table scrolls horizontally. */
+
+.data-table th.actions-cell,
+.data-table td.actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background-color: #ffffff;
+  box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.18);
+}
+
+.data-table th.actions-cell {
+  background-color: #f8fafc;
+  z-index: 3;
+}
+
+.data-table tr:hover td.actions-cell {
+  background-color: #f8fafc;
+}
+
+/* ==========================================================================
+   Telegram Mini App / mobile
+   ========================================================================== */
+
+/* Wide tables scroll inside their own box instead of stretching the page. */
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  /* Nothing should be able to widen the viewport horizontally. */
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .content-body,
+  .card,
+  .modal-content {
+    max-width: 100%;
+  }
+
+  /* Charts and images stay inside their card. */
+  .card canvas,
+  .card img,
+  .card svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Bottom bar: single-line labels, clear of the iPhone home indicator. */
+  .mobile-bottom-nav {
+    height: auto;
+    min-height: 62px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mob-nav-item {
+    min-width: 0;
+    padding: 8px 4px;
+  }
+
+  .mob-label {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  /* Leave room for the fixed bar plus the home indicator. */
+  .content-body {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Comfortable tap targets (Apple/Google both recommend ~44px). */
+  .data-table th.sortable,
+  .btn,
+  button.btn,
+  .tab-btn {
+    min-height: 40px;
+  }
+
+  /* Filter inputs inside table headers stay usable at small widths. */
+  .table-col-filter {
+    min-width: 90px;
+    font-size: 16px; /* iOS zooms the page for inputs under 16px */
+  }
+}
+
+@media (max-width: 768px) {
+  /* KPI / stat tiles are compact enough to pair up; one per row wasted most of
+     the screen and pushed the real content far down. Wider content blocks
+     (.grid-2 / .grid-3 — charts, tables) stay full width. */
+  .grid-4, .grid-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+}
+
+/* Only the narrowest handsets (iPhone SE 1st gen and similar) drop back to one
+   tile per row; 375px phones fit two comfortably. */
+@media (max-width: 340px) {
+  .grid-4, .grid-5 {
+    grid-template-columns: 1fr !important;
+  }
+}

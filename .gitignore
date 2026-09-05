@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Local database
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor / working backups
+*.bak
+*.orig
+*.rej
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Stale local copies of the project (contain old secrets, not for publication)
+backup_2/
+backup_project/
+
+# Vercel
+.vercel/
+
+# Env files: ignore every variant EXCEPT the committed template.
+# (Keep this negation last so nothing re-ignores it.)
+.env*
+!.env.example

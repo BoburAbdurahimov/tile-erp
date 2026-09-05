@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8691440475:AAGPDBIS3rpmjbPuiZqPk0JoNJGZ5O2YEBA")
+# Never hard-code the bot token: this file is committed. Set it in .env instead.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/tile_erp")
 SQLITE_FALLBACK_URL = f"sqlite:///{BASE_DIR / 'tile_erp.db'}"
 

@@ -1,4 +1,5 @@
 import logging
+import os
 import asyncio
 from datetime import date
 from typing import List, Optional, Dict
@@ -28,40 +29,47 @@ from telegram_bot.table_renderer import render_excel_table_image
 
 logger = logging.getLogger("TileERPBot")
 
-WEBAPP_HTTPS_URL = "https://imposed-butler-ability-encourage.trycloudflare.com/webapp"
+WEBAPP_HTTPS_URL = os.getenv("WEBAPP_HTTPS_URL", "https://tile-erp-main.vercel.app/webapp")
+
+# The bot is a read-only reporting surface: it shows stock, cash, production,
+# balances, finance and salary data, but never creates or edits records.
+# Set BOT_READ_ONLY=0 to re-enable the cash and production entry wizards.
+BOT_READ_ONLY = os.getenv("BOT_READ_ONLY", "1").strip().lower() not in ("0", "false", "no")
 
 BOT_TEXTS = {
     "uz": {
-        "welcome": "👋 **Assalomu alaykum!**\nKafel zavodi ERP tizimiga xush kelibsiz.\n\n👇 **🚀 ERP Mini App** orqali to'liq tizimni ochishingiz yoki quyidagi menyudan foydalanishingiz mumkin:",
-        "choose_lang": "🌐 Iltimos, tilni tanlang / Пожалуйста, выберите язык:",
-        "lang_set": "✅ Til o'zbek tiliga o'rnatildi!",
-        "btn_webapp": "🚀 ERP Mini Appni ochish",
-        "menu_warehouse": "📦 Ombor qoldiqlari",
-        "menu_cash": "💵 Kassa holati",
-        "menu_production": "🏭 Ishlab chiqarish",
-        "menu_balances": "👥 Balanslar",
-        "menu_finance": "📊 Moliya & PnL",
-        "menu_salary": "👷 Ish haqi & Davomat",
-        "btn_change_lang": "🌐 Tilni o'zgartirish",
+        "welcome": "Kafel zavodi ERP tizimi.\nBo'limni tanlang:",
+        "choose_lang": "Iltimos, tilni tanlang / Пожалуйста, выберите язык:",
+        "lang_set": "Til o'zbek tiliga o'rnatildi!",
+        "btn_webapp": "ERP Mini Appni ochish",
+        "menu_warehouse": "Ombor qoldiqlari",
+        "menu_cash": "Kassa holati",
+        "menu_production": "Ishlab chiqarish",
+        "menu_balances": "Balanslar",
+        "menu_finance": "Moliya & PnL",
+        "menu_salary": "Ish haqi & Davomat",
+        "btn_change_lang": "Tilni o'zgartirish",
         "select_warehouse": "Qaysi omborni ko'rmoqchisiz?",
         "select_currency": "Qaysi valyutada hisoblansin?",
-        "cbu_rate": "Valyuta kursi (CBU)"
+        "cbu_rate": "Valyuta kursi (CBU)",
+        "read_only": "Bot faqat ko'rish uchun. Ma'lumot kiritish ERP web tizimida."
     },
     "ru": {
-        "welcome": "👋 **Здравствуйте!**\nДобро пожаловать в ERP-систему завода по производству плитки.\n\n👇 Нажмите **🚀 Открыть ERP Mini App** для быстрого управления или выберите раздел ниже:",
-        "choose_lang": "🌐 Пожалуйста, выберите язык / Iltimos, tilni tanlang:",
-        "lang_set": "✅ Язык успешно изменен на русский!",
-        "btn_webapp": "🚀 Открыть ERP Mini App",
-        "menu_warehouse": "📦 Остатки на складе",
-        "menu_cash": "💵 Состояние кассы",
-        "menu_production": "🏭 Производство",
-        "menu_balances": "👥 Балансы контрагентов",
-        "menu_finance": "📊 Финансы & PnL",
-        "menu_salary": "👷 Зарплата & Табель",
-        "btn_change_lang": "🌐 Сменить язык",
+        "welcome": "ERP-система завода.\nВыберите раздел:",
+        "choose_lang": "Пожалуйста, выберите язык / Iltimos, tilni tanlang:",
+        "lang_set": "Язык успешно изменен на русский!",
+        "btn_webapp": "Открыть ERP Mini App",
+        "menu_warehouse": "Остатки на складе",
+        "menu_cash": "Состояние кассы",
+        "menu_production": "Производство",
+        "menu_balances": "Балансы контрагентов",
+        "menu_finance": "Финансы & PnL",
+        "menu_salary": "Зарплата & Табель",
+        "btn_change_lang": "Сменить язык",
         "select_warehouse": "Какой склад вы хотите просмотреть?",
         "select_currency": "В какой валюте отобразить цены?",
-        "cbu_rate": "Курс ЦБ РУз"
+        "cbu_rate": "Курс ЦБ РУз",
+        "read_only": "Бот только для просмотра. Ввод данных - в веб-системе ERP."
     }
 }
 
@@ -85,6 +93,19 @@ def set_user_lang(tg_id: int, lang: str, username: str = "", first_name: str = "
         db.commit()
     finally:
         db.close()
+
+async def deny_if_read_only(target_message, lang: str) -> bool:
+    """Refuse any data-changing action while the bot runs read-only.
+
+    Returns True when the caller must stop. Menus already hide the write
+    buttons; this also covers stale buttons in old chat history and any
+    callback replayed by hand.
+    """
+    if not BOT_READ_ONLY:
+        return False
+    await target_message.reply_text(BOT_TEXTS[lang]["read_only"])
+    return True
+
 
 def check_bot_user_auth(user_id: int):
     db = SessionLocal()
@@ -162,13 +183,13 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     keyboard = [
         [
-            InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="lang_uz"),
-            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")
+            InlineKeyboardButton("O'zbekcha", callback_data="lang_uz"),
+            InlineKeyboardButton("Русский", callback_data="lang_ru")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"👋 Assalomu alaykum, {user.first_name}!\nIltimos, tilni tanlang / Пожалуйста, выберите язык:",
+        f"Assalomu alaykum, {user.first_name}!\nIltimos, tilni tanlang / Пожалуйста, выберите язык:",
         reply_markup=reply_markup
     )
 
@@ -185,40 +206,38 @@ async def lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # If phone number is missing, prompt to share contact!
     if not db_user or not db_user.phone_number:
         contact_kb = [
-            [KeyboardButton(text="📱 Telefon raqamni yuborish" if lang == "uz" else "📱 Отправить номер телефона", request_contact=True)]
+            [KeyboardButton(text="Telefon raqamni yuborish" if lang == "uz" else "Отправить номер телефона", request_contact=True)]
         ]
         msg = (
-            f"✅ {t['lang_set']}\n\n"
-            f"📱 **Hurmatli {user.first_name}!**\n"
-            f"ERP tizimidan foydalanish va administrator sizga rol biriktirishi uchun, iltimos, **telefon raqamingizni yuboring** (pastdagi tugmani bosing):"
+            f"{t['lang_set']}\n\n"
+            f"Hurmatli {user.first_name}!\n"
+            f"ERP tizimidan foydalanish va administrator sizga rol biriktirishi uchun, iltimos, telefon raqamingizni yuboring (pastdagi tugmani bosing):"
             if lang == "uz" else
-            f"✅ {t['lang_set']}\n\n"
-            f"📱 **Уважаемый {user.first_name}!**\n"
-            f"Для доступа к ERP-системе и назначения вам роли Администратором, пожалуйста, **отправьте ваш номер телефона** (нажмите кнопку ниже):"
+            f"{t['lang_set']}\n\n"
+            f"Уважаемый {user.first_name}!\n"
+            f"Для доступа к ERP-системе и назначения вам роли Администратором, пожалуйста, отправьте ваш номер телефона (нажмите кнопку ниже):"
         )
         await query.message.reply_text(
             msg,
             reply_markup=ReplyKeyboardMarkup(contact_kb, resize_keyboard=True, one_time_keyboard=True),
-            parse_mode="Markdown"
         )
     elif not is_appr:
         pending_msg = (
-            f"✅ {t['lang_set']}\n\n"
-            f"⏳ **Hurmatli {user.first_name}!**\n"
-            f"Sizning telefon raqamingiz (`{db_user.phone_number}`) tizimga yuborilgan.\n\n"
-            f"Administrator profilingizni tasdiqlab, sizga mos **rol** (omborchi, kassir, ish boshqaruvchi va h.k.) bergach, barcha operatsiyalar avtomatik ochiladi."
+            f"{t['lang_set']}\n\n"
+            f"Hurmatli {user.first_name}!\n"
+            f"Sizning telefon raqamingiz ({db_user.phone_number}) tizimga yuborilgan.\n\n"
+            f"Administrator profilingizni tasdiqlab, sizga mos rol (omborchi, kassir, ish boshqaruvchi va h.k.) bergach, barcha operatsiyalar avtomatik ochiladi."
             if lang == "uz" else
-            f"✅ {t['lang_set']}\n\n"
-            f"⏳ **Уважаемый {user.first_name}!**\n"
-            f"Ваш номер телефона (`{db_user.phone_number}`) отправлен в систему.\n\n"
+            f"{t['lang_set']}\n\n"
+            f"Уважаемый {user.first_name}!\n"
+            f"Ваш номер телефона ({db_user.phone_number}) отправлен в систему.\n\n"
             f"Ожидается подтверждение и назначение вам роли Администратором."
         )
-        await query.message.reply_text(pending_msg, parse_mode="Markdown")
+        await query.message.reply_text(pending_msg)
     else:
         await query.message.reply_text(
             f"{t['lang_set']}\n\n{t['welcome']}",
             reply_markup=get_main_keyboard(lang, u_role),
-            parse_mode="Markdown"
         )
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -262,33 +281,31 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not is_approved or user_role in [None, "", "Kutilmoqda"]:
         pending_text = (
-            f"✅ **Telefon raqamingiz qabul qilindi:** `{phone}`\n\n"
-            f"⏳ **Holat:** `Kutilmoqda (Admin tasdig'i talab etiladi)`\n\n"
-            f"Administrator web boshqaruv paneli orqali profilingizni ko'rib chiqadi va sizga tegishli **rol** biriktiradi. Shundan so'ng botdan foydalanishingiz mumkin bo'ladi."
+            f"Telefon raqamingiz qabul qilindi: {phone}\n\n"
+            f"Holat: Kutilmoqda (Admin tasdig'i talab etiladi)\n\n"
+            f"Administrator web boshqaruv paneli orqali profilingizni ko'rib chiqadi va sizga tegishli rol biriktiradi. Shundan so'ng botdan foydalanishingiz mumkin bo'ladi."
             if lang == "uz" else
-            f"✅ **Ваш номер телефона принят:** `{phone}`\n\n"
-            f"⏳ **Статус:** `Ожидает подтверждения Администратором`\n\n"
+            f"Ваш номер телефона принят: {phone}\n\n"
+            f"Статус: Ожидает подтверждения Администратором\n\n"
             f"Администратор назначит вам роль в веб-панели управления, после чего бот станет доступен."
         )
         await update.message.reply_text(
             pending_text,
             reply_markup=ReplyKeyboardRemove(),
-            parse_mode="Markdown"
         )
     else:
         reply_text = (
-            f"✅ **Telefon raqamingiz tasdiqlangan:** `{phone}`\n"
-            f"🎭 **Sizning rolingiz:** `{user_role}`\n\n"
+            f"Telefon raqamingiz tasdiqlangan: {phone}\n"
+            f"Sizning rolingiz: {user_role}\n\n"
             f"Barcha amallarni bajarish uchun quyidagi menyudan foydalanishingiz mumkin:"
             if lang == "uz" else
-            f"✅ **Ваш номер телефона подтвержден:** `{phone}`\n"
-            f"🎭 **Ваша роль:** `{user_role}`\n\n"
+            f"Ваш номер телефона подтвержден: {phone}\n"
+            f"Ваша роль: {user_role}\n\n"
             f"Вы можете приступать к работе в системе:"
         )
         await update.message.reply_text(
             reply_text,
             reply_markup=get_main_keyboard(lang, user_role),
-            parse_mode="Markdown"
         )
 
 # ==================== 1. WAREHOUSE MODULE ====================
@@ -299,10 +316,10 @@ async def handle_warehouse_menu(update: Update, context: ContextTypes.DEFAULT_TY
         warehouses = db.query(Warehouse).all()
         keyboard = []
         for w in warehouses:
-            keyboard.append([InlineKeyboardButton(f"🏢 {w.name}", callback_data=f"wh_{w.id}")])
+            keyboard.append([InlineKeyboardButton(f"{w.name}", callback_data=f"wh_{w.id}")])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(f"📦 {t['select_warehouse']}", reply_markup=reply_markup)
+        await update.message.reply_text(f"{t['select_warehouse']}", reply_markup=reply_markup)
     finally:
         db.close()
 
@@ -312,7 +329,7 @@ async def warehouse_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     is_appr, u_role, db_user = check_bot_user_auth(query.from_user.id)
     if not is_appr or not get_role_capabilities(u_role)["ombor"]:
-        await query.message.reply_text(f"⛔ Sizning rolingizda (`{u_role}`) Ombor amallariga ruxsat yo'q.")
+        await query.message.reply_text(f"Sizning rolingizda ({u_role}) Ombor amallariga ruxsat yo'q.")
         return
 
     data = query.data
@@ -323,12 +340,12 @@ async def warehouse_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         wh_id = int(data.split("_")[1])
         keyboard = [
             [
-                InlineKeyboardButton("💵 USD ($)", callback_data=f"whcur_{wh_id}_USD"),
-                InlineKeyboardButton("🇺🇿 UZS (So'm)", callback_data=f"whcur_{wh_id}_UZS")
+                InlineKeyboardButton("USD ($)", callback_data=f"whcur_{wh_id}_USD"),
+                InlineKeyboardButton("UZS (So'm)", callback_data=f"whcur_{wh_id}_UZS")
             ]
         ]
         await query.message.edit_text(
-            f"💱 {t['select_currency']}",
+            f"{t['select_currency']}",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     elif data.startswith("whcur_"):
@@ -376,8 +393,8 @@ async def warehouse_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"{total_sum:,.2f} {currency}"
             ]
 
-            title = f"📦 {wh_name} ({currency})"
-            subtitle = f"📅 Sana: {date.today()} | 📈 1 USD = {today_rate:,.0f} UZS"
+            title = f"{wh_name} ({currency})"
+            subtitle = f"Sana: {date.today()} | 1 USD = {today_rate:,.0f} UZS"
 
             img_buf = render_excel_table_image(
                 title=title,
@@ -390,8 +407,7 @@ async def warehouse_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             await query.message.reply_photo(
                 photo=img_buf,
-                caption=f"📦 **{wh_name}** ({currency})\n💰 Jami: `{total_sum:,.2f} {currency}`",
-                parse_mode="Markdown"
+                caption=f"{wh_name} ({currency})\nJami: {total_sum:,.2f} {currency}",
             )
         finally:
             db.close()
@@ -424,8 +440,8 @@ async def handle_cash_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, l
                 equiv_str
             ])
 
-        title = "💵 Kassa qoldiqlari" if lang == "uz" else "💵 Состояние кассы"
-        subtitle = f"📅 Sana: {date.today()} | 📈 1 USD = {today_rate:,.0f} UZS"
+        title = "Kassa qoldiqlari" if lang == "uz" else "Состояние кассы"
+        subtitle = f"Sana: {date.today()} | 1 USD = {today_rate:,.0f} UZS"
 
         img_buf = render_excel_table_image(
             title=title,
@@ -435,23 +451,31 @@ async def handle_cash_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, l
             col_alignments=col_aligns
         )
 
-        keyboard = [
-            [
-                InlineKeyboardButton("➕ Kirim qilish" if lang == "uz" else "➕ Поступление (Приход)", callback_data="cash_kirim_start"),
-                InlineKeyboardButton("➖ Chiqim qilish" if lang == "uz" else "➖ Расход (Выплата)", callback_data="cash_chiqim_start")
-            ]
-        ]
+        keyboard = []
+        if not BOT_READ_ONLY:
+            keyboard.append([
+                InlineKeyboardButton("Kirim qilish" if lang == "uz" else "Поступление (Приход)", callback_data="cash_kirim_start"),
+                InlineKeyboardButton("Chiqim qilish" if lang == "uz" else "Расход (Выплата)", callback_data="cash_chiqim_start")
+            ])
 
         await update.message.reply_photo(
             photo=img_buf,
-            caption="💵 **Kassa amallari:** Pul kirimi yoki chiqimini kiritish uchun tugmalardan foydalaning:" if lang == "uz" else "💵 **Кассовые операции:** Для оформления прихода или расхода нажмите кнопку ниже:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            caption=(
+                ("Kassa qoldiqlari (faqat ko'rish rejimi)" if lang == "uz" else "Состояние кассы (режим только просмотр)")
+                if BOT_READ_ONLY else
+                ("Kassa amallari" if lang == "uz" else "Кассовые операции")
+            ),
+            reply_markup=InlineKeyboardMarkup(keyboard) if keyboard else None
         )
     finally:
         db.close()
 
 # Helper to execute cash transaction in DB
 async def execute_cash_transaction_db(target_message, context: ContextTypes.DEFAULT_TYPE, desc: str, lang: str):
+    if await deny_if_read_only(target_message, lang):
+        context.user_data.pop("cash_tx", None)
+        return
+
     state = context.user_data.get("cash_tx", {})
     if not state:
         return
@@ -466,22 +490,21 @@ async def execute_cash_transaction_db(target_message, context: ContextTypes.DEFA
     try:
         reg = db.query(CashRegister).filter(CashRegister.id == reg_id).first()
         if not reg:
-            await target_message.reply_text("❌ Kassa topilmadi.")
+            await target_message.reply_text("Kassa topilmadi.")
             return
 
         today = date.today()
         if is_month_closed(db, today):
-            await target_message.reply_text("❌ Ushbu oy yopilgan! Operatsiya bajarilmadi.")
+            await target_message.reply_text("Ushbu oy yopilgan! Operatsiya bajarilmadi.")
             return
 
         if action == "chiqim" and round(reg.balance, 4) < round(amt, 4):
             await target_message.reply_text(
-                f"❌ **Kassada yetarli mablag' mavjud emas!**\n"
-                f"💵 Kassa: `{reg.name}`\n"
-                f"🔻 Talab qilingan: `{amt:,.2f} {reg.currency}`\n"
-                f"📊 Mavjud qoldiq: `{reg.balance:,.2f} {reg.currency}`\n\n"
+                f"Kassada yetarli mablag' mavjud emas!\n"
+                f"Kassa: {reg.name}\n"
+                f"Talab qilingan: {amt:,.2f} {reg.currency}\n"
+                f"Mavjud qoldiq: {reg.balance:,.2f} {reg.currency}\n\n"
                 f"Kassa manfiy songa tushishiga yo'l qo'yilmaydi.",
-                parse_mode="Markdown"
             )
             return
 
@@ -537,39 +560,39 @@ async def execute_cash_transaction_db(target_message, context: ContextTypes.DEFA
         context.user_data["cash_tx"] = {}
 
         storno_kb = [
-            [InlineKeyboardButton("↩️ Storno qilish (Bekor qilish)" if lang == "uz" else "↩️ Сторнировать", callback_data=f"ctx_storno_{tx.id}")]
+            [InlineKeyboardButton("Storno qilish (Bekor qilish)" if lang == "uz" else "Сторнировать", callback_data=f"ctx_storno_{tx.id}")]
         ]
 
-        title = "✅ KASSA KIRIMI TASDIQLANDI!" if action == "kirim" else "✅ KASSA CHIQIMI TASDIQLANDI!"
+        title = "KASSA KIRIMI TASDIQLANDI!" if action == "kirim" else "KASSA CHIQIMI TASDIQLANDI!"
         symbol = "+" if action == "kirim" else "-"
         
         msg = (
-            f"**{title}**\n"
-            f"━━━━━━━━━━━━━━━━━━━\n"
-            f"📋 **Hujjat №:** `CSH-{tx.id:04d}`\n"
-            f"💵 **Kassa:** `{reg.name}`\n"
-            f"💰 **Summa:** `{symbol}{amt:,.2f} {reg.currency}`\n"
-            f"📋 **Toifa / Manba:** `{category}` {f'({cp.name})' if cp else ''}\n"
-            f"📝 **Izoh:** _{final_desc}_\n"
-            f"📈 **Yangi kassa qoldig'i:** `{reg.balance:,.2f} {reg.currency}`\n"
-            f"━━━━━━━━━━━━━━━━━━━\n"
-            f"ℹ️ _Xatolik bo'lsa, quyidagi Storno tugmasi orqali bekor qilishingiz mumkin._"
+            f"{title}\n"
+            f"\n"
+            f"Hujjat №: CSH-{tx.id:04d}\n"
+            f"Kassa: {reg.name}\n"
+            f"Summa: {symbol}{amt:,.2f} {reg.currency}\n"
+            f"Toifa / Manba: {category} {f'({cp.name})' if cp else ''}\n"
+            f"Izoh: _{final_desc}_\n"
+            f"Yangi kassa qoldig'i: {reg.balance:,.2f} {reg.currency}\n"
+            f"\n"
+            f"Xatolik bo'lsa, quyidagi Storno tugmasi orqali bekor qilishingiz mumkin."
         )
         try:
-            await target_message.reply_text(msg, reply_markup=InlineKeyboardMarkup(storno_kb), parse_mode="Markdown")
+            await target_message.reply_text(msg, reply_markup=InlineKeyboardMarkup(storno_kb))
         except Exception as err:
             logger.warning(f"Markdown send failed, falling back to plain text: {err}")
             plain_msg = (
                 f"{title}\n"
-                f"━━━━━━━━━━━━━━━━━━━\n"
-                f"📋 Hujjat №: CSH-{tx.id:04d}\n"
-                f"💵 Kassa: {reg.name}\n"
-                f"💰 Summa: {symbol}{amt:,.2f} {reg.currency}\n"
-                f"📋 Toifa / Manba: {category} {f'({cp.name})' if cp else ''}\n"
-                f"📝 Izoh: {final_desc}\n"
-                f"📈 Yangi kassa qoldig'i: {reg.balance:,.2f} {reg.currency}\n"
-                f"━━━━━━━━━━━━━━━━━━━\n"
-                f"ℹ️ Xatolik bo'lsa, quyidagi Storno tugmasi orqali bekor qilishingiz mumkin."
+                f"\n"
+                f"Hujjat №: CSH-{tx.id:04d}\n"
+                f"Kassa: {reg.name}\n"
+                f"Summa: {symbol}{amt:,.2f} {reg.currency}\n"
+                f"Toifa / Manba: {category} {f'({cp.name})' if cp else ''}\n"
+                f"Izoh: {final_desc}\n"
+                f"Yangi kassa qoldig'i: {reg.balance:,.2f} {reg.currency}\n"
+                f"\n"
+                f"Xatolik bo'lsa, quyidagi Storno tugmasi orqali bekor qilishingiz mumkin."
             )
             await target_message.reply_text(plain_msg, reply_markup=InlineKeyboardMarkup(storno_kb))
     finally:
@@ -582,11 +605,14 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     is_appr, u_role, db_user = check_bot_user_auth(query.from_user.id)
     if not is_appr or not get_role_capabilities(u_role)["kassa"]:
-        await query.message.reply_text(f"⛔ Sizning rolingizda (`{u_role}`) Kassa amallariga ruxsat yo'q.")
+        await query.message.reply_text(f"Sizning rolingizda ({u_role}) Kassa amallariga ruxsat yo'q.")
         return
 
     data = query.data
     lang = get_user_lang(query.from_user.id)
+
+    if await deny_if_read_only(query.message, lang):
+        return
 
     db = SessionLocal()
     try:
@@ -596,26 +622,24 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             registers = db.query(CashRegister).all()
             keyboard = []
             for r in registers:
-                keyboard.append([InlineKeyboardButton(f"💵 {r.name} ({r.currency})", callback_data=f"ckr_reg_{r.id}")])
+                keyboard.append([InlineKeyboardButton(f"{r.name} ({r.currency})", callback_data=f"ckr_reg_{r.id}")])
             await query.message.reply_text(
-                "📥 **KIRIM: Pul qaysi kassaga qabul qilinsin?**" if lang == "uz" else "📥 **ПРИХОД: Выберите кассу поступления:**",
+                "KIRIM: Pul qaysi kassaga qabul qilinsin?" if lang == "uz" else "ПРИХОД: Выберите кассу поступления:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2: Select Category/Source for Kirim
         elif data.startswith("ckr_reg_"):
             reg_id = int(data.split("_")[2])
             keyboard = [
-                [InlineKeyboardButton("👤 Mijozdan to'lov (Debitorlik yopish)" if lang == "uz" else "👤 Оплата от клиента", callback_data=f"ckr_src_{reg_id}_client")],
-                [InlineKeyboardButton("🚚 Postavshikdan qaytgan pul" if lang == "uz" else "🚚 Возврат от поставщика", callback_data=f"ckr_src_{reg_id}_supplier")],
-                [InlineKeyboardButton("💼 Asoschidan investitsiya / Pul kiritish" if lang == "uz" else "💼 Взнос учредителя", callback_data=f"ckr_src_{reg_id}_founder")],
-                [InlineKeyboardButton("💰 Boshqa kirimlar" if lang == "uz" else "💰 Прочий приход", callback_data=f"ckr_src_{reg_id}_other")]
+                [InlineKeyboardButton("Mijozdan to'lov (Debitorlik yopish)" if lang == "uz" else "Оплата от клиента", callback_data=f"ckr_src_{reg_id}_client")],
+                [InlineKeyboardButton("Postavshikdan qaytgan pul" if lang == "uz" else "Возврат от поставщика", callback_data=f"ckr_src_{reg_id}_supplier")],
+                [InlineKeyboardButton("Asoschidan investitsiya / Pul kiritish" if lang == "uz" else "Взнос учредителя", callback_data=f"ckr_src_{reg_id}_founder")],
+                [InlineKeyboardButton("Boshqa kirimlar" if lang == "uz" else "Прочий приход", callback_data=f"ckr_src_{reg_id}_other")]
             ]
             await query.message.reply_text(
-                "📋 **Kirim manbasini tanlang:**" if lang == "uz" else "📋 **Выберите источник прихода:**",
+                "Kirim manbasini tanlang:" if lang == "uz" else "Выберите источник прихода:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 3: Specific Source Selection
@@ -628,21 +652,19 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 clients = db.query(MDMCounterparty).filter(MDMCounterparty.type == "client", MDMCounterparty.is_archived == False).all()
                 keyboard = []
                 for c in clients:
-                    keyboard.append([InlineKeyboardButton(f"👤 {c.name} (${c.current_balance_usd:,.0f})", callback_data=f"ckr_cp_{reg_id}_{c.id}_client")])
+                    keyboard.append([InlineKeyboardButton(f"{c.name} (${c.current_balance_usd:,.0f})", callback_data=f"ckr_cp_{reg_id}_{c.id}_client")])
                 await query.message.reply_text(
-                    "👤 **Qaysi mijozdan to'lov qabul qilindi?**" if lang == "uz" else "👤 **Выберите клиента:**",
+                    "Qaysi mijozdan to'lov qabul qilindi?" if lang == "uz" else "Выберите клиента:",
                     reply_markup=InlineKeyboardMarkup(keyboard),
-                    parse_mode="Markdown"
                 )
             elif src_type == "supplier":
                 suppliers = db.query(MDMCounterparty).filter(MDMCounterparty.type == "supplier", MDMCounterparty.is_archived == False).all()
                 keyboard = []
                 for s in suppliers:
-                    keyboard.append([InlineKeyboardButton(f"🏢 {s.name}", callback_data=f"ckr_cp_{reg_id}_{s.id}_supplier")])
+                    keyboard.append([InlineKeyboardButton(f"{s.name}", callback_data=f"ckr_cp_{reg_id}_{s.id}_supplier")])
                 await query.message.reply_text(
-                    "🏢 **Qaysi yetkazib beruvchidan pul qaytgan?**" if lang == "uz" else "🏢 **Выберите поставщика:**",
+                    "Qaysi yetkazib beruvchidan pul qaytgan?" if lang == "uz" else "Выберите поставщика:",
                     reply_markup=InlineKeyboardMarkup(keyboard),
-                    parse_mode="Markdown"
                 )
             else:
                 cat_name = "Asoschidan investitsiya" if src_type == "founder" else "Boshqa kirim"
@@ -656,11 +678,10 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "step": "await_cash_amount"
                 }
                 await query.message.reply_text(
-                    f"💵 **Kassaga kirim qilinadigan summani yozing ({reg.currency if reg else 'UZS'}):**\n"
-                    f"🏢 Kassa: **{reg.name if reg else 'Kassa'}**\n"
-                    f"📥 Kirim turi: **{cat_name}**\n\n"
-                    f"_Aniq summani raqam bilan yozib yuboring (masalan: 15000000 yoki 1250):_",
-                    parse_mode="Markdown"
+                    f"Kassaga kirim qilinadigan summani yozing ({reg.currency if reg else 'UZS'}):\n"
+                    f"Kassa: {reg.name if reg else 'Kassa'}\n"
+                    f"Kirim turi: {cat_name}\n\n"
+                    f"Aniq summani raqam bilan yozib yuboring (masalan: 15000000 yoki 1250):",
                 )
 
         elif data.startswith("ckr_cp_"):
@@ -684,11 +705,10 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             debt_str = f"${cp.current_balance_usd:,.2f}" if cp else "$0.00"
             await query.message.reply_text(
-                f"💵 **{cp.name if cp else 'Kontragent'} to'lagan summani yozing ({reg.currency if reg else 'UZS'}):**\n"
-                f"🏢 Kassa: **{reg.name if reg else 'Kassa'}**\n"
-                f"📊 Joriy qarzdorlik: **{debt_str}**\n\n"
-                f"_Aniq summani raqam bilan yozib yuboring (masalan: 5000000 yoki 500):_",
-                parse_mode="Markdown"
+                f"{cp.name if cp else 'Kontragent'} to'lagan summani yozing ({reg.currency if reg else 'UZS'}):\n"
+                f"Kassa: {reg.name if reg else 'Kassa'}\n"
+                f"Joriy qarzdorlik: {debt_str}\n\n"
+                f"Aniq summani raqam bilan yozib yuboring (masalan: 5000000 yoki 500):",
             )
 
         # ================= CHIQIM FLOW =================
@@ -697,63 +717,59 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             registers = db.query(CashRegister).all()
             keyboard = []
             for r in registers:
-                keyboard.append([InlineKeyboardButton(f"💵 {r.name} ({r.balance:,.0f} {r.currency})", callback_data=f"cch_reg_{r.id}")])
+                keyboard.append([InlineKeyboardButton(f"{r.name} ({r.balance:,.0f} {r.currency})", callback_data=f"cch_reg_{r.id}")])
             await query.message.reply_text(
-                "📤 **CHIQIM: Pul qaysi kassadan to'lansin?**" if lang == "uz" else "📤 **РАСХОД: Выберите кассу списания:**",
+                "CHIQIM: Pul qaysi kassadan to'lansin?" if lang == "uz" else "РАСХОД: Выберите кассу списания:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2: Main Expense Groups
         elif data.startswith("cch_reg_"):
             reg_id = int(data.split("_")[2])
             keyboard = [
-                [InlineKeyboardButton("⚡ Bilvosita ishlab chiqarish xarajatlari" if lang == "uz" else "⚡ Косвенные производственные расходы", callback_data=f"cch_grp_{reg_id}_indirect")],
-                [InlineKeyboardButton("🏢 Ma'muriyat va ofis xarajatlari" if lang == "uz" else "🏢 Административные расходы", callback_data=f"cch_grp_{reg_id}_admin")],
-                [InlineKeyboardButton("🚚 Postavshikka to'lov (Yetkazib beruvchi)" if lang == "uz" else "🚚 Оплата поставщику", callback_data=f"cch_grp_{reg_id}_supplier")],
-                [InlineKeyboardButton("💼 Boshqa chiqimlar" if lang == "uz" else "💼 Прочий расход", callback_data=f"cch_grp_{reg_id}_other")]
+                [InlineKeyboardButton("Bilvosita ishlab chiqarish xarajatlari" if lang == "uz" else "Косвенные производственные расходы", callback_data=f"cch_grp_{reg_id}_indirect")],
+                [InlineKeyboardButton("Ma'muriyat va ofis xarajatlari" if lang == "uz" else "Административные расходы", callback_data=f"cch_grp_{reg_id}_admin")],
+                [InlineKeyboardButton("Postavshikka to'lov (Yetkazib beruvchi)" if lang == "uz" else "Оплата поставщику", callback_data=f"cch_grp_{reg_id}_supplier")],
+                [InlineKeyboardButton("Boshqa chiqimlar" if lang == "uz" else "Прочий расход", callback_data=f"cch_grp_{reg_id}_other")]
             ]
             await query.message.reply_text(
-                "📋 **Xarajat toifasini tanlang:**" if lang == "uz" else "📋 **Выберите категорию расхода:**",
+                "Xarajat toifasini tanlang:" if lang == "uz" else "Выберите категорию расхода:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2.1: Indirect Production Expenses Subcategories
         elif data.startswith("cch_grp_") and data.endswith("_indirect"):
             reg_id = int(data.split("_")[2])
             keyboard = [
-                [InlineKeyboardButton("⚡ Elektr energiya (Svet)", callback_data=f"cch_sub_{reg_id}_Elektr energiya (Svet)")],
-                [InlineKeyboardButton("🔥 Tabiiy gaz", callback_data=f"cch_sub_{reg_id}_Tabiiy gaz")],
-                [InlineKeyboardButton("💧 Suv va kanalizatsiya", callback_data=f"cch_sub_{reg_id}_Suv va kanalizatsiya")],
-                [InlineKeyboardButton("🛠️ Uskunalar ta'miri va ehtiyot qismlar", callback_data=f"cch_sub_{reg_id}_Uskunalar ta'miri")],
-                [InlineKeyboardButton("🏭 Sex ijarasi va xizmatlar", callback_data=f"cch_sub_{reg_id}_Sex ijarasi")],
-                [InlineKeyboardButton("🚚 Transport va yoqilg'i", callback_data=f"cch_sub_{reg_id}_Transport va yoqilgi")],
-                [InlineKeyboardButton("👥 Ishchilar oyligi / Avans", callback_data=f"cch_sub_{reg_id}_Ishchilar oyligi")],
-                [InlineKeyboardButton("📦 Boshqa sex xarajatlari", callback_data=f"cch_sub_{reg_id}_Boshqa sex xarajati")]
+                [InlineKeyboardButton("Elektr energiya (Svet)", callback_data=f"cch_sub_{reg_id}_Elektr energiya (Svet)")],
+                [InlineKeyboardButton("Tabiiy gaz", callback_data=f"cch_sub_{reg_id}_Tabiiy gaz")],
+                [InlineKeyboardButton("Suv va kanalizatsiya", callback_data=f"cch_sub_{reg_id}_Suv va kanalizatsiya")],
+                [InlineKeyboardButton("Uskunalar ta'miri va ehtiyot qismlar", callback_data=f"cch_sub_{reg_id}_Uskunalar ta'miri")],
+                [InlineKeyboardButton("Sex ijarasi va xizmatlar", callback_data=f"cch_sub_{reg_id}_Sex ijarasi")],
+                [InlineKeyboardButton("Transport va yoqilg'i", callback_data=f"cch_sub_{reg_id}_Transport va yoqilgi")],
+                [InlineKeyboardButton("Ishchilar oyligi / Avans", callback_data=f"cch_sub_{reg_id}_Ishchilar oyligi")],
+                [InlineKeyboardButton("Boshqa sex xarajatlari", callback_data=f"cch_sub_{reg_id}_Boshqa sex xarajati")]
             ]
             await query.message.reply_text(
-                "⚡ **Aynan qaysi bilvosita ishlab chiqarish xarajati?**" if lang == "uz" else "⚡ **Выберите статью косвенных расходов:**",
+                "Aynan qaysi bilvosita ishlab chiqarish xarajati?" if lang == "uz" else "Выберите статью косвенных расходов:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2.2: Administrative Expenses Subcategories
         elif data.startswith("cch_grp_") and data.endswith("_admin"):
             reg_id = int(data.split("_")[2])
             keyboard = [
-                [InlineKeyboardButton("🏢 Ofis ijarasi", callback_data=f"cch_sub_{reg_id}_Ofis ijarasi")],
-                [InlineKeyboardButton("💻 Aloqa, Internet va IT", callback_data=f"cch_sub_{reg_id}_Aloqa va IT")],
-                [InlineKeyboardButton("📑 Buxgalteriya va audit", callback_data=f"cch_sub_{reg_id}_Buxgalteriya")],
-                [InlineKeyboardButton("📢 Reklama va marketing", callback_data=f"cch_sub_{reg_id}_Reklama va marketing")],
-                [InlineKeyboardButton("🏛️ Soliqlar va davlat bojlari", callback_data=f"cch_sub_{reg_id}_Soliqlar va bojlar")],
-                [InlineKeyboardButton("☕ Ofis va xo'jalik xarajatlari", callback_data=f"cch_sub_{reg_id}_Ofis xo'jalik")],
-                [InlineKeyboardButton("📁 Boshqa ma'muriy xarajatlar", callback_data=f"cch_sub_{reg_id}_Boshqa ma'muriy")]
+                [InlineKeyboardButton("Ofis ijarasi", callback_data=f"cch_sub_{reg_id}_Ofis ijarasi")],
+                [InlineKeyboardButton("Aloqa, Internet va IT", callback_data=f"cch_sub_{reg_id}_Aloqa va IT")],
+                [InlineKeyboardButton("Buxgalteriya va audit", callback_data=f"cch_sub_{reg_id}_Buxgalteriya")],
+                [InlineKeyboardButton("Reklama va marketing", callback_data=f"cch_sub_{reg_id}_Reklama va marketing")],
+                [InlineKeyboardButton("Soliqlar va davlat bojlari", callback_data=f"cch_sub_{reg_id}_Soliqlar va bojlar")],
+                [InlineKeyboardButton("Ofis va xo'jalik xarajatlari", callback_data=f"cch_sub_{reg_id}_Ofis xo'jalik")],
+                [InlineKeyboardButton("Boshqa ma'muriy xarajatlar", callback_data=f"cch_sub_{reg_id}_Boshqa ma'muriy")]
             ]
             await query.message.reply_text(
-                "🏢 **Aynan qaysi ma'muriy xarajat?**" if lang == "uz" else "🏢 **Выберите статью административных расходов:**",
+                "Aynan qaysi ma'muriy xarajat?" if lang == "uz" else "Выберите статью административных расходов:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2.3: Supplier Payment Selection
@@ -762,11 +778,10 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             suppliers = db.query(MDMCounterparty).filter(MDMCounterparty.type == "supplier", MDMCounterparty.is_archived == False).all()
             keyboard = []
             for s in suppliers:
-                keyboard.append([InlineKeyboardButton(f"🏢 {s.name} (${abs(s.current_balance_usd):,.0f})", callback_data=f"cch_cp_{reg_id}_{s.id}")])
+                keyboard.append([InlineKeyboardButton(f"{s.name} (${abs(s.current_balance_usd):,.0f})", callback_data=f"cch_cp_{reg_id}_{s.id}")])
             await query.message.reply_text(
-                "🏢 **Qaysi yetkazib beruvchiga to'lov qilinmoqda?**" if lang == "uz" else "🏢 **Выберите поставщика:**",
+                "Qaysi yetkazib beruvchiga to'lov qilinmoqda?" if lang == "uz" else "Выберите поставщика:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2.4: Other Expense Selection
@@ -782,11 +797,10 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "step": "await_cash_amount"
             }
             await query.message.reply_text(
-                f"💸 **Chiqim qilinadigan summani yozing ({reg.currency if reg else 'UZS'}):**\n"
-                f"🏢 Kassa: **{reg.name if reg else 'Kassa'}** (Mavjud: {reg.balance:,.2f} {reg.currency if reg else ''})\n"
-                f"📋 Xarajat toifasi: **Boshqa chiqim**\n\n"
-                f"_Aniq summani raqam bilan yozib yuboring (masalan: 3500000 yoki 450):_",
-                parse_mode="Markdown"
+                f"Chiqim qilinadigan summani yozing ({reg.currency if reg else 'UZS'}):\n"
+                f"Kassa: {reg.name if reg else 'Kassa'} (Mavjud: {reg.balance:,.2f} {reg.currency if reg else ''})\n"
+                f"Xarajat toifasi: Boshqa chiqim\n\n"
+                f"Aniq summani raqam bilan yozib yuboring (masalan: 3500000 yoki 450):",
             )
 
         # Selected Subcategory prompt for Amount
@@ -805,11 +819,10 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "step": "await_cash_amount"
             }
             await query.message.reply_text(
-                f"💸 **Chiqim qilinadigan summani yozing ({reg.currency if reg else 'UZS'}):**\n"
-                f"🏢 Kassa: **{reg.name if reg else 'Kassa'}** (Mavjud qoldiq: {reg.balance:,.2f} {reg.currency if reg else ''})\n"
-                f"📋 Xarajat toifasi: **{cat_name}**\n\n"
-                f"_Aniq summani raqam bilan yozib yuboring (masalan: 3500000 yoki 450):_",
-                parse_mode="Markdown"
+                f"Chiqim qilinadigan summani yozing ({reg.currency if reg else 'UZS'}):\n"
+                f"Kassa: {reg.name if reg else 'Kassa'} (Mavjud qoldiq: {reg.balance:,.2f} {reg.currency if reg else ''})\n"
+                f"Xarajat toifasi: {cat_name}\n\n"
+                f"Aniq summani raqam bilan yozib yuboring (masalan: 3500000 yoki 450):",
             )
 
         # Selected Supplier prompt for Amount
@@ -831,11 +844,10 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }
             debt_str = f"${abs(cp.current_balance_usd):,.2f}" if cp else "$0.00"
             await query.message.reply_text(
-                f"💸 **{cp.name if cp else 'Postavshik'}ga to'lanadigan summani yozing ({reg.currency if reg else 'UZS'}):**\n"
-                f"🏢 Kassa: **{reg.name if reg else 'Kassa'}** (Mavjud qoldiq: {reg.balance:,.2f} {reg.currency if reg else ''})\n"
-                f"📊 Qarzimiz: **{debt_str}**\n\n"
-                f"_Aniq summani raqam bilan yozib yuboring (masalan: 12000000 yoki 1000):_",
-                parse_mode="Markdown"
+                f"{cp.name if cp else 'Postavshik'}ga to'lanadigan summani yozing ({reg.currency if reg else 'UZS'}):\n"
+                f"Kassa: {reg.name if reg else 'Kassa'} (Mavjud qoldiq: {reg.balance:,.2f} {reg.currency if reg else ''})\n"
+                f"Qarzimiz: {debt_str}\n\n"
+                f"Aniq summani raqam bilan yozib yuboring (masalan: 12000000 yoki 1000):",
             )
 
         # Save without description
@@ -847,29 +859,29 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Cancel cash transaction
         elif data == "cash_cancel":
             context.user_data["cash_tx"] = {}
-            await query.message.reply_text("❌ Kassa operatsiyasi bekor qilindi.", parse_mode="Markdown")
+            await query.message.reply_text("Kassa operatsiyasi bekor qilindi.")
 
         # Storno Cash Transaction
         elif data.startswith("ctx_storno_"):
             tx_id = int(data.split("_")[2])
             tx = db.query(CashTransaction).filter(CashTransaction.id == tx_id).first()
             if not tx:
-                await query.message.reply_text("❌ Kassa operatsiyasi topilmadi.")
+                await query.message.reply_text("Kassa operatsiyasi topilmadi.")
                 return
             if tx.status == "Storno":
-                await query.message.reply_text("ℹ️ Ushbu operatsiya allaqachon storno qilingan.")
+                await query.message.reply_text("Ushbu operatsiya allaqachon storno qilingan.")
                 return
 
             today = date.today()
             if is_month_closed(db, today):
-                await query.message.reply_text("❌ Ushbu oy yopilgan! Operatsiya bajarilmadi.")
+                await query.message.reply_text("Ushbu oy yopilgan! Operatsiya bajarilmadi.")
                 return
 
             today_rate = get_exchange_rate_for_date(db, today)
             reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
             if tx.type == "kirim":
                 if reg.balance < tx.amount:
-                    await query.message.reply_text("❌ Kassada storno qilish uchun yetarli mablag' qolmagan!")
+                    await query.message.reply_text("Kassada storno qilish uchun yetarli mablag' qolmagan!")
                     return
                 reg.balance -= tx.amount
                 if tx.counterparty_id:
@@ -911,8 +923,7 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             db.commit()
 
             await query.message.reply_text(
-                f"↩️ **STORNO BAJARILDI!**\n`CSH-{tx.id:04d}` bekor qilindi.\nKassa va hisob-kitoblar qaytarildi.",
-                parse_mode="Markdown"
+                f"STORNO BAJARILDI!\nCSH-{tx.id:04d} bekor qilindi.\nKassa va hisob-kitoblar qaytarildi.",
             )
     finally:
         db.close()
@@ -952,8 +963,8 @@ async def handle_production_menu(update: Update, context: ContextTypes.DEFAULT_T
             "100.0%"
         ]
 
-        title = "🏭 Ishlab chiqarish (5 Liniya)" if lang == "uz" else "🏭 Производство (5 Линий)"
-        subtitle = f"📅 Sana: {date.today()} | 📐 Jami hajm: {total_m2:,.1f} m²"
+        title = "Ishlab chiqarish (5 Liniya)" if lang == "uz" else "Производство (5 Линий)"
+        subtitle = f"Sana: {date.today()} | Jami hajm: {total_m2:,.1f} m²"
 
         img_buf = render_excel_table_image(
             title=title,
@@ -964,14 +975,18 @@ async def handle_production_menu(update: Update, context: ContextTypes.DEFAULT_T
             total_row=total_row
         )
 
-        keyboard = [
-            [InlineKeyboardButton("➕ Yangi ishlab chiqarishni kiritish" if lang == "uz" else "➕ Ввести выпуск продукции", callback_data="prod_wizard_start")],
-            [InlineKeyboardButton("🚀 Mini App orqali ochish" if lang == "uz" else "🚀 Открыть в Mini App", web_app=WebAppInfo(url=WEBAPP_HTTPS_URL))]
-        ]
+        keyboard = []
+        if not BOT_READ_ONLY:
+            keyboard.append([InlineKeyboardButton("Yangi ishlab chiqarishni kiritish" if lang == "uz" else "Ввести выпуск продукции", callback_data="prod_wizard_start")])
+        keyboard.append([InlineKeyboardButton("Mini App orqali ochish" if lang == "uz" else "Открыть в Mini App", web_app=WebAppInfo(url=WEBAPP_HTTPS_URL))])
 
         await update.message.reply_photo(
             photo=img_buf,
-            caption=f"🏭 **Ishlab chiqarish:** Jami `{total_m2:,.1f} m²`\n\nYangi partiyani kiritish uchun quyidagi tugmani bosing:",
+            caption=(
+                f"Ishlab chiqarish: Jami {total_m2:,.1f} m²"
+                if BOT_READ_ONLY else
+                f"Ishlab chiqarish: Jami {total_m2:,.1f} m²"
+            ),
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     finally:
@@ -984,11 +999,15 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
     
     is_appr, u_role, db_user = check_bot_user_auth(query.from_user.id)
     if not is_appr or not get_role_capabilities(u_role)["production"]:
-        await query.message.reply_text(f"⛔ Sizning rolingizda (`{u_role}`) Ishlab chiqarish amallariga ruxsat yo'q.")
+        await query.message.reply_text(f"Sizning rolingizda ({u_role}) Ishlab chiqarish amallariga ruxsat yo'q.")
         return
 
     data = query.data
     lang = get_user_lang(query.from_user.id)
+
+    if await deny_if_read_only(query.message, lang):
+        context.user_data.pop("pw_state", None)
+        return
 
     db = SessionLocal()
     try:
@@ -998,7 +1017,7 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
             keyboard = []
             row = []
             for l in lines:
-                row.append(InlineKeyboardButton(f"🏭 Liniya {l.line_number}", callback_data=f"pw_line_{l.id}"))
+                row.append(InlineKeyboardButton(f"Liniya {l.line_number}", callback_data=f"pw_line_{l.id}"))
                 if len(row) == 2:
                     keyboard.append(row)
                     row = []
@@ -1006,9 +1025,8 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
                 keyboard.append(row)
             
             await query.message.reply_text(
-                "🏭 **1-QADAM: Ishlab chiqarish liniyasini tanlang:**" if lang == "uz" else "🏭 **ШАГ 1: Выберите производственную линию:**",
+                "1-QADAM: Ishlab chiqarish liniyasini tanlang:" if lang == "uz" else "ШАГ 1: Выберите производственную линию:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 2: Select Tile
@@ -1017,12 +1035,11 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
             tiles = db.query(MDMMaterial).filter(MDMMaterial.category == "Tayyor mahsulot").all()
             keyboard = []
             for t_item in tiles:
-                keyboard.append([InlineKeyboardButton(f"🧱 {t_item.name}", callback_data=f"pw_tile_{line_id}_{t_item.id}")])
+                keyboard.append([InlineKeyboardButton(f"{t_item.name}", callback_data=f"pw_tile_{line_id}_{t_item.id}")])
             
             await query.message.reply_text(
-                "🧱 **2-QADAM: Chiqarilgan kafel turini tanlang:**" if lang == "uz" else "🧱 **ШАГ 2: Выберите готовую плитку:**",
+                "2-QADAM: Chiqarilgan kafel turini tanlang:" if lang == "uz" else "ШАГ 2: Выберите готовую плитку:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 3: Prompt User to TYPE Output Tile Quantity
@@ -1039,13 +1056,13 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
             }
 
             prompt = (
-                "✏️ **3-QADAM: Chiqarilgan tayyor kafel hajmini (m²) yozib yuboring:**\n\n"
-                "_Masalan: 1250 yoki 850.5 deb yuboring._"
+                "3-QADAM: Chiqarilgan tayyor kafel hajmini (m²) yozib yuboring:\n\n"
+                "Masalan: 1250 yoki 850.5 deb yuboring."
                 if lang == "uz" else
-                "✏️ **ШАГ 3: Напишите и отправьте объем выпуска (м²):**\n\n"
-                "_Например: отправьте 1250 или 850.5_"
+                "ШАГ 3: Напишите и отправьте объем выпуска (м²):\n\n"
+                "Например: отправьте 1250 или 850.5"
             )
-            await query.message.reply_text(prompt, parse_mode="Markdown")
+            await query.message.reply_text(prompt)
 
         # Step 4: User selects Raw Materials Warehouse (WH-02 or WH-03)
         elif data.startswith("pw_raw_wh_"):
@@ -1063,14 +1080,13 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
         # Switch warehouse menu
         elif data == "pw_switch_wh":
             keyboard = [
-                [InlineKeyboardButton("🏢 Xomashyo ombori (Materiallar)" if lang == "uz" else "🏢 Склад сырья (Материалы)", callback_data="pw_raw_wh_2")],
-                [InlineKeyboardButton("🏢 Aralash ombor" if lang == "uz" else "🏢 Смешанный склад", callback_data="pw_raw_wh_3")],
-                [InlineKeyboardButton("🔙 Hozirgi omborga qaytish" if lang == "uz" else "🔙 Назад", callback_data="pw_show_mats")]
+                [InlineKeyboardButton("Xomashyo ombori (Materiallar)" if lang == "uz" else "Склад сырья (Материалы)", callback_data="pw_raw_wh_2")],
+                [InlineKeyboardButton("Aralash ombor" if lang == "uz" else "Смешанный склад", callback_data="pw_raw_wh_3")],
+                [InlineKeyboardButton("Hozirgi omborga qaytish" if lang == "uz" else "Назад", callback_data="pw_show_mats")]
             ]
             await query.message.reply_text(
-                "🔄 **Qaysi ombordan xomashyo qo'shmoqchisiz?**" if lang == "uz" else "🔄 **Выберите склад для списания материалов:**",
+                "Qaysi ombordan xomashyo qo'shmoqchisiz?" if lang == "uz" else "Выберите склад для списания материалов:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
-                parse_mode="Markdown"
             )
 
         # Step 5: User clicks a specific material from that warehouse
@@ -1092,15 +1108,15 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
             context.user_data["pw_state"]["step"] = "await_mat_pick_qty"
 
             prompt = (
-                f"🧪 **{mat_name}** dan qancha sarflandi ({mat_unit})?\n"
-                f"🏢 _Tanlangan ombor: **{wh_name}** (Qoldiq: {stock_qty:,.1f} {mat_unit})_\n\n"
-                f"_Aniq sarflangan miqdorni raqam bilan yozib yuboring (masalan: 12500 yoki agar sarflanmagan bo'lsa 0):_"
+                f"{mat_name} dan qancha sarflandi ({mat_unit})?\n"
+                f"_Tanlangan ombor: {wh_name} (Qoldiq: {stock_qty:,.1f} {mat_unit})_\n\n"
+                f"Aniq sarflangan miqdorni raqam bilan yozib yuboring (masalan: 12500 yoki agar sarflanmagan bo'lsa 0):"
                 if lang == "uz" else
-                f"🧪 Сколько израсходовано **{mat_name}** ({mat_unit})?\n"
-                f"🏢 _Склад: **{wh_name}** (Остаток: {stock_qty:,.1f} {mat_unit})_\n\n"
-                f"_Напишите количество числом (например: 12500 или 0):_"
+                f"Сколько израсходовано {mat_name} ({mat_unit})?\n"
+                f"_Склад: {wh_name} (Остаток: {stock_qty:,.1f} {mat_unit})_\n\n"
+                f"Напишите количество числом (например: 12500 или 0):"
             )
-            await query.message.reply_text(prompt, parse_mode="Markdown")
+            await query.message.reply_text(prompt)
 
         # Refresh material picker
         elif data == "pw_show_mats":
@@ -1109,7 +1125,7 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
         # Cancel production callback
         elif data == "pw_cancel":
             context.user_data["pw_state"] = {}
-            await query.message.reply_text("❌ Ishlab chiqarish bekor qilindi.", parse_mode="Markdown")
+            await query.message.reply_text("Ishlab chiqarish bekor qilindi.")
 
         # Step 6: Final Execution in Database
         elif data == "pw_exec_final":
@@ -1122,7 +1138,7 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
 
             today = date.today()
             if is_month_closed(db, today):
-                await query.message.reply_text("❌ Ushbu oy yopilgan! Operatsiya bajarilmadi.")
+                await query.message.reply_text("Ushbu oy yopilgan! Operatsiya bajarilmadi.")
                 return
 
             line = db.query(ProductionLine).filter(ProductionLine.id == line_id).first()
@@ -1159,7 +1175,7 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
                         unit_cost_usd=u_cost,
                         total_cost_usd=tot_c
                     ))
-                    consumed_summary_text += f"  • [{wh_obj.name if wh_obj else 'Ombor'}] {mat_obj.name}: `{c_qty:,.1f} {mat_obj.unit}` (`${tot_c:,.2f}`)\n"
+                    consumed_summary_text += f"  - [{wh_obj.name if wh_obj else 'Ombor'}] {mat_obj.name}: {c_qty:,.1f} {mat_obj.unit} (${tot_c:,.2f})\n"
 
                 unit_direct_cost = direct_cost / qty if qty > 0 else 0.0
 
@@ -1194,39 +1210,38 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
                 db.refresh(order)
             except HTTPException as he:
                 db.rollback()
-                await query.message.reply_text(he.detail, parse_mode="Markdown")
+                await query.message.reply_text(he.detail)
                 return
             except Exception as e:
                 db.rollback()
-                await query.message.reply_text(f"❌ Xatolik yuz berdi: {str(e)}", parse_mode="Markdown")
+                await query.message.reply_text(f"Xatolik yuz berdi: {str(e)}")
                 return
 
             # Clear state
             context.user_data["pw_state"] = {}
 
             storno_kb = [
-                [InlineKeyboardButton("↩️ Storno qilish (Bekor qilish)" if lang == "uz" else "↩️ Сторнировать", callback_data=f"pw_storno_{order.id}_{dst_wh_id}")]
+                [InlineKeyboardButton("Storno qilish (Bekor qilish)" if lang == "uz" else "Сторнировать", callback_data=f"pw_storno_{order.id}_{dst_wh_id}")]
             ]
 
             confirm_msg = (
-                f"✅ **ISHLAB CHIQARISH TASDIQLANDI!**\n"
-                f"━━━━━━━━━━━━━━━━━━━\n"
-                f"📋 **Hujjat №:** `{order.order_number}`\n"
-                f"🏭 **Liniya:** `{line.name if line else 'Liniya'}`\n"
-                f"🧱 **Mahsulot:** `{output_mat.name if output_mat else 'Kafel'}`\n"
-                f"📐 **Kiritilgan hajm:** `{qty:,.1f} m²`\n"
-                f"💵 **Jami xomashyo tannarxi:** `${direct_cost:,.2f}` (`${unit_direct_cost:.2f} / m²`)\n"
-                f"📥 **Kirim ombori:** `{dst_wh.name if dst_wh else 'Tayyor mahsulotlar'}` (+{qty:,.1f} m²)\n\n"
-                f"🧪 **Sarflangan materiallar (Omborlar bo'yicha):**\n"
-                f"{consumed_summary_text if consumed_summary_text else '  • Xomashyo sarflanmadi'}"
-                f"━━━━━━━━━━━━━━━━━━━\n"
-                f"ℹ️ _Xatolik bo'lsa, quyidagi Storno tugmasi orqali bekor qilishingiz mumkin._"
+                f"ISHLAB CHIQARISH TASDIQLANDI!\n"
+                f"\n"
+                f"Hujjat №: {order.order_number}\n"
+                f"Liniya: {line.name if line else 'Liniya'}\n"
+                f"Mahsulot: {output_mat.name if output_mat else 'Kafel'}\n"
+                f"Kiritilgan hajm: {qty:,.1f} m²\n"
+                f"Jami xomashyo tannarxi: ${direct_cost:,.2f} (${unit_direct_cost:.2f} / m²)\n"
+                f"Kirim ombori: {dst_wh.name if dst_wh else 'Tayyor mahsulotlar'} (+{qty:,.1f} m²)\n\n"
+                f"Sarflangan materiallar (Omborlar bo'yicha):\n"
+                f"{consumed_summary_text if consumed_summary_text else '  - Xomashyo sarflanmadi'}"
+                f"\n"
+                f"Xatolik bo'lsa, quyidagi Storno tugmasi orqali bekor qilishingiz mumkin."
             )
 
             await query.message.reply_text(
                 confirm_msg,
                 reply_markup=InlineKeyboardMarkup(storno_kb),
-                parse_mode="Markdown"
             )
 
         elif data.startswith("pw_storno_"):
@@ -1236,10 +1251,10 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
 
             order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
             if not order:
-                await query.message.reply_text("❌ Buyurtma topilmadi.")
+                await query.message.reply_text("Buyurtma topilmadi.")
                 return
             if order.status == "Storno":
-                await query.message.reply_text("ℹ️ Ushbu buyurtma allaqachon storno qilingan.")
+                await query.message.reply_text("Ushbu buyurtma allaqachon storno qilingan.")
                 return
 
             deduct_stock(db, dst_wh_id, order.output_material_id, order.quantity)
@@ -1274,8 +1289,7 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
             db.commit()
 
             await query.message.reply_text(
-                f"↩️ **STORNO BAJARILDI!**\n`{order.order_number}` bekor qilindi.\nXomashyo omborga qaytarildi.",
-                parse_mode="Markdown"
+                f"STORNO BAJARILDI!\n{order.order_number} bekor qilindi.\nXomashyo omborga qaytarildi.",
             )
     finally:
         db.close()
@@ -1316,7 +1330,7 @@ async def show_raw_material_picker(message, context: ContextTypes.DEFAULT_TYPE, 
             line_tot = m_qty * unit_price
             direct_cost += line_tot
             wh_label = f"[{wh_obj.name}] " if wh_obj else ""
-            mat_lines.append(f"  • {wh_label}**{m_obj.name if m_obj else 'Material'}**: `{m_qty:,.1f} {m_obj.unit if m_obj else 'kg'}` (~`${line_tot:,.2f}`)")
+            mat_lines.append(f"  - {wh_label}{m_obj.name if m_obj else 'Material'}: {m_qty:,.1f} {m_obj.unit if m_obj else 'kg'} (~${line_tot:,.2f})")
 
     unit_cost = direct_cost / qty if qty > 0 else 0.0
 
@@ -1328,63 +1342,61 @@ async def show_raw_material_picker(message, context: ContextTypes.DEFAULT_TYPE, 
         added_qty = added_item["qty"] if added_item else 0.0
         
         if added_qty > 0:
-            btn_label = f"✅ {m.name} ({added_qty:,.0f} {m.unit} kiritildi)"
+            btn_label = f"{m.name} ({added_qty:,.0f} {m.unit} kiritildi)"
         else:
-            btn_label = f"🧪 {m.name} (Qoldiq: {stock_qty:,.0f} {m.unit})"
+            btn_label = f"{m.name} (Qoldiq: {stock_qty:,.0f} {m.unit})"
         
         keyboard.append([InlineKeyboardButton(btn_label, callback_data=f"pw_pick_mat_{src_wh_id}_{m.id}")])
 
     # Action navigation buttons
     keyboard.append([
-        InlineKeyboardButton("🔄 Boshqa omborga o'tish" if lang == "uz" else "🔄 Перейти на другой склад", callback_data="pw_switch_wh")
+        InlineKeyboardButton("Boshqa omborga o'tish" if lang == "uz" else "Перейти на другой склад", callback_data="pw_switch_wh")
     ])
     if len(custom_mats) > 0:
-        keyboard.append([InlineKeyboardButton("✅ Barcha sarf xomashyolar kiritildi (Tasdiqlash)" if lang == "uz" else "✅ Подтвердить все введенные материалы", callback_data="pw_exec_final")])
-    keyboard.append([InlineKeyboardButton("❌ Bekor qilish" if lang == "uz" else "❌ Отмена", callback_data="pw_cancel")])
+        keyboard.append([InlineKeyboardButton("Barcha sarf xomashyolar kiritildi (Tasdiqlash)" if lang == "uz" else "Подтвердить все введенные материалы", callback_data="pw_exec_final")])
+    keyboard.append([InlineKeyboardButton("Bekor qilish" if lang == "uz" else "Отмена", callback_data="pw_cancel")])
 
     summary_header = (
-        f"🏭 **Liniya:** `{line.name if line else 'Liniya'}` | 🧱 **Mahsulot:** `{output_mat.name if output_mat else 'Kafel'}` ({qty:,.1f} m²)\n"
-        f"📥 **Kirim:** `Tayyor mahsulotlar ombori`\n"
-        f"📍 **Hozirgi tanlangan ombor:** `{src_wh.name if src_wh else 'Xomashyo ombori'}`\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"Liniya: {line.name if line else 'Liniya'} | Mahsulot: {output_mat.name if output_mat else 'Kafel'} ({qty:,.1f} m²)\n"
+        f"Kirim: Tayyor mahsulotlar ombori\n"
+        f"Hozirgi tanlangan ombor: {src_wh.name if src_wh else 'Xomashyo ombori'}\n"
+        f"\n"
     )
 
     if mat_lines:
         content_text = (
             f"{summary_header}"
-            f"📋 **Hozircha kiritilgan sarf materiallari:**\n"
+            f"Hozircha kiritilgan sarf materiallari:\n"
             f"{chr(10).join(mat_lines)}\n"
-            f"━━━━━━━━━━━━━━━━━━━\n"
-            f"💵 **Hisoblangan tannarx:** `${direct_cost:,.2f}` (`${unit_cost:.2f} / m²`)\n\n"
-            f"👇 **Ushbu ombordan material tanlang, boshqa omborga o'ting yoki tasdiqlang:**"
+            f"\n"
+            f"Hisoblangan tannarx: ${direct_cost:,.2f} (${unit_cost:.2f} / m²)\n\n"
+            f"Ushbu ombordan material tanlang, boshqa omborga o'ting yoki tasdiqlang:"
         )
     else:
         content_text = (
             f"{summary_header}"
-            f"🧪 **{src_wh.name if src_wh else 'Ombor'}dagi mavjud materiallar:**\n\n"
-            f"👇 **Sarflangan materialni tanlang va qancha ketganini yozing:**"
+            f"{src_wh.name if src_wh else 'Ombor'}dagi mavjud materiallar:\n\n"
+            f"Sarflangan materialni tanlang va qancha ketganini yozing:"
         )
 
     await message.reply_text(
         content_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
     )
 
 # ==================== 4. BALANCES MODULE (CLIENT VS SUPPLIER SELECTION FIRST) ====================
 async def handle_balances_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str):
     keyboard = [
         [
-            InlineKeyboardButton("👤 Mijozlar balansi (Debitorlik)" if lang == "uz" else "👤 Балансы клиентов (Дебиторка)", callback_data="bal_type_client")
+            InlineKeyboardButton("Mijozlar balansi (Debitorlik)" if lang == "uz" else "Балансы клиентов (Дебиторка)", callback_data="bal_type_client")
         ],
         [
-            InlineKeyboardButton("🏢 Yetkazib beruvchilar (Kreditorlik)" if lang == "uz" else "🏢 Поставщики (Кредиторка)", callback_data="bal_type_supplier")
+            InlineKeyboardButton("Yetkazib beruvchilar (Kreditorlik)" if lang == "uz" else "Поставщики (Кредиторка)", callback_data="bal_type_supplier")
         ]
     ]
     await update.message.reply_text(
-        "👥 **Kimlarning balansini ko'rmoqchisiz?**" if lang == "uz" else "👥 **Чей баланс вы хотите посмотреть?**",
+        "Kimlarning balansini ko'rmoqchisiz?" if lang == "uz" else "Чей баланс вы хотите посмотреть?",
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
     )
 
 async def balances_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1393,7 +1405,7 @@ async def balances_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     is_appr, u_role, db_user = check_bot_user_auth(query.from_user.id)
     if not is_appr or not get_role_capabilities(u_role)["balances"]:
-        await query.message.reply_text(f"⛔ Sizning rolingizda (`{u_role}`) Balanslarni ko'rish ruxsati yo'q.")
+        await query.message.reply_text(f"Sizning rolingizda ({u_role}) Balanslarni ko'rish ruxsati yo'q.")
         return
 
     data = query.data
@@ -1407,10 +1419,10 @@ async def balances_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if cp_type == "client":
             headers = ["Mijoz nomi", "Viloyat", "Qarzdorlik (USD)", "Qarzdorlik (UZS)"] if lang == "uz" else ["Клиент", "Регион", "Долг (USD)", "Долг (UZS)"]
-            title = "👤 Mijozlar qarzdorligi (Debitorlik)" if lang == "uz" else "👤 Задолженность клиентов (Дебиторка)"
+            title = "Mijozlar qarzdorligi (Debitorlik)" if lang == "uz" else "Задолженность клиентов (Дебиторка)"
         else:
             headers = ["Postavshik nomi", "Viloyat", "Qarzimiz (USD)", "Qarzimiz (UZS)"] if lang == "uz" else ["Поставщик", "Регион", "Наш долг (USD)", "Наш долг (UZS)"]
-            title = "🏢 Yetkazib beruvchilarga qarz (Kreditorlik)" if lang == "uz" else "🏢 Задолженность поставщикам (Кредиторка)"
+            title = "Yetkazib beruvchilarga qarz (Kreditorlik)" if lang == "uz" else "Задолженность поставщикам (Кредиторка)"
 
         col_aligns = ["left", "left", "right", "right"]
         rows = []
@@ -1433,7 +1445,7 @@ async def balances_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{total_usd * today_rate:,.0f} UZS"
         ]
 
-        subtitle = f"📅 Sana: {date.today()} | 📈 CBU: 1 USD = {today_rate:,.0f} UZS"
+        subtitle = f"Sana: {date.today()} | CBU: 1 USD = {today_rate:,.0f} UZS"
 
         img_buf = render_excel_table_image(
             title=title,
@@ -1446,8 +1458,7 @@ async def balances_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.message.reply_photo(
             photo=img_buf,
-            caption=f"👥 **{title}**\n💰 Jami: `${total_usd:,.2f}` (`{total_usd * today_rate:,.0f} UZS`)",
-            parse_mode="Markdown"
+            caption=f"{title}\nJami: ${total_usd:,.2f} ({total_usd * today_rate:,.0f} UZS)",
         )
     finally:
         db.close()
@@ -1463,16 +1474,16 @@ async def handle_finance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         col_aligns = ["left", "right", "left"]
 
         rows = [
-            ["📈 Tushum (Revenue)", f"${pnl['revenue_usd']:,.2f}", "Sotuvlar summasi"],
-            ["🧱 To'g'ridan-to'g'ri xomashyo", f"${pnl['cogs_direct_materials_usd']:,.2f}", "Sarflangan xomashyo (AVG)"],
-            ["⚡ Taqsimlangan xarajatlar", f"${pnl['cogs_indirect_expenses_usd']:,.2f}", "Elektr, gaz, ijara, maosh"],
-            ["📉 JAMI TANNARX (COGS)", f"${pnl['total_cogs_usd']:,.2f}", "Xomashyo + Bilvosita"],
-            ["🏢 Ma'muriy xarajatlar", f"${pnl['admin_expenses_usd']:,.2f}", "Ofis va boshqa xarajatlar"],
-            ["💎 SOF FOYDA (Net Profit)", f"${pnl['net_profit_usd']:,.2f}", f"Rentabellik: {((pnl['net_profit_usd']/pnl['revenue_usd']*100) if pnl['revenue_usd']>0 else 0):.1f}%"]
+            ["Tushum (Revenue)", f"${pnl['revenue_usd']:,.2f}", "Sotuvlar summasi"],
+            ["To'g'ridan-to'g'ri xomashyo", f"${pnl['cogs_direct_materials_usd']:,.2f}", "Sarflangan xomashyo (AVG)"],
+            ["Taqsimlangan xarajatlar", f"${pnl['cogs_indirect_expenses_usd']:,.2f}", "Elektr, gaz, ijara, maosh"],
+            ["JAMI TANNARX (COGS)", f"${pnl['total_cogs_usd']:,.2f}", "Xomashyo + Bilvosita"],
+            ["Ma'muriy xarajatlar", f"${pnl['admin_expenses_usd']:,.2f}", "Ofis va boshqa xarajatlar"],
+            ["SOF FOYDA (Net Profit)", f"${pnl['net_profit_usd']:,.2f}", f"Rentabellik: {((pnl['net_profit_usd']/pnl['revenue_usd']*100) if pnl['revenue_usd']>0 else 0):.1f}%"]
         ]
 
-        title = f"📊 Foyda va Zarar (PnL: {ym})" if lang == "uz" else f"📊 Отчет о прибылях (PnL: {ym})"
-        subtitle = f"🔒 Holati: {'Yopilgan (Locked)' if pnl['is_closed'] else 'Davr Ochiq'} | Valyuta: USD"
+        title = f"Foyda va Zarar (PnL: {ym})" if lang == "uz" else f"Отчет о прибылях (PnL: {ym})"
+        subtitle = f"Holati: {'Yopilgan (Locked)' if pnl['is_closed'] else 'Davr Ochiq'} | Valyuta: USD"
 
         img_buf = render_excel_table_image(
             title=title,
@@ -1484,7 +1495,7 @@ async def handle_finance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         await update.message.reply_photo(
             photo=img_buf,
-            caption=f"📊 **PnL Moliyaviy hisobot ({ym})**\n💎 Sof foyda: `${pnl['net_profit_usd']:,.2f}`"
+            caption=f"PnL Moliyaviy hisobot ({ym})\nSof foyda: ${pnl['net_profit_usd']:,.2f}"
         )
     finally:
         db.close()
@@ -1498,39 +1509,37 @@ async def handle_salary_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
         summary = get_payroll_summary(db, current_ym)
         
         is_uz = lang == "uz"
-        status_text = "🔒 Yopilgan (Tasdiqlangan)" if summary["is_all_finalized"] else "✏️ Ochiq (Qoralama)"
+        status_text = "Yopilgan (Tasdiqlangan)" if summary["is_all_finalized"] else "Ochiq (Qoralama)"
         if not is_uz:
-            status_text = "🔒 Зафиксирован" if summary["is_all_finalized"] else "✏️ Открыт (Черновик)"
+            status_text = "Зафиксирован" if summary["is_all_finalized"] else "Открыт (Черновик)"
 
         msg = (
-            f"👷 **{current_ym} Oylik ish haqi va Davomat hisobi**\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👥 **Jami xodimlar soni:** `{summary['total_employees']} nafar`\n"
-            f"💼 **Jami hisoblangan fond:** `{summary['total_payroll']:,.0f} UZS`\n"
-            f"🏢 **Fiksalangan maoshlar:** `{summary['total_fixed']:,.0f} UZS`\n"
-            f"🔨 **Ishbay to'lovlar hajmi:** `{summary['total_piecework']:,.0f} UZS`\n"
-            f"✅ **To'langan ish haqi:** `{summary['total_paid']:,.0f} UZS`\n"
-            f"🟡 **To'lanishi kerak qoldiq:** `{summary['total_unpaid']:,.0f} UZS`\n\n"
-            f"📌 **Holat:** `{status_text}`\n\n"
-            f"👇 _Kunlik davomat va ishbay hajmlarni kiritish uchun **🚀 ERP Mini App** dan foydalaning._"
+            f"{current_ym} Oylik ish haqi va Davomat hisobi\n"
+            f"\n"
+            f"Jami xodimlar soni: {summary['total_employees']} nafar\n"
+            f"Jami hisoblangan fond: {summary['total_payroll']:,.0f} UZS\n"
+            f"Fiksalangan maoshlar: {summary['total_fixed']:,.0f} UZS\n"
+            f"Ishbay to'lovlar hajmi: {summary['total_piecework']:,.0f} UZS\n"
+            f"To'langan ish haqi: {summary['total_paid']:,.0f} UZS\n"
+            f"To'lanishi kerak qoldiq: {summary['total_unpaid']:,.0f} UZS\n\n"
+            f"Holat: {status_text}"
             if is_uz else
-            f"👷 **Сводка по зарплате за {current_ym}**\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👥 **Всего сотрудников:** `{summary['total_employees']}`\n"
-            f"💼 **Общий фонд начислений:** `{summary['total_payroll']:,.0f} UZS`\n"
-            f"🏢 **Окладная часть:** `{summary['total_fixed']:,.0f} UZS`\n"
-            f"🔨 **Сдельная часть:** `{summary['total_piecework']:,.0f} UZS`\n"
-            f"✅ **Выплачено:** `{summary['total_paid']:,.0f} UZS`\n"
-            f"🟡 **Остаток к выплате:** `{summary['total_unpaid']:,.0f} UZS`\n\n"
-            f"📌 **Статус:** `{status_text}`\n\n"
-            f"👇 _Для внесения ежедневного табеля и нарядов используйте **🚀 ERP Mini App**._"
+            f"Сводка по зарплате за {current_ym}\n"
+            f"\n"
+            f"Всего сотрудников: {summary['total_employees']}\n"
+            f"Общий фонд начислений: {summary['total_payroll']:,.0f} UZS\n"
+            f"Окладная часть: {summary['total_fixed']:,.0f} UZS\n"
+            f"Сдельная часть: {summary['total_piecework']:,.0f} UZS\n"
+            f"Выплачено: {summary['total_paid']:,.0f} UZS\n"
+            f"Остаток к выплате: {summary['total_unpaid']:,.0f} UZS\n\n"
+            f"Статус: {status_text}"
         )
         
-        kb = [[InlineKeyboardButton("🚀 Mini Appni ochish" if is_uz else "🚀 Открыть Mini App", web_app=WebAppInfo(url=WEBAPP_HTTPS_URL))]]
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode="Markdown")
+        kb = [[InlineKeyboardButton("Mini Appni ochish" if is_uz else "Открыть Mini App", web_app=WebAppInfo(url=WEBAPP_HTTPS_URL))]]
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(kb))
     except Exception as e:
         logger.error(f"Error in handle_salary_menu: {e}")
-        await update.message.reply_text(f"⚠️ Xatolik: {e}")
+        await update.message.reply_text(f"Xatolik: {e}")
     finally:
         db.close()
 
@@ -1540,7 +1549,13 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
     text = raw_text.lower()
     user = update.effective_user
     lang = get_user_lang(user.id)
-    
+
+    # Read-only mode: drop any half-finished entry wizard so leftover state
+    # from before the switch cannot be completed into a write.
+    if BOT_READ_ONLY:
+        context.user_data.pop("cash_tx", None)
+        context.user_data.pop("pw_state", None)
+
     # 0. Check if user is in Cash Wizard
     cash_tx = context.user_data.get("cash_tx", {})
     c_step = cash_tx.get("step")
@@ -1561,12 +1576,11 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
                     # Strict non-negative cash balance check
                     if action == "chiqim" and reg and round(reg.balance, 4) < round(amt, 4):
                         await update.message.reply_text(
-                            f"❌ **Kassada yetarli mablag' mavjud emas!**\n"
-                            f"🏢 Kassa: **{reg.name}**\n"
-                            f"🔻 Talab qilingan: `{amt:,.2f} {reg.currency}`\n"
-                            f"📊 Mavjud qoldiq: `{reg.balance:,.2f} {reg.currency}`\n\n"
-                            f"⚠️ _Iltimos, mavjud mablag'dan ({reg.balance:,.2f} {reg.currency}) oshmagan summa kiriting:_",
-                            parse_mode="Markdown"
+                            f"Kassada yetarli mablag' mavjud emas!\n"
+                            f"Kassa: {reg.name}\n"
+                            f"Talab qilingan: {amt:,.2f} {reg.currency}\n"
+                            f"Mavjud qoldiq: {reg.balance:,.2f} {reg.currency}\n\n"
+                            f"_Iltimos, mavjud mablag'dan ({reg.balance:,.2f} {reg.currency}) oshmagan summa kiriting:_",
                         )
                         return
 
@@ -1578,37 +1592,35 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
                     target_label = f"{cat_name} ({cp_name})" if cp_name else cat_name
 
                     keyboard = [
-                        [InlineKeyboardButton("⏩ Izohsiz saqlash (Tasdiqlash)" if lang == "uz" else "⏩ Сохранить без описания", callback_data="cash_save_no_desc")],
-                        [InlineKeyboardButton("❌ Bekor qilish" if lang == "uz" else "❌ Отмена", callback_data="cash_cancel")]
+                        [InlineKeyboardButton("Izohsiz saqlash (Tasdiqlash)" if lang == "uz" else "Сохранить без описания", callback_data="cash_save_no_desc")],
+                        [InlineKeyboardButton("Bekor qilish" if lang == "uz" else "Отмена", callback_data="cash_cancel")]
                     ]
 
                     action_str = "Kirim" if action == "kirim" else "Chiqim"
                     await update.message.reply_text(
-                        f"📝 **{action_str} operatsiyasi uchun izoh (opisaniye) kiritasizmi?**\n"
-                        f"━━━━━━━━━━━━━━━━━━━\n"
-                        f"💵 **Kassa:** `{reg.name if reg else 'Kassa'}`\n"
-                        f"💰 **Kiritilgan summa:** `{amt:,.2f} {reg.currency if reg else 'UZS'}`\n"
-                        f"📋 **Toifa / Manba:** `{target_label}`\n"
-                        f"━━━━━━━━━━━━━━━━━━━\n"
-                        f"_Izohni quyida matn ko'rinishida yozib yuborishingiz yoki izohsiz saqlash tugmasini bosishingiz mumkin:_"
+                        f"{action_str} operatsiyasi uchun izoh (opisaniye) kiritasizmi?\n"
+                        f"\n"
+                        f"Kassa: {reg.name if reg else 'Kassa'}\n"
+                        f"Kiritilgan summa: {amt:,.2f} {reg.currency if reg else 'UZS'}\n"
+                        f"Toifa / Manba: {target_label}\n"
+                        f"\n"
+                        f"Izohni quyida matn ko'rinishida yozib yuborishingiz yoki izohsiz saqlash tugmasini bosishingiz mumkin:"
                         if lang == "uz" else
-                        f"📝 **Хотите добавить описание (комментарий)?**\n"
-                        f"━━━━━━━━━━━━━━━━━━━\n"
-                        f"💵 **Касса:** `{reg.name if reg else 'Касса'}`\n"
-                        f"💰 **Сумма:** `{amt:,.2f} {reg.currency if reg else 'UZS'}`\n"
-                        f"📋 **Статья / Источник:** `{target_label}`\n"
-                        f"━━━━━━━━━━━━━━━━━━━\n"
-                        f"_Напишите комментарий в сообщении или нажмите кнопку сохранить без описания:_",
+                        f"Хотите добавить описание (комментарий)?\n"
+                        f"\n"
+                        f"Касса: {reg.name if reg else 'Касса'}\n"
+                        f"Сумма: {amt:,.2f} {reg.currency if reg else 'UZS'}\n"
+                        f"Статья / Источник: {target_label}\n"
+                        f"\n"
+                        f"Напишите комментарий в сообщении или нажмите кнопку сохранить без описания:",
                         reply_markup=InlineKeyboardMarkup(keyboard),
-                        parse_mode="Markdown"
                     )
                     return
                 except Exception:
                     await update.message.reply_text(
-                        "⚠️ **Iltimos, summani to'g'ri raqamda kiriting:**\n_Masalan: 5000000 yoki 1250.50_"
+                        "Iltimos, summani to'g'ri raqamda kiriting:\nMasalan: 5000000 yoki 1250.50"
                         if lang == "uz" else
-                        "⚠️ **Пожалуйста, введите корректную сумму:**\n_Например: 5000000 или 1250.50_",
-                        parse_mode="Markdown"
+                        "Пожалуйста, введите корректную сумму:\nНапример: 5000000 или 1250.50",
                     )
                     return
 
@@ -1638,34 +1650,32 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
 
                     # Only 2 warehouses for raw materials: WH-02 (Xomashyo ombori) and WH-03 (Aralash ombor)
                     keyboard = [
-                        [InlineKeyboardButton("🏢 Xomashyo ombori (Materiallar)" if lang == "uz" else "🏢 Склад сырья (Материалы)", callback_data="pw_raw_wh_2")],
-                        [InlineKeyboardButton("🏢 Aralash ombor" if lang == "uz" else "🏢 Смешанный склад", callback_data="pw_raw_wh_3")]
+                        [InlineKeyboardButton("Xomashyo ombori (Materiallar)" if lang == "uz" else "Склад сырья (Материалы)", callback_data="pw_raw_wh_2")],
+                        [InlineKeyboardButton("Aralash ombor" if lang == "uz" else "Смешанный склад", callback_data="pw_raw_wh_3")]
                     ]
 
                     msg = (
-                        f"✅ Tayyor kafel hajmi: **{qty:,.1f} m²**\n"
-                        f"📥 Mahsulot to'g'ridan-to'g'ri **\"Tayyor mahsulotlar ombori\"**ga kirim qilinadi.\n"
-                        f"━━━━━━━━━━━━━━━━━━━\n"
-                        f"🧪 **4-QADAM: Sarflanadigan xomashyolar QAYSI OMBORDAN chiqim qilinsin?**"
+                        f"Tayyor kafel hajmi: {qty:,.1f} m²\n"
+                        f"Mahsulot to'g'ridan-to'g'ri \"Tayyor mahsulotlar ombori\"ga kirim qilinadi.\n"
+                        f"\n"
+                        f"4-QADAM: Sarflanadigan xomashyolar QAYSI OMBORDAN chiqim qilinsin?"
                         if lang == "uz" else
-                        f"✅ Объем плитки: **{qty:,.1f} м²**\n"
-                        f"📥 Продукция автоматически приходуется на **\"Склад готовой продукции\"**.\n"
-                        f"━━━━━━━━━━━━━━━━━━━\n"
-                        f"🧪 **ШАГ 4: С какого склада списать сырье и материалы?**"
+                        f"Объем плитки: {qty:,.1f} м²\n"
+                        f"Продукция автоматически приходуется на \"Склад готовой продукции\".\n"
+                        f"\n"
+                        f"ШАГ 4: С какого склада списать сырье и материалы?"
                     )
                     
                     await update.message.reply_text(
                         msg,
                         reply_markup=InlineKeyboardMarkup(keyboard),
-                        parse_mode="Markdown"
                     )
                     return
                 except Exception:
                     await update.message.reply_text(
-                        "⚠️ **Iltimos, hajm miqdorini to'g'ri raqamda kiriting:**\n_Masalan: 1250 yoki 850.5_"
+                        "Iltimos, hajm miqdorini to'g'ri raqamda kiriting:\nMasalan: 1250 yoki 850.5"
                         if lang == "uz" else
-                        "⚠️ **Пожалуйста, введите корректное число:**\n_Например: 1250 или 850.5_",
-                        parse_mode="Markdown"
+                        "Пожалуйста, введите корректное число:\nНапример: 1250 или 850.5",
                     )
                     return
 
@@ -1690,13 +1700,12 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
                         # Strict check: Cannot deduct more than available in warehouse
                         if mat_qty > stock_qty:
                             await update.message.reply_text(
-                                f"❌ **Omborda yetarli qoldiq mavjud emas!**\n"
-                                f"🏢 Ombor: **{wh_name}**\n"
-                                f"📦 Mahsulot: **{mat_name}**\n"
-                                f"🔻 Talab qilingan: `{mat_qty:,.1f} {mat_unit}`\n"
-                                f"📊 Ombordagi mavjud qoldiq: `{stock_qty:,.1f} {mat_unit}`\n\n"
-                                f"⚠️ _Iltimos, mavjud qoldiqdan ({stock_qty:,.1f} {mat_unit}) oshmagan miqdor kiriting yoki 0 deb yuboring:_",
-                                parse_mode="Markdown"
+                                f"Omborda yetarli qoldiq mavjud emas!\n"
+                                f"Ombor: {wh_name}\n"
+                                f"Mahsulot: {mat_name}\n"
+                                f"Talab qilingan: {mat_qty:,.1f} {mat_unit}\n"
+                                f"Ombordagi mavjud qoldiq: {stock_qty:,.1f} {mat_unit}\n\n"
+                                f"_Iltimos, mavjud qoldiqdan ({stock_qty:,.1f} {mat_unit}) oshmagan miqdor kiriting yoki 0 deb yuboring:_",
                             )
                             return
 
@@ -1714,7 +1723,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
                     await show_raw_material_picker(update.message, context, db, lang)
                     return
                 except Exception:
-                    await update.message.reply_text("⚠️ Iltimos, miqdorni to'g'ri raqamda kiriting (masalan: 12500 yoki 0):")
+                    await update.message.reply_text("Iltimos, miqdorni to'g'ri raqamda kiriting (masalan: 12500 yoki 0):")
                     return
         finally:
             db.close()
@@ -1723,10 +1732,9 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
     is_appr, u_role, db_user = check_bot_user_auth(update.effective_user.id)
     if not is_appr and ("ombor" in text or "склад" in text or "kassa" in text or "касс" in text or "ishlab" in text or "производ" in text or "balans" in text or "баланс" in text or "moliya" in text or "финанс" in text or "ish haqi" in text or "zarplat" in text or "зарплат" in text or "davomat" in text or "табель" in text):
         await update.message.reply_text(
-            "⏳ **Hurmatli xodim!**\nSizning akkauntingiz administrator tomonidan tasdiqlanishi kutilmoqda. Administrator sizga rol berganidan so'ng ushbu bo'limlardan foydalanishingiz mumkin."
+            "Hurmatli xodim!\nSizning akkauntingiz administrator tomonidan tasdiqlanishi kutilmoqda. Administrator sizga rol berganidan so'ng ushbu bo'limlardan foydalanishingiz mumkin."
             if lang == "uz" else
-            "⏳ **Уважаемый сотрудник!**\nВаш аккаунт ожидает подтверждения Администратором. Доступ откроется после назначения роли.",
-            parse_mode="Markdown"
+            "Уважаемый сотрудник!\nВаш аккаунт ожидает подтверждения Администратором. Доступ откроется после назначения роли.",
         )
         return
 
@@ -1735,61 +1743,61 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
     if "ombor" in text or "склад" in text:
         if not caps["ombor"]:
             await update.message.reply_text(
-                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Ombor** bo'limiga kirish ruxsati yo'q."
+                f"Sizning biriktirilgan rollaringizda ({u_role}) Ombor bo'limiga kirish ruxsati yo'q."
                 if lang == "uz" else
-                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Склад**."
+                f"В ваших назначенных ролях ({u_role}) нет доступа к разделу Склад."
             )
             return
         await handle_warehouse_menu(update, context, lang)
     elif "kassa" in text or "касс" in text:
         if not caps["kassa"]:
             await update.message.reply_text(
-                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Kassa** bo'limiga kirish ruxsati yo'q."
+                f"Sizning biriktirilgan rollaringizda ({u_role}) Kassa bo'limiga kirish ruxsati yo'q."
                 if lang == "uz" else
-                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Касса**."
+                f"В ваших назначенных ролях ({u_role}) нет доступа к разделу Касса."
             )
             return
         await handle_cash_menu(update, context, lang)
     elif "ishlab" in text or "производ" in text:
         if not caps["production"]:
             await update.message.reply_text(
-                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Ishlab chiqarish** bo'limiga kirish ruxsati yo'q."
+                f"Sizning biriktirilgan rollaringizda ({u_role}) Ishlab chiqarish bo'limiga kirish ruxsati yo'q."
                 if lang == "uz" else
-                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Производство**."
+                f"В ваших назначенных ролях ({u_role}) нет доступа к разделу Производство."
             )
             return
         await handle_production_menu(update, context, lang)
     elif "balans" in text or "баланс" in text:
         if not caps["balances"]:
             await update.message.reply_text(
-                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Balanslar** bo'limiga kirish ruxsati yo'q."
+                f"Sizning biriktirilgan rollaringizda ({u_role}) Balanslar bo'limiga kirish ruxsati yo'q."
                 if lang == "uz" else
-                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Балансы**."
+                f"В ваших назначенных ролях ({u_role}) нет доступа к разделу Балансы."
             )
             return
         await handle_balances_menu(update, context, lang)
     elif "moliya" in text or "финанс" in text or "pnl" in text:
         if not caps["finance"]:
             await update.message.reply_text(
-                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Moliya** bo'limiga kirish ruxsati yo'q."
+                f"Sizning biriktirilgan rollaringizda ({u_role}) Moliya bo'limiga kirish ruxsati yo'q."
                 if lang == "uz" else
-                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Финансы**."
+                f"В ваших назначенных ролях ({u_role}) нет доступа к разделу Финансы."
             )
             return
         await handle_finance_menu(update, context, lang)
     elif "ish haqi" in text or "zarplat" in text or "зарплат" in text or "davomat" in text or "табель" in text:
         if not caps["salary"]:
             await update.message.reply_text(
-                f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Ish haqi** bo'limiga kirish ruxsati yo'q."
+                f"Sizning biriktirilgan rollaringizda ({u_role}) Ish haqi bo'limiga kirish ruxsati yo'q."
                 if lang == "uz" else
-                f"⛔ В ваших назначенных ролях (`{u_role}`) нет доступа к разделу **Зарплата**."
+                f"В ваших назначенных ролях ({u_role}) нет доступа к разделу Зарплата."
             )
             return
         await handle_salary_menu(update, context, lang)
     elif "til" in text or "язык" in text or "сменить" in text:
         await start_cmd(update, context)
     else:
-        await update.message.reply_text(BOT_TEXTS[lang]["welcome"], reply_markup=get_main_keyboard(lang, u_role if is_appr else ""), parse_mode="Markdown")
+        await update.message.reply_text(BOT_TEXTS[lang]["welcome"], reply_markup=get_main_keyboard(lang, u_role if is_appr else ""))
 
 def create_bot_app():
     req = HTTPXRequest(

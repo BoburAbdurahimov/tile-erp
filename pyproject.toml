@@ -1,0 +1,22 @@
+[project]
+name = "tile-erp"
+version = "1.0.0"
+description = "Ceramic tile factory ERP - web dashboard and Telegram Mini App"
+requires-python = ">=3.12"
+
+# Web/API dependencies only. The Telegram bot (python-telegram-bot, Pillow)
+# runs locally, not on Vercel, so it is deliberately not listed here - see
+# requirements.txt for the full local set.
+dependencies = [
+    "fastapi>=0.110.0",
+    "sqlalchemy>=2.0.28",
+    "pydantic>=2.6.4",
+    "httpx>=0.27.0",
+    "openpyxl>=3.1.2",
+    "python-dotenv>=1.0.1",
+    "jinja2>=3.1.3",
+    "psycopg2-binary>=2.9.9",
+]
+
+[tool.vercel]
+entrypoint = "backend.main:app"
