@@ -35,3 +35,6 @@ backup_project/
 # (Keep this negation last so nothing re-ignores it.)
 .env*
 !.env.example
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
