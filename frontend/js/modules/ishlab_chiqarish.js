@@ -28,7 +28,7 @@ const ProductionModule = {
         </div>
 
         <!-- Tabs Header -->
-        <div style="display: flex; gap: 10px; margin-top: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap;">
+        <div class="module-tab-strip" style="display: flex; gap: 10px; margin-top: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap;">
           <button id="prod-tab-orders" class="btn" onclick="ProductionModule.switchTab('orders')" style="font-weight: 700; font-size: 14px; padding: 8px 18px; border-radius: 6px; background: #2563eb; color: #ffffff; cursor: pointer;">
             📋 ${CURRENT_LANG === 'uz' ? 'Buyurtmalar va Chiqarilgan Tayyor Mahsulotlar' : 'История выпуска готовой продукции'}
           </button>

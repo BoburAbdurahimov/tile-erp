@@ -125,7 +125,7 @@ const UsersModule = (() => {
       </div>
 
       <!-- Tab Navigation -->
-      <div style="display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
+      <div class="module-tab-strip" style="display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
         <button class="tab-btn ${activeTab === 'web' ? 'active-tab' : ''}" onclick="UsersModule.switchTab('web')" style="padding: 12px 20px; font-weight: 600; font-size: 15px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${activeTab === 'web' ? '#2563eb' : 'transparent'}; color: ${activeTab === 'web' ? '#2563eb' : '#64748b'}; display: flex; align-items: center; gap: 8px;">
           <span>💻</span> ${isUz ? "Web Tizim Foydalanuvchilari" : "Пользователи Веб-Системы"} <span class="badge" id="web-users-count" style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 12px;">0</span>
         </button>

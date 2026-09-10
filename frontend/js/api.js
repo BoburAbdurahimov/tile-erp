@@ -259,6 +259,22 @@ const API = {
   calculatePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/calculate`, "POST"),
   finalizePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/finalize`, "POST"),
   reopenPayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/reopen`, "POST"),
-  paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data)
+  paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data),
+
+  // ---- Sales order pipeline: Order -> Delivery -> Payment ----
+  getOrders: (status) => apiRequest(`/orders${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+  getOrder: (id) => apiRequest(`/orders/${id}`),
+  createOrder: (data) => apiRequest("/orders", "POST", data),
+  cancelOrder: (id) => apiRequest(`/orders/${id}/cancel`, "POST"),
+  deliverOrder: (id, data) => apiRequest(`/orders/${id}/deliver`, "POST", data),
+  addOrderPayment: (id, data) => apiRequest(`/orders/${id}/payments`, "POST", data),
+
+  // Real-time free stock (on hand minus reserved) and the shortfall to produce
+  getStockAvailability: (warehouseId = 1) => apiRequest(`/orders/availability?warehouse_id=${warehouseId}`),
+  getProductionPlan: (warehouseId = 1) => apiRequest(`/orders/production-plan?warehouse_id=${warehouseId}`),
+
+  // Warehouse article grid
+  getStockGrid: (warehouseId = 1, group) =>
+    apiRequest(`/ombor/grid?warehouse_id=${warehouseId}${group ? `&group=${encodeURIComponent(group)}` : ""}`)
 };
 

@@ -29,6 +29,11 @@ class MDMMaterial(Base):
     category = Column(String(50), nullable=False) # Xomashyo/Siryo, Tayyor mahsulot, Ehtiyot qism, Yarim tayyor
     unit = Column(String(20), nullable=False, default="kg") # kg, m2, dona, litr, tonna
     min_stock = Column(Float, default=0.0)
+    # Warehouse grid coordinates: article_no is the 3-digit article (200-899)
+    # shown as row(hundreds) x column(tens); article_group is the code in the
+    # grid's top-left corner (e.g. "22").
+    article_no = Column(Integer, nullable=True, index=True)
+    article_group = Column(String(20), nullable=True, index=True)
     current_avg_price_usd = Column(Float, default=0.0) # Moving AVG cost in USD
     current_avg_price_uzs = Column(Float, default=0.0) # Moving AVG cost in UZS
     is_archived = Column(Boolean, default=False)
@@ -448,3 +453,109 @@ class MonthlySalaryCalculation(Base):
     employee = relationship("Employee", back_populates="salary_calculations")
     cash_transaction = relationship("CashTransaction")
 
+
+
+# ==================================================================
+#  SALES ORDER PIPELINE
+#  Order (stock reserved) -> Delivery (stock deducted, Sale created)
+#  -> Payment (cash in, receivable reduced).
+#  The existing Sale model stays the accounting document: it is created
+#  at the delivery step so PnL, client balances and storno are unchanged.
+# ==================================================================
+
+# Order lifecycle. Stored on SalesOrder.status.
+ORDER_STATUS_NEW = "Yangi"              # taken, stock reserved, not shipped
+ORDER_STATUS_DELIVERED = "Yetkazildi"   # shipped, awaiting payment
+ORDER_STATUS_PAID = "To'landi"          # fully paid, closed
+ORDER_STATUS_CANCELLED = "Bekor"        # cancelled, reservation released
+
+
+class SalesOrder(Base):
+    __tablename__ = "sales_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_number = Column(String(50), unique=True, nullable=False)  # ORD-20260910-0001
+
+    # Either a registered client, or a one-off walk-in buyer typed inline.
+    client_id = Column(Integer, ForeignKey("mdm_counterparties.id"), nullable=True)
+    walkin_name = Column(String(150), nullable=True)
+    walkin_phone = Column(String(50), nullable=True)
+
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    order_date = Column(Date, nullable=False, default=date.today)
+    deadline = Column(Date, nullable=True)  # drives the "must produce by" figure
+
+    currency = Column(String(10), nullable=False, default="USD")
+    total_amount = Column(Float, nullable=False, default=0.0)
+    paid_amount = Column(Float, nullable=False, default=0.0)
+
+    status = Column(String(20), nullable=False, default=ORDER_STATUS_NEW, index=True)
+
+    # Set once the order is shipped; links to the accounting document.
+    sale_id = Column(Integer, ForeignKey("sales.id"), nullable=True)
+
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    client = relationship("MDMCounterparty")
+    warehouse = relationship("Warehouse")
+    sale = relationship("Sale")
+    items = relationship("SalesOrderItem", back_populates="order", cascade="all, delete-orphan")
+    delivery = relationship("OrderDelivery", back_populates="order", uselist=False, cascade="all, delete-orphan")
+    payments = relationship("OrderPayment", back_populates="order", cascade="all, delete-orphan")
+
+    @property
+    def buyer_name(self) -> str:
+        if self.client is not None:
+            return self.client.name
+        return self.walkin_name or "-"
+
+
+class SalesOrderItem(Base):
+    __tablename__ = "sales_order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("sales_orders.id"), nullable=False)
+    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    unit_price = Column(Float, nullable=False)
+    total_price = Column(Float, nullable=False)
+    currency = Column(String(10), nullable=False, default="USD")
+
+    order = relationship("SalesOrder", back_populates="items")
+    material = relationship("MDMMaterial")
+
+
+class OrderDelivery(Base):
+    __tablename__ = "order_deliveries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("sales_orders.id"), unique=True, nullable=False)
+    delivered_date = Column(Date, nullable=False, default=date.today)
+    car_number = Column(String(50), nullable=False)
+    driver_name = Column(String(150), nullable=False)
+    driver_phone = Column(String(50), nullable=True)
+    destination = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("SalesOrder", back_populates="delivery")
+
+
+class OrderPayment(Base):
+    __tablename__ = "order_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("sales_orders.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), nullable=False, default="USD")
+    paid_date = Column(Date, nullable=False, default=date.today)
+    register_id = Column(Integer, ForeignKey("cash_registers.id"), nullable=True)
+    cash_transaction_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("SalesOrder", back_populates="payments")
+    register = relationship("CashRegister")
+    cash_transaction = relationship("CashTransaction")
