@@ -551,7 +551,7 @@ const SalesModule = {
         <div style="display:grid;grid-template-columns:2.2fr 1fr 1fr auto;gap:8px;align-items:start;margin-bottom:8px;">
           <div>
             <select class="form-control" onchange="SalesModule.updateDraftLine(${i},'material_id',this.value)">
-              ${this.availability.map(m => `<option value="${m.material_id}" ${m.material_id === ln.material_id ? "selected" : ""}>${m.article_no ? `[${m.article_no}] ` : ""}${m.name}</option>`).join("")}
+              ${this.availability.map(m => `<option value="${m.material_id}" ${m.material_id === ln.material_id ? "selected" : ""}>${m.name}</option>`).join("")}
             </select>
             <div style="font-size:11px;margin-top:3px;color:${short ? "#dc2626" : "#059669"};font-weight:600;">
               ${a ? `${isUz ? "erkin" : "свободно"}: ${formatNumber(free)} ${a.unit}${short ? ` — ${isUz ? "yetishmaydi" : "не хватает"} ${formatNumber(ln.quantity - free)}` : ""}` : ""}

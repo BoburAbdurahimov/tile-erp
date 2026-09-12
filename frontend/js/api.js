@@ -273,10 +273,6 @@ const API = {
   getStockAvailability: (warehouseId = 1) => apiRequest(`/orders/availability?warehouse_id=${warehouseId}`),
   getProductionPlan: (warehouseId = 1) => apiRequest(`/orders/production-plan?warehouse_id=${warehouseId}`),
 
-  // Warehouse article grid
-  getStockGrid: (warehouseId = 1, group) =>
-    apiRequest(`/ombor/grid?warehouse_id=${warehouseId}${group ? `&group=${encodeURIComponent(group)}` : ""}`),
-
   // ---- Telegram warehouse bot mirror (read-only) ----
   getSkladStatus: () => apiRequest("/sklad/status"),
   getSkladWarehouses: () => apiRequest("/sklad/warehouses"),

@@ -2,14 +2,10 @@ from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import (
-    StockItem, Warehouse, MDMMaterial, StockTransfer,
-    SalesOrder, SalesOrderItem,
-)
+from backend.models import StockItem, Warehouse, MDMMaterial, StockTransfer
 from backend.schemas import StockItemResponse, StockAdjustmentRequest, StockTransferCreate, StockTransferResponse
 from backend.api.auth import get_current_user_role, check_permission
 from backend.services.inventory_service import adjust_stock_manual, transfer_stock_between_warehouses
@@ -163,79 +159,3 @@ def export_stock_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=ombor_qoldiqlari.xlsx"}
     )
-
-
-@router.get("/grid")
-def get_stock_grid(
-    warehouse_id: int = 1,
-    group: Optional[str] = None,
-    db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
-):
-    """Finished stock as an article grid: rows are hundreds, columns are tens.
-
-    Article 234 sits at row 200, column 30. `group` is the code shown in the
-    grid's top-left corner; omitting it returns the first group found.
-    """
-    check_permission("ombor", role)
-
-    groups = [
-        g[0] for g in db.query(MDMMaterial.article_group)
-        .filter(MDMMaterial.article_group.isnot(None))
-        .distinct().order_by(MDMMaterial.article_group)
-    ]
-    if group is None:
-        group = groups[0] if groups else None
-
-    q = db.query(MDMMaterial).filter(
-        MDMMaterial.article_no.isnot(None),
-        MDMMaterial.is_archived == False  # noqa: E712
-    )
-    if group is not None:
-        q = q.filter(MDMMaterial.article_group == group)
-    materials = q.all()
-
-    stock = {
-        mat_id: float(qty or 0.0)
-        for mat_id, qty in db.query(StockItem.material_id, StockItem.quantity)
-        .filter(StockItem.warehouse_id == warehouse_id)
-    }
-
-    # Reserved by orders that are taken but not yet shipped.
-    reserved = {
-        mat_id: float(total or 0.0)
-        for mat_id, total in db.query(
-            SalesOrderItem.material_id, func.sum(SalesOrderItem.quantity)
-        )
-        .join(SalesOrder, SalesOrder.id == SalesOrderItem.order_id)
-        .filter(SalesOrder.status == "Yangi", SalesOrder.warehouse_id == warehouse_id)
-        .group_by(SalesOrderItem.material_id)
-    }
-
-    cells = []
-    for m in materials:
-        art = int(m.article_no)
-        on_hand = stock.get(m.id, 0.0)
-        res = reserved.get(m.id, 0.0)
-        cells.append({
-            "article_no": art,
-            "row": (art // 100) * 100,
-            "col": (art % 100) // 10 * 10,
-            "material_id": m.id,
-            "code": m.code,
-            "name": m.name,
-            "unit": m.unit,
-            "quantity": round(on_hand, 2),
-            "reserved": round(res, 2),
-            "free": round(on_hand - res, 2),
-        })
-
-    rows = sorted({c["row"] for c in cells})
-    return {
-        "warehouse_id": warehouse_id,
-        "group": group,
-        "available_groups": groups,
-        "rows": rows or [200, 300, 400, 500, 600, 700, 800],
-        "cols": list(range(0, 100, 10)),
-        "cells": cells,
-    }
