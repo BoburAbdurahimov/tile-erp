@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from backend.database import create_tables, SessionLocal
-from backend.api import auth, mdm, ombor, kassa, ishlab_chiqarish, kontragentlar, savdo, moliya, ish_haqi, buyurtma
+from backend.api import auth, mdm, ombor, kassa, ishlab_chiqarish, kontragentlar, savdo, moliya, ish_haqi, buyurtma, sklad
 from backend.services.currency_service import fetch_cbu_rate_today
 from backend.models import ExchangeRate
 from datetime import date
@@ -64,6 +64,7 @@ app.include_router(savdo.router, prefix="/api")
 app.include_router(moliya.router, prefix="/api")
 app.include_router(ish_haqi.router, prefix="/api")
 app.include_router(buyurtma.router, prefix="/api")
+app.include_router(sklad.router, prefix="/api")
 
 # Static frontend files mounting
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"

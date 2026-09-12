@@ -269,7 +269,8 @@ const MODULE_SUBNAV = {
   ombor: [
     { key: "stock",     tab: "stock",     icon: "📦", uz: "Ombor qoldiqlari", ru: "Остатки склада" },
     { key: "grid",      tab: "grid",      icon: "🔢", uz: "Artikul jadvali",  ru: "Сетка артикулов" },
-    { key: "transfers", tab: "transfers", icon: "🔄", uz: "O'tkazmalar",      ru: "Перемещения" }
+    { key: "transfers", tab: "transfers", icon: "🔄", uz: "O'tkazmalar",      ru: "Перемещения" },
+    { key: "bot",       tab: "bot",       icon: "🤖", uz: "Bot ombori",        ru: "Склад бота" }
   ],
   balances: [
     { key: "clients",   tab: "clients",   icon: "👤", uz: "Mijozlar",             ru: "Клиенты" },

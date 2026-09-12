@@ -275,6 +275,13 @@ const API = {
 
   // Warehouse article grid
   getStockGrid: (warehouseId = 1, group) =>
-    apiRequest(`/ombor/grid?warehouse_id=${warehouseId}${group ? `&group=${encodeURIComponent(group)}` : ""}`)
+    apiRequest(`/ombor/grid?warehouse_id=${warehouseId}${group ? `&group=${encodeURIComponent(group)}` : ""}`),
+
+  // ---- Telegram warehouse bot mirror (read-only) ----
+  getSkladStatus: () => apiRequest("/sklad/status"),
+  getSkladWarehouses: () => apiRequest("/sklad/warehouses"),
+  getSkladMatrix: (skladId) => apiRequest(`/sklad/matrix?sklad_id=${skladId}`),
+  getSkladMovements: (limit = 50, skladId) =>
+    apiRequest(`/sklad/movements?limit=${limit}${skladId ? `&sklad_id=${skladId}` : ""}`)
 };
 
