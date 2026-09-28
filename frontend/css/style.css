@@ -1,40 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 :root {
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Authentic Odoo ERP Palette */
-  --odoo-purple: #714B67;
-  --odoo-purple-hover: #5c3c54;
-  --odoo-purple-light: #875A7B;
-  --odoo-purple-active: #4a2f44;
-  --odoo-purple-soft: #f4eef3;
-  --odoo-purple-border: #d4c5d1;
+  /* Hi-Tech Moviy (Electric Sapphire Blue & Azure Cyan) Palette */
+  --moviy-primary: #0284c7;
+  --moviy-hover: #0369a1;
+  --moviy-dark: #0c4a6e;
+  --moviy-light: #f0f9ff;
+  --moviy-border: #bae6fd;
+  --moviy-glow: rgba(2, 132, 199, 0.25);
+  --moviy-gradient: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
   
-  --odoo-teal: #00A09D;
-  --odoo-teal-hover: #00807d;
-  --odoo-teal-light: #e6f6f6;
-  --odoo-teal-border: #99d6d5;
+  --odoo-purple: #0284c7;
+  --odoo-purple-hover: #0369a1;
+  --odoo-purple-light: #0ea5e9;
+  --odoo-purple-active: #0c4a6e;
+  --odoo-purple-soft: #f0f9ff;
+  --odoo-purple-border: #bae6fd;
   
-  --bg-app: #f8f9fa;
-  --bg-sidebar: #1f2937;
-  --bg-sidebar-active: rgba(113, 75, 103, 0.15);
+  --odoo-teal: #06b6d4;
+  --odoo-teal-hover: #0891b2;
+  --odoo-teal-light: #ecfeff;
+  --odoo-teal-border: #a5f3fc;
+  
+  --bg-app: #f4f7fb;
+  --bg-sidebar: #0b1727;
+  --bg-sidebar-active: rgba(2, 132, 199, 0.18);
   --bg-card: #ffffff;
   
-  --text-main: #212529;
-  --text-muted: #6c757d;
-  --text-light: #adb5bd;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
   
-  /* Primary & Accent (Odoo Standard) */
-  --primary: #714B67;
-  --primary-hover: #5c3c54;
-  --primary-light: #f4eef3;
-  --primary-border: #d4c5d1;
-  --primary-glow: rgba(113, 75, 103, 0.2);
+  /* Primary & Accent (Moviy Standard) */
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-light: #f0f9ff;
+  --primary-border: #bae6fd;
+  --primary-glow: rgba(2, 132, 199, 0.22);
   
-  --secondary: #00A09D;
-  --secondary-hover: #00807d;
+  --secondary: #06b6d4;
+  --secondary-hover: #0891b2;
   
   /* Status Colors */
   --success: #10b981;
@@ -51,17 +59,17 @@
   --danger-light: #fef2f2;
   --danger-border: #fecaca;
   
-  --info: #00A09D;
-  --info-light: #e6f6f6;
-  --info-border: #99d6d5;
+  --info: #0284c7;
+  --info-light: #f0f9ff;
+  --info-border: #bae6fd;
   
-  --purple: #714B67;
-  --purple-light: #f4eef3;
+  --purple: #0284c7;
+  --purple-light: #f0f9ff;
   
   /* Borders & Dividers */
-  --border-color: #dee2e6;
-  --border-subtle: #e9ecef;
-  --border-focus: #714B67;
+  --border-color: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-focus: #0284c7;
   
   /* Elevation Shadows */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
@@ -278,16 +286,16 @@ body {
 }
 
 .top-header {
-  height: 52px;
-  background-color: var(--odoo-purple);
+  height: 54px;
+  background: linear-gradient(90deg, #0b1727 0%, #0f2b48 55%, #0284c7 100%);
   color: #ffffff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
-  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 50;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 14px rgba(11, 23, 39, 0.35);
 }
 
 .header-left {
