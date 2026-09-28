@@ -27,7 +27,7 @@ const MdmModule = {
         </div>
 
         <!-- Navigation Tabs -->
-        <div class="tabs-nav module-tab-strip" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
+        <div class="tabs-nav" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
           <button class="tab-btn ${this.currentTab === 'materials' ? 'active' : ''}" onclick="MdmModule.switchTab('materials')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'materials' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'materials' ? '#2563eb' : '#64748b'};">
             🧱 ${t('tab_materials')}
           </button>

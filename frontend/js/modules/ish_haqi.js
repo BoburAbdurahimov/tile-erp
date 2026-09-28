@@ -122,7 +122,7 @@ const IshHaqiModule = (function () {
             </h2>
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t.subtitle}</p>
           </div>
-          <div class="tabs-nav module-tab-strip" style="margin-bottom: 0; border-bottom: none; gap: 6px; flex-wrap: wrap;">
+          <div class="tabs-nav" style="margin-bottom: 0; border-bottom: none; gap: 6px; flex-wrap: wrap;">
             <button class="tab-btn ${activeTab === 'payroll' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('payroll')">${t.tab_payroll}</button>
             <button class="tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('daily')">${t.tab_daily}</button>
             <button class="tab-btn ${activeTab === 'employees' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('employees')">${t.tab_employees}</button>

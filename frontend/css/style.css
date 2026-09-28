@@ -4,22 +4,37 @@
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Executive Calm Palette */
-  --bg-app: #f6f8fb;
-  --bg-sidebar: #0b1329;
-  --bg-sidebar-active: rgba(59, 130, 246, 0.16);
+  /* Authentic Odoo ERP Palette */
+  --odoo-purple: #714B67;
+  --odoo-purple-hover: #5c3c54;
+  --odoo-purple-light: #875A7B;
+  --odoo-purple-active: #4a2f44;
+  --odoo-purple-soft: #f4eef3;
+  --odoo-purple-border: #d4c5d1;
+  
+  --odoo-teal: #00A09D;
+  --odoo-teal-hover: #00807d;
+  --odoo-teal-light: #e6f6f6;
+  --odoo-teal-border: #99d6d5;
+  
+  --bg-app: #f8f9fa;
+  --bg-sidebar: #1f2937;
+  --bg-sidebar-active: rgba(113, 75, 103, 0.15);
   --bg-card: #ffffff;
   
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-light: #94a3b8;
+  --text-main: #212529;
+  --text-muted: #6c757d;
+  --text-light: #adb5bd;
   
-  /* Primary & Accent */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #eff6ff;
-  --primary-border: #bfdbfe;
-  --primary-glow: rgba(37, 99, 235, 0.16);
+  /* Primary & Accent (Odoo Standard) */
+  --primary: #714B67;
+  --primary-hover: #5c3c54;
+  --primary-light: #f4eef3;
+  --primary-border: #d4c5d1;
+  --primary-glow: rgba(113, 75, 103, 0.2);
+  
+  --secondary: #00A09D;
+  --secondary-hover: #00807d;
   
   /* Status Colors */
   --success: #10b981;
@@ -36,35 +51,35 @@
   --danger-light: #fef2f2;
   --danger-border: #fecaca;
   
-  --info: #06b6d4;
-  --info-light: #ecfeff;
-  --info-border: #a5f3fc;
+  --info: #00A09D;
+  --info-light: #e6f6f6;
+  --info-border: #99d6d5;
   
-  --purple: #8b5cf6;
-  --purple-light: #f5f3ff;
+  --purple: #714B67;
+  --purple-light: #f4eef3;
   
   /* Borders & Dividers */
-  --border-color: #e2e8f0;
-  --border-subtle: #f1f5f9;
-  --border-focus: #3b82f6;
+  --border-color: #dee2e6;
+  --border-subtle: #e9ecef;
+  --border-focus: #714B67;
   
   /* Elevation Shadows */
-  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, 0.1), 0 4px 10px -3px rgba(15, 23, 42, 0.05);
-  --shadow-xl: 0 24px 38px -6px rgba(15, 23, 42, 0.14), 0 12px 16px -6px rgba(15, 23, 42, 0.08);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.1), 0 4px 10px -3px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 24px 38px -6px rgba(0, 0, 0, 0.14), 0 12px 16px -6px rgba(0, 0, 0, 0.08);
   
-  /* Border Radius */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* Border Radius (Odoo Signature 6px Clean Edge) */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
   
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-bounce: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 *, *::before, *::after, input, select, textarea, button, optgroup, table, th, td {
@@ -97,15 +112,7 @@ body {
    SIDEBAR (Modern Deep Navy Executive Theme)
    ========================================================================== */
 .sidebar {
-  width: 260px;
-  background: linear-gradient(180deg, #0b1329 0%, #080d1e 100%);
-  color: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  transition: var(--transition);
-  z-index: 40;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  display: none !important;
 }
 
 .brand-header {
@@ -271,68 +278,153 @@ body {
 }
 
 .top-header {
-  height: 64px;
-  background-color: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 28px;
+  height: 52px;
+  background-color: var(--odoo-purple);
+  color: #ffffff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  z-index: 20;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  height: 100%;
+  overflow-x: auto;
 }
 
-.page-title {
-  font-size: 18px;
+/* Odoo Apps Grid Switcher Button (9-dots) */
+.odoo-apps-btn {
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.odoo-apps-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.odoo-brand-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+}
+
+/* Odoo Parallel Horizontal Nav Bar */
+.odoo-parallel-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  overflow-x: auto;
+}
+
+.odoo-parallel-nav::-webkit-scrollbar {
+  height: 0px;
+}
+
+.odoo-nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+  border-bottom: 3px solid transparent;
+}
+
+.odoo-nav-tab:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.odoo-nav-tab.active {
+  background-color: rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+  border-bottom: 3px solid var(--odoo-teal);
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-main);
+}
+
+.odoo-nav-tab .tab-icon {
+  font-size: 14px;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-/* FX Rate Indicator */
+/* FX Rate Indicator in Odoo Header */
 .fx-rate-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
+  gap: 6px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-main);
+  color: #ffffff;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: var(--shadow-xs);
 }
 
 .fx-rate-pill:hover {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-glow);
-  transform: translateY(-1px);
-}
-
-.fx-rate-pill .rate-val {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  color: var(--primary);
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 /* Month Status Pill */
+.month-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: var(--transition);
+}
+
+.month-status-pill.open {
+  background-color: #00A09D;
+  color: #ffffff;
+}
+
+.month-status-pill.closed {
+  background-color: #ef4444;
+  color: #ffffff;
+}
 .month-status-pill {
   display: flex;
   align-items: center;
@@ -1184,200 +1276,99 @@ body {
 }
 
 /* ==========================================================================
-   Role badge cells
-   `.data-table td` sets `white-space: nowrap`, so a cell holding many role
-   badges overflowed its `max-width` and painted over the neighbouring status
-   and date columns. Re-enable wrapping for these cells only.
+   ODOO ERP APPS GRID SWITCHER MODAL & CONTROL PANEL
    ========================================================================== */
-
-.data-table td.roles-cell {
-  white-space: normal;
-  min-width: 200px;
-  max-width: 320px;
-}
-
-.role-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-}
-
-/* Actions column stays reachable when a wide table scrolls horizontally. */
-
-.data-table th.actions-cell,
-.data-table td.actions-cell {
-  position: sticky;
-  right: 0;
-  z-index: 2;
+.odoo-sub-header {
+  height: 42px;
   background-color: #ffffff;
-  box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.18);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  z-index: 10;
 }
 
-.data-table th.actions-cell {
-  background-color: #f8fafc;
-  z-index: 3;
+.odoo-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--odoo-purple);
 }
 
-.data-table tr:hover td.actions-cell {
-  background-color: #f8fafc;
+.odoo-apps-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 41, 55, 0.88);
+  backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  animation: fadeIn 0.2s ease;
 }
 
-/* ==========================================================================
-   Telegram Mini App / mobile
-   ========================================================================== */
+.odoo-apps-overlay.open {
+  display: flex;
+}
 
-/* Wide tables scroll inside their own box instead of stretching the page. */
-.table-scroll {
+.odoo-apps-container {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  max-width: 860px;
+  padding: 32px;
+  box-shadow: var(--shadow-xl);
+  position: relative;
 }
 
-@media (max-width: 768px) {
-  /* Nothing should be able to widen the viewport horizontally. */
-  html, body {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .content-body,
-  .card,
-  .modal-content {
-    max-width: 100%;
-  }
-
-  /* Charts and images stay inside their card. */
-  .card canvas,
-  .card img,
-  .card svg {
-    max-width: 100%;
-    height: auto;
-  }
-
-  /* Bottom bar: single-line labels, clear of the iPhone home indicator. */
-  .mobile-bottom-nav {
-    height: auto;
-    min-height: 62px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .mob-nav-item {
-    min-width: 0;
-    padding: 8px 4px;
-  }
-
-  .mob-label {
-    display: block;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 10px;
-    line-height: 1.2;
-  }
-
-  /* Leave room for the fixed bar plus the home indicator. */
-  .content-body {
-    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  /* Comfortable tap targets (Apple/Google both recommend ~44px). */
-  .data-table th.sortable,
-  .btn,
-  button.btn,
-  .tab-btn {
-    min-height: 40px;
-  }
-
-  /* Filter inputs inside table headers stay usable at small widths. */
-  .table-col-filter {
-    min-width: 90px;
-    font-size: 16px; /* iOS zooms the page for inputs under 16px */
-  }
+.odoo-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
 }
 
-@media (max-width: 768px) {
-  /* KPI / stat tiles are compact enough to pair up; one per row wasted most of
-     the screen and pushed the real content far down. Wider content blocks
-     (.grid-2 / .grid-3 — charts, tables) stay full width. */
-  .grid-4, .grid-5 {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px;
-  }
-}
-
-/* Only the narrowest handsets (iPhone SE 1st gen and similar) drop back to one
-   tile per row; 375px phones fit two comfortably. */
-@media (max-width: 340px) {
-  .grid-4, .grid-5 {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-/* ==========================================================================
-   Sidebar sub-navigation
-   Module sub-pages live in the sidebar under their parent item instead of a
-   horizontal tab strip inside the page.
-   ========================================================================== */
-
-.nav-subnav {
+.odoo-app-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin: 2px 0 6px 0;
-  padding-left: 14px;
-  border-left: 1px solid rgba(148, 163, 184, 0.22);
-  margin-left: 18px;
-}
-
-.nav-subitem {
-  display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  color: #8ea0b8;
-  text-decoration: none;
-  font-size: 12.5px;
-  font-weight: 500;
+  justify-content: center;
+  padding: 16px 10px;
+  border-radius: var(--radius-md);
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
   cursor: pointer;
   transition: var(--transition);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
 }
 
-.nav-subitem:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
+.odoo-app-card:hover {
+  background: var(--odoo-purple-soft);
+  border-color: var(--odoo-purple-border);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
-.nav-subitem.active {
-  background-color: rgba(96, 165, 250, 0.13);
-  color: #93c5fd;
-  font-weight: 600;
+.odoo-app-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
-.nav-subitem .sub-icon {
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-/* Strips replaced by the sidebar sub-navigation. Marked per module so that
-   other .tabs-nav strips (the warehouse filter, the payroll department filter)
-   are untouched. */
-.module-tab-strip {
-  display: none !important;
-}
-
-@media (max-width: 768px) {
-  /* The sidebar is hidden on phones; sub-pages are reached from inside the page. */
-  .nav-subnav {
-    display: none;
-  }
-  .module-tab-strip {
-    display: flex !important;
-  }
+.odoo-app-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
 }

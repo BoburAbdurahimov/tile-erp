@@ -234,6 +234,14 @@ function updateUserDisplay() {
     avatarEl.textContent = (CURRENT_USER.username || "KZ").substring(0, 2).toUpperCase();
   }
 
+  // Filter Odoo top parallel navigation tabs based on assigned roles
+  document.querySelectorAll(".odoo-nav-tab").forEach(tab => {
+    const nav = tab.getAttribute("data-nav");
+    if (nav) {
+      tab.style.display = hasModuleAccess(nav) ? "flex" : "none";
+    }
+  });
+
   // Filter sidebar navigation items based on assigned roles
   document.querySelectorAll(".nav-item").forEach(item => {
     const nav = item.getAttribute("data-nav");
@@ -249,104 +257,54 @@ function updateUserDisplay() {
       item.style.display = hasModuleAccess(nav) ? "flex" : "none";
     }
   });
+
+  // Filter Odoo App Launcher cards
+  document.querySelectorAll(".odoo-app-card").forEach(card => {
+    const onclickAttr = card.getAttribute("onclick") || "";
+    const match = onclickAttr.match(/selectOdooApp\('([^']+)'\)/);
+    if (match && match[1]) {
+      card.style.display = hasModuleAccess(match[1]) ? "flex" : "none";
+    }
+  });
 }
 
-// Sub-pages shown as an indented list under the active sidebar item.
-// `tab` is the key the module's own switchTab() already understands, so the
-// sidebar drives each module's existing logic instead of duplicating it.
-const MODULE_SUBNAV = {
-  sales: [
-    { key: "orders",   tab: "orders",   icon: "📋", uz: "Buyurtmalar",     ru: "Заказы" },
-    { key: "delivery", tab: "delivery", icon: "🚚", uz: "Yetkazib berish", ru: "Доставка" },
-    { key: "payments", tab: "payments", icon: "💰", uz: "To'lovlar",       ru: "Оплаты" }
-  ],
-  mdm: [
-    { key: "materials",  tab: "materials",  icon: "🧱", uz: "Materiallar & Mahsulotlar", ru: "Материалы и продукция" },
-    { key: "clients",    tab: "clients",    icon: "👤", uz: "Mijozlar",                  ru: "Клиенты" },
-    { key: "suppliers",  tab: "suppliers",  icon: "🚛", uz: "Yetkazib beruvchilar",      ru: "Поставщики" },
-    { key: "warehouses", tab: "warehouses", icon: "🏢", uz: "Omborlar",                  ru: "Склады" }
-  ],
-  ombor: [
-    { key: "stock",     tab: "stock",     icon: "📦", uz: "Ombor qoldiqlari", ru: "Остатки склада" },
-    { key: "transfers", tab: "transfers", icon: "🔄", uz: "O'tkazmalar",      ru: "Перемещения" },
-    { key: "bot",       tab: "bot",       icon: "🤖", uz: "Bot ombori",        ru: "Склад бота" }
-  ],
-  balances: [
-    { key: "clients",   tab: "clients",   icon: "👤", uz: "Mijozlar",             ru: "Клиенты" },
-    { key: "suppliers", tab: "suppliers", icon: "🚛", uz: "Yetkazib beruvchilar", ru: "Поставщики" }
-  ],
-  production: [
-    { key: "orders",   tab: "orders",   icon: "🏭", uz: "Ishlab chiqarish", ru: "Выпуск продукции" },
-    { key: "expenses", tab: "expenses", icon: "🔧", uz: "Sarf materiallar", ru: "Расходные материалы" }
-  ],
-  salary: [
-    { key: "payroll",   tab: "payroll",   icon: "💵", uz: "Hisob-kitob",    ru: "Расчет" },
-    { key: "daily",     tab: "daily",     icon: "📅", uz: "Kunlik davomat", ru: "Табель" },
-    { key: "employees", tab: "employees", icon: "👷", uz: "Xodimlar",       ru: "Сотрудники" },
-    { key: "job_types", tab: "job_types", icon: "📝", uz: "Ish turlari",    ru: "Виды работ" }
-  ],
-  users: [
-    { key: "web",      tab: "web",      icon: "💻", uz: "Web foydalanuvchilar", ru: "Web пользователи" },
-    { key: "telegram", tab: "telegram", icon: "📱", uz: "Telegram bot",         ru: "Telegram бот" }
-  ]
-};
-
-// Which global object owns each module's switchTab().
-// The modules are declared with top-level `const`, which lands in the global
-// lexical scope and NOT on `window` - so these must reference the bare
-// identifiers, guarded in case a module script failed to load.
-const MODULE_OBJECTS = {
-  sales:      () => (typeof SalesModule      !== "undefined" ? SalesModule      : null),
-  mdm:        () => (typeof MdmModule        !== "undefined" ? MdmModule        : null),
-  ombor:      () => (typeof OmborModule      !== "undefined" ? OmborModule      : null),
-  balances:   () => (typeof BalancesModule   !== "undefined" ? BalancesModule   : null),
-  production: () => (typeof ProductionModule !== "undefined" ? ProductionModule : null),
-  salary:     () => (typeof IshHaqiModule    !== "undefined" ? IshHaqiModule    : null),
-  users:      () => (typeof UsersModule      !== "undefined" ? UsersModule      : null)
-};
-
-let currentSubKey = null;
-
-function renderSubNav(moduleName, activeKey) {
-  document.querySelectorAll(".nav-subnav").forEach(el => el.remove());
-
-  const subs = MODULE_SUBNAV[moduleName];
-  if (!subs || !subs.length) return;
-
-  const parent = document.querySelector(`.nav-item[data-nav="${moduleName}"]`);
-  if (!parent) return;
-
-  const isUz = CURRENT_LANG === "uz";
-  const list = document.createElement("div");
-  list.className = "nav-subnav";
-  list.innerHTML = subs.map(sub => `
-    <a class="nav-subitem ${sub.key === activeKey ? "active" : ""}"
-       data-subnav="${sub.key}"
-       onclick="navigateTo('${moduleName}', '${sub.key}')">
-      <span class="sub-icon">${sub.icon}</span>
-      <span>${isUz ? sub.uz : sub.ru}</span>
-    </a>`).join("");
-
-  parent.insertAdjacentElement("afterend", list);
+function toggleOdooAppsOverlay() {
+  const overlay = document.getElementById("odoo-apps-overlay");
+  if (overlay) {
+    overlay.classList.toggle("open");
+  }
 }
 
-async function navigateTo(moduleName, subKey) {
+function closeOdooAppsOverlayOnBackdrop(e) {
+  if (e.target && e.target.id === "odoo-apps-overlay") {
+    const overlay = document.getElementById("odoo-apps-overlay");
+    if (overlay) overlay.classList.remove("open");
+  }
+}
+
+function selectOdooApp(moduleName) {
+  const overlay = document.getElementById("odoo-apps-overlay");
+  if (overlay) overlay.classList.remove("open");
+  navigateTo(moduleName);
+}
+
+async function navigateTo(moduleName) {
   if (!hasModuleAccess(moduleName)) {
     showToast("Ushbu modulga kirish uchun sizda ruxsat yo'q!", "error");
     moduleName = "dashboard";
-    subKey = undefined;
   }
-
-  const subs = MODULE_SUBNAV[moduleName];
-  // Default to the module's first sub-page when none was asked for.
-  if (subs && subs.length && !subKey) subKey = subs[0].key;
-
-  // Already on this module: switch sub-page without re-rendering the shell.
-  const sameModule = currentModule === moduleName;
   currentModule = moduleName;
-  currentSubKey = subKey || null;
+  
+  // Highlight active Odoo top parallel nav tab
+  document.querySelectorAll(".odoo-nav-tab").forEach(tab => {
+    if (tab.getAttribute("data-nav") === moduleName) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
+  });
 
-  // Highlight active nav item (Desktop & Mobile Mini App)
+  // Highlight active sidebar nav item (Desktop & Mobile Mini App)
   document.querySelectorAll(".nav-item").forEach(item => {
     if (item.getAttribute("data-nav") === moduleName) {
       item.classList.add("active");
@@ -354,18 +312,6 @@ async function navigateTo(moduleName, subKey) {
       item.classList.remove("active");
     }
   });
-
-  renderSubNav(moduleName, subKey);
-
-  if (sameModule && subs && subKey) {
-    const getMod = MODULE_OBJECTS[moduleName];
-    const mod = getMod ? getMod() : null;
-    const sub = subs.find(x => x.key === subKey);
-    if (mod && sub && typeof mod.switchTab === "function") {
-      await mod.switchTab(sub.tab);
-      return;
-    }
-  }
 
   document.querySelectorAll(".mob-nav-item").forEach(item => {
     if (item.getAttribute("data-mobnav") === moduleName) {
@@ -430,41 +376,6 @@ async function navigateTo(moduleName, subKey) {
     default:
       await DashboardModule.render(container);
   }
-
-  // Freshly mounted module: apply the requested sub-page via its own logic.
-  if (subs && subKey) {
-    const getMod = MODULE_OBJECTS[moduleName];
-    const mod = getMod ? getMod() : null;
-    const sub = subs.find(x => x.key === subKey);
-    if (mod && sub && typeof mod.switchTab === "function") {
-      try {
-        await mod.switchTab(sub.tab);
-      } catch (e) {
-        console.warn(`Sub-page '${subKey}' failed for ${moduleName}:`, e);
-      }
-    }
-  }
-
-  makeTablesScrollable(container);
-}
-
-// Wide ERP tables must scroll inside their own box; without this they widen the
-// whole page on a phone, which matters most in the Telegram Mini App. Modules
-// that already wrap their table in a scroll container are left alone.
-function makeTablesScrollable(root) {
-  if (!root) return;
-  root.querySelectorAll("table.data-table").forEach(table => {
-    const parent = table.parentElement;
-    if (!parent || parent.classList.contains("table-scroll")) return;
-
-    const parentScrolls = getComputedStyle(parent).overflowX;
-    if (parentScrolls === "auto" || parentScrolls === "scroll") return;
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "table-scroll";
-    parent.insertBefore(wrapper, table);
-    wrapper.appendChild(table);
-  });
 }
 
 async function updateHeaderFxRate() {

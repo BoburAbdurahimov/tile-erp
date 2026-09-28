@@ -24,7 +24,7 @@ const UsersModule = (() => {
       return `<span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; border: 1px solid #fde68a;">${isUz ? "🟡 Kutilmoqda (Rolsiz)" : "🟡 Ожидает (Без ролей)"}</span>`;
     }
     const roles = roleStr.split(",").map(r => r.trim()).filter(Boolean);
-    const badges = roles.map(r => {
+    return roles.map(r => {
       let color = "#3b82f6";
       let bg = "#eff6ff";
       let icon = "🔘";
@@ -41,9 +41,8 @@ const UsersModule = (() => {
       else if (r.includes("Moliya") || r === "Direktor" || r === "Buxgalter") { color = "#7c3aed"; bg = "#f5f3ff"; icon = "📈"; label = isUz ? "Moliya" : "Финансы"; }
       else if (r.includes("MDM")) { color = "#475569"; bg = "#f1f5f9"; icon = "🗂️"; label = "MDM"; }
 
-      return `<span style="background: ${bg}; color: ${color}; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; border: 1px solid ${color}30; display: inline-block; white-space: nowrap;">${icon} ${label}</span>`;
-    }).join("");
-    return `<div class="role-badges">${badges}</div>`;
+      return `<span style="background: ${bg}; color: ${color}; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; border: 1px solid ${color}30; margin-right: 4px; display: inline-block; margin-bottom: 2px;">${icon} ${label}</span>`;
+    }).join(" ");
   }
 
   function renderRoleCheckboxes(inputName, selectedRolesStr = "") {
@@ -125,7 +124,7 @@ const UsersModule = (() => {
       </div>
 
       <!-- Tab Navigation -->
-      <div class="module-tab-strip" style="display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
+      <div style="display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
         <button class="tab-btn ${activeTab === 'web' ? 'active-tab' : ''}" onclick="UsersModule.switchTab('web')" style="padding: 12px 20px; font-weight: 600; font-size: 15px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${activeTab === 'web' ? '#2563eb' : 'transparent'}; color: ${activeTab === 'web' ? '#2563eb' : '#64748b'}; display: flex; align-items: center; gap: 8px;">
           <span>💻</span> ${isUz ? "Web Tizim Foydalanuvchilari" : "Пользователи Веб-Системы"} <span class="badge" id="web-users-count" style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 12px;">0</span>
         </button>
@@ -240,12 +239,12 @@ const UsersModule = (() => {
             <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; color: #0f172a; font-size: 13px;">${u.username}</code>
           </td>
           <td data-sort-value="${u.phone_number || ''}" style="padding: 14px 16px; color: #475569; font-size: 13px;">${u.phone_number || "-"}</td>
-          <td data-sort-value="${u.role}" class="roles-cell" style="padding: 14px 16px;">
+          <td data-sort-value="${u.role}" style="padding: 14px 16px; max-width: 300px;">
             ${renderRoleBadges(u.role)}
           </td>
           <td data-sort-value="${u.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 14px 16px;">${statusBadge}</td>
           <td data-sort-value="${u.created_at}" style="padding: 14px 16px; color: #64748b; font-size: 13px;">${formatDate(u.created_at)}</td>
-          <td class="actions-cell" style="padding: 14px 16px; text-align: right;">
+          <td style="padding: 14px 16px; text-align: right;">
             <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
               <button class="btn btn-sm" onclick="UsersModule.openEditUserModal(${u.id})" style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;" title="${isUz ? 'Tahrirlash' : 'Редактировать'}">
                 ✏️ ${isUz ? 'Tahrirlash' : 'Редактировать'}
@@ -276,7 +275,7 @@ const UsersModule = (() => {
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)" style="padding: 12px 16px;">${isUz ? 'Biriktirilgan Ruxsatlar' : 'Назначенные Права'} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)" style="padding: 12px 16px;">${isUz ? 'Holati' : 'Статус'} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, false)" style="padding: 12px 16px;">${isUz ? 'Yaratilgan sana' : 'Дата создания'} <span class="sort-icon">↕</span></th>
-                <th class="actions-cell" style="padding: 12px 16px; text-align: right;">${isUz ? 'Amallar' : 'Действия'}</th>
+                <th style="padding: 12px 16px; text-align: right;">${isUz ? 'Amallar' : 'Действия'}</th>
               </tr>
               <tr class="filter-row">
                 <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${isUz ? 'F.I.Sh...' : 'Ф.И.О...'}" oninput="TableFilterSort.filterTable(this)" /></th>
@@ -340,12 +339,12 @@ const UsersModule = (() => {
           <td data-sort-value="${u.phone_number || ''}" style="padding: 14px 16px;">
             <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; color: #0f172a; font-size: 13px;">${u.phone_number}</code>
           </td>
-          <td data-sort-value="${u.role}" class="roles-cell" style="padding: 14px 16px;">
+          <td data-sort-value="${u.role}" style="padding: 14px 16px; max-width: 300px;">
             ${renderRoleBadges(u.role)}
           </td>
           <td data-sort-value="${isPending ? 'Kutilmoqda' : 'Tasdiqlangan'}" style="padding: 14px 16px;">${statusBadge}</td>
           <td data-sort-value="${u.created_at}" style="padding: 14px 16px; color: #64748b; font-size: 13px;">${formatDate(u.created_at)}</td>
-          <td class="actions-cell" style="padding: 14px 16px; text-align: right;">
+          <td style="padding: 14px 16px; text-align: right;">
             <div style="display: flex; gap: 6px; justify-content: flex-end;">
               <button class="btn btn-sm" onclick="UsersModule.openApproveTgUserModal(${u.id})" style="background: #2563eb; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
                 ${btnLabel}
@@ -380,7 +379,7 @@ const UsersModule = (() => {
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)" style="padding: 12px 16px;">${isUz ? 'Biriktirilgan Rollar' : 'Назначенные Роли'} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)" style="padding: 12px 16px;">${isUz ? 'Holat' : 'Статус'} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, false)" style="padding: 12px 16px;">${isUz ? 'Sana' : 'Дата'} <span class="sort-icon">↕</span></th>
-                <th class="actions-cell" style="padding: 12px 16px; text-align: right;">${isUz ? 'Amallar' : 'Действия'}</th>
+                <th style="padding: 12px 16px; text-align: right;">${isUz ? 'Amallar' : 'Действия'}</th>
               </tr>
               <tr class="filter-row">
                 <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${isUz ? 'Xodim...' : 'Сотрудник...'}" oninput="TableFilterSort.filterTable(this)" /></th>
