@@ -157,7 +157,12 @@ class ProductionOrder(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_number = Column(String(50), unique=True, nullable=False)
     line_id = Column(Integer, ForeignKey("production_lines.id"), nullable=False)
-    output_material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
+    output_material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=True)
+    # Output may instead land in the dimensional warehouse, as a sheet size.
+    # When out_sklad_id is set, out_length/out_width say which cell it fills.
+    out_sklad_id = Column(Integer, nullable=True)
+    out_length = Column(Integer, nullable=True)
+    out_width = Column(Integer, nullable=True)
     quantity = Column(Float, nullable=False) # m2 or pcs
     date = Column(Date, nullable=False, default=date.today)
     status = Column(String(20), default="Tasdiqlandi") # "Tasdiqlandi", "Storno"
@@ -244,7 +249,11 @@ class PurchaseItem(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     purchase_id = Column(Integer, ForeignKey("purchases.id"), nullable=False)
-    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
+    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=True)
+    # A line bought as sheets goes to the dimensional warehouse instead.
+    sklad_id = Column(Integer, nullable=True)
+    length = Column(Integer, nullable=True)
+    width = Column(Integer, nullable=True)
     quantity = Column(Float, nullable=False)
     unit_price = Column(Float, nullable=False)
     total_price = Column(Float, nullable=False)

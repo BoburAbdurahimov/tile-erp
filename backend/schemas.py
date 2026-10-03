@@ -235,7 +235,13 @@ class LineExpenseResponse(BaseModel):
 
 class ProductionOrderCreate(BaseModel):
     line_id: int
-    output_material_id: int
+    # Output goes to the dimensional warehouse when out_sklad_id and a size are
+    # given; otherwise it lands on the legacy product stock as before.
+    output_material_id: Optional[int] = None
+    out_sklad_id: Optional[int] = None
+    out_code: Optional[int] = None          # 680 = 600x80
+    out_length: Optional[int] = None
+    out_width: Optional[int] = None
     quantity: float
     date: dt_date = Field(default_factory=dt_date.today)
     consumed_materials: List[ConsumedMaterialInput]
@@ -258,9 +264,13 @@ class ProductionOrderResponse(BaseModel):
     line_id: int
     line_name: str
     line_number: int
-    output_material_id: int
+    # Null when the output went to the dimensional warehouse; the size fields
+    # describe it instead.
+    output_material_id: Optional[int] = None
     output_material_code: str
     output_material_name: str
+    out_sklad_id: Optional[int] = None
+    out_size_code: Optional[int] = None
     quantity: float
     unit: str
     date: dt_date
@@ -276,7 +286,13 @@ class ProductionOrderResponse(BaseModel):
 
 # Purchase (Zakup)
 class PurchaseItemInput(BaseModel):
-    material_id: int
+    # A line is either a catalogue material (raw materials, spares) or sheets
+    # bought by size into the dimensional warehouse.
+    material_id: Optional[int] = None
+    sklad_id: Optional[int] = None
+    code: Optional[int] = None          # 680 = 600x80
+    length: Optional[int] = None
+    width: Optional[int] = None
     quantity: float
     unit_price: float
 
@@ -290,9 +306,12 @@ class PurchaseCreate(BaseModel):
 
 class PurchaseItemResponse(BaseModel):
     id: int
-    material_id: int
+    # Null on a line bought as sheets; the size fields describe it instead.
+    material_id: Optional[int] = None
     material_code: str
     material_name: str
+    sklad_id: Optional[int] = None
+    size_code: Optional[int] = None
     quantity: float
     unit: str
     unit_price: float

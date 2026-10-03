@@ -14,6 +14,7 @@ from backend.schemas import (
     ConsumedMaterialResponse, LineExpenseCreate, LineExpenseResponse, LineExpenseItemResponse
 )
 from backend.api.auth import get_current_user_role, check_permission
+from backend.services import sklad_service as sklad_svc
 from backend.services.inventory_service import (
     get_or_create_stock_item, deduct_stock, add_stock_with_avg_valuation
 )
@@ -88,7 +89,9 @@ def get_production_orders(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("ishlab_chiqarish", role)
-    query = db.query(ProductionOrder).join(ProductionLine).join(MDMMaterial)
+    # Outer join: an order whose output went to the dimensional warehouse
+    # has no output_material, and an inner join would hide it.
+    query = db.query(ProductionOrder).join(ProductionLine).outerjoin(MDMMaterial)
     
     if line_id:
         query = query.filter(ProductionOrder.line_id == line_id)
@@ -124,10 +127,17 @@ def get_production_orders(
             line_name=o.line.name if o.line else "",
             line_number=o.line.line_number if o.line else 1,
             output_material_id=o.output_material_id,
-            output_material_code=o.output_material.code if o.output_material else "",
-            output_material_name=o.output_material.name if o.output_material else "",
+            output_material_code=(str(o.out_length + o.out_width)
+                                  if o.out_sklad_id and o.out_length is not None
+                                  else (o.output_material.code if o.output_material else "")),
+            output_material_name=(f"{sklad_svc.sklad_label(o.out_sklad_id)} - {o.out_length}x{o.out_width}"
+                                  if o.out_sklad_id and o.out_length is not None
+                                  else (o.output_material.name if o.output_material else "")),
+            out_sklad_id=o.out_sklad_id,
+            out_size_code=((o.out_length + o.out_width)
+                           if o.out_length is not None and o.out_width is not None else None),
             quantity=round(o.quantity, 2),
-            unit=o.output_material.unit if o.output_material else "m2",
+            unit=("dona" if o.out_sklad_id else (o.output_material.unit if o.output_material else "m2")),
             date=o.date,
             status=o.status,
             direct_cost_usd=round(o.direct_cost_usd, 2),
@@ -157,9 +167,27 @@ def create_production_order(
     if not line:
         raise HTTPException(status_code=404, detail="Liniya topilmadi.")
         
-    output_mat = db.query(MDMMaterial).filter(MDMMaterial.id == payload.output_material_id).first()
-    if not output_mat:
-        raise HTTPException(status_code=404, detail="Chiqarilayotgan tayyor mahsulot topilmadi.")
+    # Output goes either to the dimensional warehouse (a sheet size) or, for
+    # backwards compatibility, to the legacy product stock.
+    out_length = out_width = None
+    if payload.out_sklad_id:
+        if not sklad_svc.get_config(payload.out_sklad_id):
+            raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+        try:
+            if payload.out_code is not None:
+                out_length, out_width = sklad_svc.decode_size(int(payload.out_code))
+            elif payload.out_length is not None and payload.out_width is not None:
+                out_length, out_width = int(payload.out_length), int(payload.out_width)
+                sklad_svc.decode_size(out_length + out_width)
+            else:
+                raise HTTPException(status_code=400, detail="Chiqarilayotgan o'lchamni kiriting (masalan 680).")
+        except sklad_svc.SkladError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        output_mat = None
+    else:
+        output_mat = db.query(MDMMaterial).filter(MDMMaterial.id == payload.output_material_id).first()
+        if not output_mat:
+            raise HTTPException(status_code=404, detail="Chiqarilayotgan tayyor mahsulot topilmadi.")
 
     # Generate order number
     count = db.query(func.count(ProductionOrder.id)).scalar() or 0
@@ -200,20 +228,34 @@ def create_production_order(
         total_cost_usd=direct_cost_usd,
         unit_cost_usd=unit_direct_cost,
         notes=payload.notes,
-        consumed_materials=consumed_records
+        consumed_materials=consumed_records,
+        out_sklad_id=payload.out_sklad_id,
+        out_length=out_length,
+        out_width=out_width,
     )
     db.add(order)
-    
-    # Increase finished goods stock in Warehouse 1 (Tayyor mahsulotlar)
-    add_stock_with_avg_valuation(
-        db=db,
-        warehouse_id=1,
-        material_id=payload.output_material_id,
-        quantity=payload.quantity,
-        unit_price=unit_direct_cost,
-        currency="USD",
-        trans_date=payload.date
-    )
+
+    if payload.out_sklad_id:
+        # Finished sheets land in the dimensional warehouse.
+        sklad_svc.receive_stock(
+            db,
+            sklad_id=payload.out_sklad_id,
+            items=[{"length": out_length, "width": out_width,
+                    "quantity": int(payload.quantity)}],
+            client_name=f"Ishlab chiqarish {order_num}",
+            created_by=role,
+        )
+    else:
+        # Legacy path: finished goods onto product stock in Warehouse 1.
+        add_stock_with_avg_valuation(
+            db=db,
+            warehouse_id=1,
+            material_id=payload.output_material_id,
+            quantity=payload.quantity,
+            unit_price=unit_direct_cost,
+            currency="USD",
+            trans_date=payload.date
+        )
     
     db.commit()
     db.refresh(order)
@@ -247,10 +289,18 @@ def create_production_order(
         line_name=order.line.name if order.line else "",
         line_number=order.line.line_number if order.line else 1,
         output_material_id=order.output_material_id,
-        output_material_code=order.output_material.code if order.output_material else "",
-        output_material_name=order.output_material.name if order.output_material else "",
+        output_material_code=(str(order.out_length + order.out_width)
+                              if order.out_sklad_id and order.out_length is not None
+                              else (order.output_material.code if order.output_material else "")),
+        output_material_name=(f"{sklad_svc.sklad_label(order.out_sklad_id)} - {order.out_length}x{order.out_width}"
+                              if order.out_sklad_id and order.out_length is not None
+                              else (order.output_material.name if order.output_material else "")),
+        out_sklad_id=order.out_sklad_id,
+        out_size_code=((order.out_length + order.out_width)
+                       if order.out_length is not None and order.out_width is not None else None),
         quantity=round(order.quantity, 2),
-        unit=order.output_material.unit if order.output_material else "m2",
+        unit=("dona" if order.out_sklad_id
+              else (order.output_material.unit if order.output_material else "m2")),
         date=order.date,
         status=order.status,
         direct_cost_usd=round(order.direct_cost_usd, 2),

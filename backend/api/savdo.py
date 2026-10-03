@@ -14,6 +14,7 @@ from backend.schemas import (
     SaleCreate, SaleResponse, SaleItemResponse
 )
 from backend.api.auth import get_current_user_role, check_permission
+from backend.services import sklad_service as sklad_svc
 from backend.services.inventory_service import (
     add_stock_with_avg_valuation, deduct_stock
 )
@@ -50,13 +51,18 @@ def get_purchases(
     for p in purchases:
         items_list = []
         for it in p.items:
+            is_sheet = it.sklad_id is not None
+            size_code = (it.length + it.width) if (it.length is not None and it.width is not None) else None
             items_list.append(PurchaseItemResponse(
                 id=it.id,
                 material_id=it.material_id,
-                material_code=it.material.code if it.material else "",
-                material_name=it.material.name if it.material else "",
+                material_code=(str(size_code) if is_sheet else (it.material.code if it.material else "")),
+                material_name=(f"{sklad_svc.sklad_label(it.sklad_id)} - {it.length}x{it.width}"
+                               if is_sheet else (it.material.name if it.material else "")),
+                sklad_id=it.sklad_id,
+                size_code=size_code,
                 quantity=it.quantity,
-                unit=it.material.unit if it.material else "kg",
+                unit=("dona" if is_sheet else (it.material.unit if it.material else "kg")),
                 unit_price=it.unit_price,
                 total_price=it.total_price,
                 currency=it.currency
@@ -108,7 +114,44 @@ def create_purchase(
             continue
         line_tot = it.quantity * it.unit_price
         total_amount += line_tot
-        
+
+        if it.sklad_id:
+            # Sheets bought by size go to the dimensional warehouse. Raw
+            # materials cannot: clay and glaze have no length or width.
+            if not sklad_svc.get_config(it.sklad_id):
+                raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+            try:
+                if it.code is not None:
+                    length, width = sklad_svc.decode_size(int(it.code))
+                elif it.length is not None and it.width is not None:
+                    length, width = int(it.length), int(it.width)
+                    sklad_svc.decode_size(length + width)
+                else:
+                    raise HTTPException(status_code=400, detail="O'lchamni kiriting (masalan 680).")
+            except sklad_svc.SkladError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+            purchase_items.append(PurchaseItem(
+                material_id=None, sklad_id=it.sklad_id, length=length, width=width,
+                quantity=it.quantity, unit_price=it.unit_price,
+                total_price=line_tot, currency=payload.currency
+            ))
+            sklad_svc.receive_stock(
+                db,
+                sklad_id=it.sklad_id,
+                items=[{"length": length, "width": width, "quantity": int(it.quantity)}],
+                client_name=supplier.name,
+                note=f"Xarid {pur_num}",
+                created_by=role,
+            )
+            continue
+
+        if not it.material_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Har bir qatorda material yoki ombor o'lchami ko'rsatilishi kerak."
+            )
+
         purchase_items.append(PurchaseItem(
             material_id=it.material_id,
             quantity=it.quantity,
