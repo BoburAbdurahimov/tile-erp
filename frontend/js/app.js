@@ -191,7 +191,7 @@ function hasModuleAccess(moduleName) {
   const isDirector = roles.includes("Direktor") || roles.includes("Ish boshqaruvchi");
 
   if (moduleName === "mdm") return roles.includes("MDM") || roles.includes("MDM (Spravochniklar)") || isDirector || roles.includes("Ombor") || roles.includes("Omborchi");
-  if (moduleName === "ombor") return roles.includes("Ombor") || roles.includes("Omborchi") || isDirector;
+  if (moduleName === "ombor" || moduleName === "ombor_eski") return roles.includes("Ombor") || roles.includes("Omborchi") || isDirector;
   if (moduleName === "kassa") return roles.includes("Kassa") || roles.includes("Kassir") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "production") return roles.includes("Ishlab chiqarish") || roles.includes("Sex boshlig'i") || isDirector;
   if (moduleName === "balances") return roles.includes("Kontragentlar & Balanslar") || roles.includes("Balanslar") || roles.includes("Buxgalter") || roles.includes("Kassir") || isDirector;
@@ -337,7 +337,14 @@ async function navigateTo(moduleName) {
       await MdmModule.render(container);
       break;
     case "ombor":
+      // The dimensional warehouse (length x width) is now the warehouse.
       if (pageTitle) pageTitle.textContent = t("nav_ombor");
+      await SkladModule.render(container);
+      break;
+    case "ombor_eski":
+      // Legacy product-based stock. Purchasing, production and PnL still
+      // post to this store, so it stays reachable until they are moved over.
+      if (pageTitle) pageTitle.textContent = CURRENT_LANG === "uz" ? "Ombor (material hisobi)" : "Склад (учет материалов)";
       await OmborModule.render(container);
       break;
     case "kassa":

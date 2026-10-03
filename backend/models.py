@@ -448,3 +448,112 @@ class MonthlySalaryCalculation(Base):
     employee = relationship("Employee", back_populates="salary_calculations")
     cash_transaction = relationship("CashTransaction")
 
+
+
+# ==================================================================
+#  DIMENSIONAL WAREHOUSE (Sklad)
+#
+#  Mirrors the Telegram sklad bot's model so the two stay compatible:
+#  stock is held per warehouse as a length x width matrix rather than
+#  per catalogue product. A size is written as one code - 680 means
+#  length 600, width 80.
+#
+#  Eight warehouses: four owners, each with an "eni" (sheet width) of
+#  100 or 120. The corner_number is what the bot prints in the
+#  top-left cell of its matrix image.
+# ==================================================================
+
+# Mirrors bot/db.py. Widths include 35 and 85.
+SKLAD_LENGTHS = [200, 300, 400, 500, 600, 700, 800]
+SKLAD_WIDTHS = [0, 10, 20, 30, 35, 40, 50, 60, 70, 80, 85, 90]
+
+# Mirrors bot/states.py SKLADS.
+SKLAD_CONFIG = [
+    {"id": 1, "name": "Toxir", "corner_number": 15, "eni": 120},
+    {"id": 2, "name": "Toxir", "corner_number": 15, "eni": 100},
+    {"id": 3, "name": "Kodir", "corner_number": 22, "eni": 120},
+    {"id": 4, "name": "Kodir", "corner_number": 22, "eni": 100},
+    {"id": 5, "name": "Istam", "corner_number": 22, "eni": 120},
+    {"id": 6, "name": "Istam", "corner_number": 22, "eni": 100},
+    {"id": 7, "name": "Aziz", "corner_number": 15, "eni": 120},
+    {"id": 8, "name": "Aziz", "corner_number": 15, "eni": 100},
+]
+
+SKLAD_OP_IN = "PRIXOD"      # goods received
+SKLAD_OP_OUT = "RASXOD"     # goods sold
+SKLAD_OP_CLEAR = "CLEAR"
+
+# How a sale is priced.
+SELL_TYPE_METR = "metr"     # linear metres: (length + width) / 100
+SELL_TYPE_MKV = "mkv"       # square metres: linear * (eni / 100)
+
+
+class SkladInventory(Base):
+    """Stock for one size in one warehouse."""
+    __tablename__ = "sklad_inventory"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sklad_id = Column(Integer, nullable=False, index=True)
+    length = Column(Integer, nullable=False)
+    width = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("sklad_id", "length", "width", name="_sklad_size_uc"),)
+
+    @property
+    def size_code(self) -> int:
+        """The single number the bot accepts, e.g. 600 + 80 = 680."""
+        return self.length + self.width
+
+
+class SkladMovement(Base):
+    """One warehouse operation. Sales carry the pricing that produced them."""
+    __tablename__ = "sklad_movements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sklad_id = Column(Integer, nullable=False, index=True)
+    operation = Column(String(20), nullable=False, index=True)  # PRIXOD / RASXOD / CLEAR
+    details = Column(Text, nullable=False)                      # "5 TA 680; 3 TA 740"
+    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    # Sales figures (null for PRIXOD and CLEAR)
+    sell_type = Column(String(10), nullable=True)      # metr | mkv
+    unit_price = Column(Float, nullable=True)          # price per metr / m.kv
+    total_units = Column(Float, nullable=True)         # metres or square metres sold
+    total_revenue = Column(Float, nullable=True)       # goods only, excluding delivery
+    delivery_cost = Column(Float, nullable=True)
+    client_name = Column(String(150), nullable=True)
+    client_address = Column(Text, nullable=True)
+    client_phone = Column(String(50), nullable=True)
+
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    items = relationship("SkladMovementItem", back_populates="movement", cascade="all, delete-orphan")
+
+    @property
+    def grand_total(self) -> float:
+        return (self.total_revenue or 0.0) + (self.delivery_cost or 0.0)
+
+
+class SkladMovementItem(Base):
+    """One size line within a movement, with the price it was sold at."""
+    __tablename__ = "sklad_movement_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    movement_id = Column(Integer, ForeignKey("sklad_movements.id"), nullable=False)
+    length = Column(Integer, nullable=False)
+    width = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    # The bot lets a line be billed against the other eni of the same owner.
+    eni = Column(Integer, nullable=False, default=120)
+    unit_price = Column(Float, nullable=True)
+    units = Column(Float, nullable=True)      # metres or m.kv for this line
+    line_total = Column(Float, nullable=True)
+
+    movement = relationship("SkladMovement", back_populates="items")
+
+    @property
+    def size_code(self) -> int:
+        return self.length + self.width

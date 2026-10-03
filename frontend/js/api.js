@@ -259,6 +259,20 @@ const API = {
   calculatePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/calculate`, "POST"),
   finalizePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/finalize`, "POST"),
   reopenPayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/reopen`, "POST"),
-  paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data)
-};
+  paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data),
 
+  // ---- Dimensional warehouse (Sklad): length x width matrix, metr / m.kv sales ----
+  getSkladConfig: () => apiRequest("/sklad/config"),
+  getSkladWarehouses: () => apiRequest("/sklad/warehouses"),
+  getSkladMatrix: (skladId) => apiRequest(`/sklad/matrix?sklad_id=${skladId}`),
+  getSkladMovements: (limit = 50, skladId, operation) =>
+    apiRequest(`/sklad/movements?limit=${limit}` +
+      (skladId ? `&sklad_id=${skladId}` : "") +
+      (operation ? `&operation=${operation}` : "")),
+  getSkladStatistics: (startDate, endDate) =>
+    apiRequest("/sklad/statistics" +
+      (startDate ? `?start_date=${startDate}${endDate ? `&end_date=${endDate}` : ""}` : "")),
+  skladKirim: (data) => apiRequest("/sklad/kirim", "POST", data),
+  skladSotish: (data) => apiRequest("/sklad/sotish", "POST", data),
+  skladPreview: (data) => apiRequest("/sklad/preview", "POST", data)
+};
