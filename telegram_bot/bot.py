@@ -25,6 +25,7 @@ from backend.services.inventory_service import deduct_stock, add_stock_with_avg_
 from backend.services.month_close_service import is_month_closed
 from backend.services.reports_service import get_pnl_report
 from telegram_bot.table_renderer import render_excel_table_image
+from telegram_bot import sklad_handlers
 
 logger = logging.getLogger("TileERPBot")
 
@@ -37,6 +38,7 @@ BOT_TEXTS = {
         "lang_set": "✅ Til o'zbek tiliga o'rnatildi!",
         "btn_webapp": "🚀 ERP Mini Appni ochish",
         "menu_warehouse": "📦 Ombor qoldiqlari",
+        "menu_sklad": "📐 Ombor (o'lcham)",
         "menu_cash": "💵 Kassa holati",
         "menu_production": "🏭 Ishlab chiqarish",
         "menu_balances": "👥 Balanslar",
@@ -53,6 +55,7 @@ BOT_TEXTS = {
         "lang_set": "✅ Язык успешно изменен на русский!",
         "btn_webapp": "🚀 Открыть ERP Mini App",
         "menu_warehouse": "📦 Остатки на складе",
+        "menu_sklad": "📐 Склад (размеры)",
         "menu_cash": "💵 Состояние кассы",
         "menu_production": "🏭 Производство",
         "menu_balances": "👥 Балансы контрагентов",
@@ -130,6 +133,7 @@ def get_main_keyboard(lang: str, role_str: str = "Admin") -> ReplyKeyboardMarkup
     row1 = []
     if caps["ombor"]:
         row1.append(KeyboardButton(text=t["menu_warehouse"]))
+        row1.append(KeyboardButton(text=t["menu_sklad"]))
     if caps["kassa"]:
         row1.append(KeyboardButton(text=t["menu_cash"]))
     if row1:
@@ -1619,6 +1623,10 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         finally:
             db.close()
 
+    # Dimensional warehouse wizard takes the message when one is running.
+    if await sklad_handlers.handle_sklad_text(update, context):
+        return
+
     # 1. Check if user is in Production Wizard
     pw_state = context.user_data.get("pw_state", {})
     step = pw_state.get("step")
@@ -1732,7 +1740,12 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
 
     caps = get_role_capabilities(u_role if is_appr else "")
 
-    if "ombor" in text or "склад" in text:
+    if "o'lcham" in text or "размер" in text:
+        if not caps["ombor"]:
+            await update.message.reply_text("Sizda Ombor bo'limiga ruxsat yo'q.")
+            return
+        await sklad_handlers.handle_sklad_menu(update, context, lang)
+    elif "ombor" in text or "склад" in text:
         if not caps["ombor"]:
             await update.message.reply_text(
                 f"⛔ Sizning biriktirilgan rollaringizda (`{u_role}`) **Ombor** bo'limiga kirish ruxsati yo'q."
@@ -1806,6 +1819,7 @@ def create_bot_app():
     app.add_handler(CallbackQueryHandler(cash_ops_callback, pattern="^cash_|^ckr_|^cch_|^ctx_"))
     app.add_handler(CallbackQueryHandler(production_wizard_callback, pattern="^pw_|^prod_wizard_start"))
     app.add_handler(CallbackQueryHandler(balances_callback, pattern="^bal_type_"))
+    app.add_handler(CallbackQueryHandler(sklad_handlers.sklad_callback, pattern="^sk_"))
     app.add_handler(MessageHandler(filters.CONTACT, handle_contact))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
     return app
