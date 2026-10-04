@@ -272,8 +272,6 @@ function updateUserDisplay() {
     }
   });
 
-  fitHeaderNav();
-
   // Filter Odoo App Launcher cards
   document.querySelectorAll(".odoo-app-card").forEach(card => {
     const onclickAttr = card.getAttribute("onclick") || "";
@@ -283,17 +281,6 @@ function updateUserDisplay() {
     }
   });
 }
-
-// Collapse the top module tabs into the apps launcher when they don't fit the screen
-function fitHeaderNav() {
-  const header = document.querySelector(".top-header");
-  const nav = document.querySelector(".odoo-parallel-nav");
-  if (!header || !nav) return;
-  header.classList.remove("nav-collapsed");
-  if (nav.scrollWidth > nav.clientWidth + 1) header.classList.add("nav-collapsed");
-}
-
-window.addEventListener("resize", fitHeaderNav);
 
 // Combined header dropdown (FX rate, period, language, logout)
 function toggleHeaderMenu(e) {
@@ -459,10 +446,10 @@ function updateMonthStatusBadge(isClosed) {
   if (!pill) return;
   if (isClosed) {
     pill.className = "month-status-pill closed";
-    pill.innerHTML = `🔒 ${t('month_closed')}`;
+    pill.textContent = t('month_closed');
   } else {
     pill.className = "month-status-pill open";
-    pill.innerHTML = `🟢 ${t('month_open')}`;
+    pill.textContent = t('month_open');
   }
 }
 
