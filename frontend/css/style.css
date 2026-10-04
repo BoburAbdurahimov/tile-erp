@@ -533,34 +533,11 @@ body {
   background: #fee2e2;
 }
 
-/* Medium screens: tighter tabs without icons */
+/* Medium screens: tighter tabs so more modules fit; the rest scroll horizontally */
 @media (max-width: 1600px) {
   .odoo-nav-tab {
     padding: 0 9px;
     font-size: 12.5px;
-  }
-
-  .odoo-nav-tab .tab-icon {
-    display: none;
-  }
-}
-
-/* Tabs that don't fit are collapsed into the apps launcher (set by fitHeaderNav in app.js) */
-.top-header.nav-collapsed .odoo-parallel-nav {
-  display: none;
-}
-
-.top-header.nav-collapsed .odoo-brand-title {
-  border-right: none;
-}
-
-@media (max-width: 900px) {
-  .odoo-parallel-nav {
-    display: none;
-  }
-
-  .odoo-brand-title {
-    border-right: none;
   }
 }
 
@@ -1341,27 +1318,44 @@ body {
     overflow-x: hidden;
   }
 
+  /* Two rows on phones: brand + menu on top, scrollable module tabs below */
   .top-header {
     padding: 0 10px;
-    height: 54px;
+    height: auto;
+    flex-wrap: wrap;
     position: sticky;
     top: 0;
   }
 
   .header-left {
-    gap: 6px;
-    overflow: hidden;
+    display: contents;
+  }
+
+  .odoo-apps-btn {
+    height: 48px;
   }
 
   .odoo-brand-title {
     font-size: 14px;
     padding-right: 0;
+    border-right: none;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .header-right {
     margin-left: 8px;
+  }
+
+  .odoo-parallel-nav {
+    order: 3;
+    width: calc(100% + 20px);
+    margin: 0 -10px;
+    height: 42px;
+    padding: 0 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .header-menu-name {
