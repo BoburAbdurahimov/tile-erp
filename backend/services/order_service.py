@@ -15,6 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from backend.models import (
@@ -125,10 +126,18 @@ def _register(db: Session, method: str) -> CashRegister:
 
     reg = db.query(CashRegister).filter(CashRegister.name == CARD_REGISTER_NAME).first()
     if not reg:
-        reg = CashRegister(name=CARD_REGISTER_NAME, currency=ORDER_CURRENCY, balance=0.0,
-                           description="Plastik karta orqali tushumlar")
+        # The seed inserts registers 1 and 2 with explicit ids, which leaves the
+        # Postgres id sequence behind; take the next id ourselves and resync it.
+        next_id = (db.query(func.max(CashRegister.id)).scalar() or 0) + 1
+        reg = CashRegister(id=next_id, name=CARD_REGISTER_NAME, currency=ORDER_CURRENCY,
+                           balance=0.0, description="Plastik karta orqali tushumlar")
         db.add(reg)
         db.flush()
+        if db.bind.dialect.name == "postgresql":
+            db.execute(text(
+                "SELECT setval(pg_get_serial_sequence('cash_registers', 'id'), "
+                "(SELECT MAX(id) FROM cash_registers))"
+            ))
     return reg
 
 
