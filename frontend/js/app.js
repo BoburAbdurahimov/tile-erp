@@ -443,9 +443,9 @@ async function navigateTo(moduleName) {
       await SkladModule.render(container);
       break;
     case "ombor_eski":
-      // Legacy product-based stock. Purchasing, production and PnL still
-      // post to this store, so it stays reachable until they are moved over.
-      if (pageTitle) pageTitle.textContent = CURRENT_LANG === "uz" ? "Ombor (material hisobi)" : "Склад (учет материалов)";
+      // Raw materials, spare parts and consumables (by item). Finished tiles
+      // live in the Ombor (owner + size); this store is for materials only.
+      if (pageTitle) pageTitle.textContent = t("nav_xomashyo");
       await OmborModule.render(container);
       break;
     case "kassa":

@@ -16,6 +16,7 @@ const I18N = {
     nav_salary: "Ish haqi",
     nav_users: "Foydalanuvchilar",
     nav_history: "Tarix",
+    nav_xomashyo: "Xomashyo ombori",
     apps_all_sections: "Barcha bo'limlar",
     users_title: "Foydalanuvchilar va Rollar",
     
@@ -137,6 +138,7 @@ const I18N = {
     nav_salary: "Зарплата",
     nav_users: "Пользователи",
     nav_history: "История",
+    nav_xomashyo: "Склад сырья",
     apps_all_sections: "Все разделы",
     users_title: "Пользователи и Роли",
     
