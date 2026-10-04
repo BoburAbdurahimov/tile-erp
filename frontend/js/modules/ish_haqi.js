@@ -56,7 +56,7 @@ const IshHaqiModule = (function () {
       btn_recalc: isUz ? "🔄 Qayta hisoblash" : "🔄 Пересчитать",
       btn_finalize: isUz ? "🔒 Oyni tasdiqlash" : "🔒 Зафиксировать",
       btn_reopen: isUz ? "🔓 Qayta ochish" : "🔓 Открыть для правок",
-      btn_excel: isUz ? "📥 Excel yuklab olish" : "📥 Экспорт в Excel",
+      btn_pdf: isUz ? "📄 PDF yuklab olish" : "📄 Скачать PDF",
       btn_add_emp: isUz ? "➕ Yangi xodim qo'shish" : "➕ Добавить сотрудника",
       btn_add_job: isUz ? "➕ Yangi ish turi" : "➕ Новый вид работы",
       btn_add_work: isUz ? "➕ Ishbay naryad qo'shish" : "➕ Добавить наряд",
@@ -127,7 +127,7 @@ const IshHaqiModule = (function () {
             <button class="tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('daily')">${t.tab_daily}</button>
             <button class="tab-btn ${activeTab === 'employees' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('employees')">${t.tab_employees}</button>
             <button class="tab-btn ${activeTab === 'job_types' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('job_types')">${t.tab_job_types}</button>
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px; padding: 6px 12px; font-weight: 600;">📊 ${isUzbek() ? 'Excel yuklash' : 'Экспорт в Excel'}</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px; padding: 6px 12px; font-weight: 600;">📄 ${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}</button>
           </div>
         </div>
       </div>
@@ -281,7 +281,7 @@ const IshHaqiModule = (function () {
               ? `<button class="btn btn-warning btn-sm" onclick="IshHaqiModule.finalizePayroll()">${t.btn_finalize}</button>`
               : `<button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.reopenPayroll()">${t.btn_reopen}</button>`
             }
-            <button class="btn btn-success btn-sm" onclick="IshHaqiModule.exportExcel()">${t.btn_excel}</button>
+            <button class="btn btn-success btn-sm" onclick="IshHaqiModule.exportPdf()">${t.btn_pdf}</button>
           </div>
         </div>
       </div>
@@ -406,8 +406,8 @@ const IshHaqiModule = (function () {
     }
   }
 
-  function exportExcel() {
-    window.open(`${API_BASE}/salary/payroll/${currentYearMonth}/export-excel`, "_blank");
+  function exportPdf() {
+    exportTableToPdf("payroll-data-table", `ish_haqi_vedomost_${currentYearMonth}`);
   }
 
   // ===========================================================================
@@ -1464,7 +1464,7 @@ const IshHaqiModule = (function () {
     recalculatePayroll,
     finalizePayroll,
     reopenPayroll,
-    exportExcel,
+    exportPdf,
     changeDailyDate,
     toggleAttRow,
     saveAttendance,

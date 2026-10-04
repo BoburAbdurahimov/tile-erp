@@ -117,9 +117,7 @@ const OrdersModule = {
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               ${this.isAdmin() ? `
               <button class="btn btn-secondary btn-sm" onclick="OrdersModule.loadDemo()"
-                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">🧪 ${isUz ? "Demo yuklash" : "Загрузить демо"}</button>
-              <button class="btn btn-secondary btn-sm" onclick="OrdersModule.clearDemo()"
-                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;color:#b91c1c;">${isUz ? "Demo tozalash" : "Очистить демо"}</button>` : ""}
+                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">🧪 ${isUz ? "Demo yuklash" : "Загрузить демо"}</button>` : ""}
               <button class="btn btn-secondary btn-sm" onclick="OrdersModule.openLegacy()"
                 style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">
                 ${isUz ? "Eski sotuv hujjatlari" : "Старые документы продаж"}
@@ -890,20 +888,6 @@ const OrdersModule = {
       async () => {
         const r = await API.loadOrderDemo();
         showToast(`${isUz ? "Demo yuklandi" : "Демо загружено"}: ${r.orders} ${isUz ? "ta buyurtma" : "заказов"}`, "success");
-        await this.reload();
-        return true;
-      });
-  },
-
-  clearDemo() {
-    const isUz = this.isUz();
-    showModal(isUz ? "Demo tozalash" : "Очистить демо",
-      `<p style="margin:0;">${isUz
-        ? "Demo buyurtmalar, ularning Kassadagi to'lovlari va Ombordagi demo mahsulot o'chiriladi. Haqiqiy ma'lumotlar qoladi."
-        : "Будут удалены демо-заказы, их оплаты в Кассе и демо-товары на складе. Реальные данные останутся."}</p>`,
-      async () => {
-        const r = await API.clearOrderDemo();
-        showToast(`${isUz ? "Tozalandi" : "Очищено"}: ${r.orders} ${isUz ? "ta buyurtma" : "заказов"}`, "success");
         await this.reload();
         return true;
       });
