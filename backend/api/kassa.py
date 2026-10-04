@@ -122,10 +122,10 @@ def create_cash_transaction(
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"❌ Kassada yetarli mablag' mavjud emas!\n"
-                    f"💵 Kassa: {reg.name}\n"
-                    f"🔻 Talab qilingan: {payload.amount:,.2f} {reg.currency}\n"
-                    f"📊 Kassadagi mavjud qoldiq: {reg.balance:,.2f} {reg.currency}\n"
+                    f"Kassada yetarli mablag' mavjud emas!\n"
+                    f"Kassa: {reg.name}\n"
+                    f"Talab qilingan: {payload.amount:,.2f} {reg.currency}\n"
+                    f"Kassadagi mavjud qoldiq: {reg.balance:,.2f} {reg.currency}\n"
                     f"Kassa manfiy songa tushishiga yo'l qo'yilmaydi."
                 )
             )

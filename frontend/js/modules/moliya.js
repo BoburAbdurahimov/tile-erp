@@ -7,7 +7,7 @@ const FinanceModule = {
     if (CURRENT_ROLE === "Ish boshqaruvchi") {
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 50px;">
-          <div style="font-size: 40px; margin-bottom: 12px;">🔒</div>
+
           <h2>${isUz ? "Kirish huquqi cheklangan" : "Доступ ограничен"}</h2>
           <p style="color: #64748b; max-width: 450px; margin: 8px auto;">
             ${isUz 
@@ -22,12 +22,12 @@ const FinanceModule = {
     container.innerHTML = `
       <div class="card">
         <div class="card-header">
-          <div class="card-title">📊 ${t('mod_finance_title')}</div>
+          <div class="card-title">${t('mod_finance_title')}</div>
           <div style="display: flex; gap: 12px; align-items: center;">
             <label style="font-size: 13px; font-weight: 600;">${isUz ? "Hisobot davri:" : "Отчетный период:"}</label>
             <input type="month" id="finance-month-picker" class="form-control" style="width: 170px;" value="${this.currentPeriod}" onchange="FinanceModule.changePeriod(this.value)" />
             <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('moliya-lines-table', 'pnl_tannarx_taqsimoti')" style="display: flex; align-items: center; gap: 6px;">
-              <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
             </button>
             <div id="month-action-buttons">
               <!-- Rendered dynamically (Close / Reopen) -->
@@ -42,12 +42,12 @@ const FinanceModule = {
 
         <!-- 5 Lines Manufacturing Cost Allocation Table -->
         <div class="card-header" style="margin-top: 10px;">
-          <div class="card-title">🏭 ${isUz ? "5 ta Liniya bo'yicha ishlab chiqarish tannarxi va bilvosita xarajatlar taqsimoti" : "Себестоимость производства и распределение косвенных расходов по 5 линиям"}</div>
+          <div class="card-title">${isUz ? "5 ta Liniya bo'yicha ishlab chiqarish tannarxi va bilvosita xarajatlar taqsimoti" : "Себестоимость производства и распределение косвенных расходов по 5 линиям"}</div>
         </div>
         <p style="font-size: 13px; color: #64748b; margin-top: -12px; margin-bottom: 16px;">
           ${isUz 
-            ? "⚡ Qoida: Bilvosita xarajatlar (svet, gaz, sex maoshi, ijara) 5 ta liniyaga ularning oylik ishlab chiqarish hajmiga proporsional ravishda taqsimlanadi." 
-            : "⚡ Правило: Косвенные расходы (свет, газ, зарплата цеха, аренда) распределяются по 5 линиям пропорционально их месячному объему выпуска."}
+            ? "Qoida: Bilvosita xarajatlar (svet, gaz, sex maoshi, ijara) 5 ta liniyaga ularning oylik ishlab chiqarish hajmiga proporsional ravishda taqsimlanadi." 
+            : "Правило: Косвенные расходы (свет, газ, зарплата цеха, аренда) распределяются по 5 линиям пропорционально их месячному объему выпуска."}
         </p>
 
         <div class="table-container" id="lines-allocation-table-container" style="margin-bottom: 28px;">
@@ -56,7 +56,7 @@ const FinanceModule = {
 
         <!-- Cash Flow Statement -->
         <div class="card-header">
-          <div class="card-title">💵 ${isUz ? "Pul mablag'lari harakati to'g'risida hisobot (Cash Flow)" : "Отчет о движении денежных средств (Cash Flow)"}</div>
+          <div class="card-title">${isUz ? "Pul mablag'lari harakati to'g'risida hisobot (Cash Flow)" : "Отчет о движении денежных средств (Cash Flow)"}</div>
         </div>
         <div class="table-container" id="cf-table-container">
           <!-- Rendered dynamically -->
@@ -90,13 +90,13 @@ const FinanceModule = {
         if (pnl.is_closed) {
           actionBtns.innerHTML = `
             <button class="btn btn-secondary btn-sm" onclick="FinanceModule.reopenMonth()" ${CURRENT_ROLE !== 'Admin' ? 'disabled title="' + (isUz ? 'Faqat Admin uchun' : 'Только для Admin') + '"' : ''}>
-              🔓 ${t('btn_reopen_month')} (Admin)
+              ${t('btn_reopen_month')} (Admin)
             </button>
           `;
         } else {
           actionBtns.innerHTML = `
             <button class="btn btn-danger btn-sm" onclick="FinanceModule.closeMonth()" ${CURRENT_ROLE !== 'Admin' ? 'disabled title="' + (isUz ? 'Faqat Admin uchun' : 'Только для Admin') + '"' : ''}>
-              🔒 ${t('btn_close_month')} (Admin)
+              ${t('btn_close_month')} (Admin)
             </button>
           `;
         }
@@ -106,22 +106,22 @@ const FinanceModule = {
       if (kpiGrid) {
         kpiGrid.innerHTML = `
           <div class="kpi-card" style="border-left: 4px solid #10b981;">
-            <span class="kpi-title">📈 ${isUz ? "Tushum (Revenue)" : "Выручка (Revenue)"}</span>
+            <span class="kpi-title">${isUz ? "Tushum (Revenue)" : "Выручка (Revenue)"}</span>
             <span class="kpi-value" style="color: #10b981;">$${pnl.revenue_usd.toLocaleString()}</span>
             <span class="kpi-sub">${isUz ? "Sotuvlar jami summasi" : "Общая сумма продаж"}</span>
           </div>
           <div class="kpi-card" style="border-left: 4px solid #ef4444;">
-            <span class="kpi-title">📉 ${isUz ? "Tannarx (COGS)" : "Себестоимость (COGS)"}</span>
+            <span class="kpi-title">${isUz ? "Tannarx (COGS)" : "Себестоимость (COGS)"}</span>
             <span class="kpi-value" style="color: #ef4444;">$${pnl.total_cogs_usd.toLocaleString()}</span>
             <span class="kpi-sub">${isUz ? "Xomashyo" : "Сырье"} ($${formatNumber(pnl.cogs_direct_materials_usd, 0, 2)}) + ${isUz ? "Zapchast va ta'mirlash" : "Запчасти и ремонт"} ($${formatNumber(pnl.cogs_line_expenses_usd || 0, 0, 2)}) + ${isUz ? "Bilvosita" : "Косвенные"} ($${formatNumber(pnl.cogs_indirect_expenses_usd, 0, 2)})</span>
           </div>
           <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
-            <span class="kpi-title">🏢 ${isUz ? "Ma'muriy xarajatlar" : "Административные расходы"}</span>
+            <span class="kpi-title">${isUz ? "Ma'muriy xarajatlar" : "Административные расходы"}</span>
             <span class="kpi-value" style="color: #f59e0b;">$${pnl.admin_expenses_usd.toLocaleString()}</span>
             <span class="kpi-sub">${isUz ? "Ofis va boshqa xarajatlar" : "Офис и прочие расходы"}</span>
           </div>
           <div class="kpi-card" style="border-left: 4px solid #2563eb;">
-            <span class="kpi-title">💎 ${isUz ? "Sof Foyda (Net Profit)" : "Чистая прибыль (Net Profit)"}</span>
+            <span class="kpi-title">${isUz ? "Sof Foyda (Net Profit)" : "Чистая прибыль (Net Profit)"}</span>
             <span class="kpi-value" style="color: ${pnl.net_profit_usd >= 0 ? '#10b981' : '#ef4444'}; font-size: 26px;">$${pnl.net_profit_usd.toLocaleString()}</span>
             <span class="kpi-sub">${isUz ? "Rentabellik:" : "Рентабельность:"} ${pnl.revenue_usd > 0 ? ((pnl.net_profit_usd / pnl.revenue_usd) * 100).toFixed(1) : 0}%</span>
           </div>

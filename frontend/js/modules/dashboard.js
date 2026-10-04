@@ -3,8 +3,8 @@ const DashboardModule = {
     container.innerHTML = `
       <div class="card">
         <div class="card-header">
-          <div class="card-title">🏭 ${CURRENT_LANG === 'uz' ? 'Zavodning umumiy holati' : 'Общее состояние завода'}</div>
-          <button class="btn btn-secondary btn-sm" onclick="DashboardModule.refresh()">🔄 ${CURRENT_LANG === 'uz' ? 'Yangilash' : 'Обновить'}</button>
+          <div class="card-title">${CURRENT_LANG === 'uz' ? 'Zavodning umumiy holati' : 'Общее состояние завода'}</div>
+          <button class="btn btn-secondary btn-sm" onclick="DashboardModule.refresh()">${CURRENT_LANG === 'uz' ? 'Yangilash' : 'Обновить'}</button>
         </div>
         <div class="grid-4" id="kpi-grid">
           <div class="kpi-card"><div class="kpi-title">${CURRENT_LANG === 'uz' ? 'Yuklanmoqda...' : 'Загрузка...'}</div></div>
@@ -14,7 +14,7 @@ const DashboardModule = {
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📊 ${CURRENT_LANG === 'uz' ? "So'nggi 7 kunlik ishlab chiqarish (5 Liniya)" : "Производство за 7 дней (5 Линий)"}</div>
+            <div class="card-title">${CURRENT_LANG === 'uz' ? "So'nggi 7 kunlik ishlab chiqarish (5 Liniya)" : "Производство за 7 дней (5 Линий)"}</div>
           </div>
           <div style="position: relative; height: 260px;">
             <canvas id="productionChart"></canvas>
@@ -23,7 +23,7 @@ const DashboardModule = {
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">💵 ${CURRENT_LANG === 'uz' ? 'Kassa qoldiqlari va Valyuta holati' : 'Остатки в кассе и Курс'}</div>
+            <div class="card-title">${CURRENT_LANG === 'uz' ? 'Kassa qoldiqlari va Valyuta holati' : 'Остатки в кассе и Курс'}</div>
           </div>
           <div id="cash-overview-list" style="display: flex; flex-direction: column; gap: 12px;">
             <!-- Rendered dynamically -->
@@ -33,7 +33,7 @@ const DashboardModule = {
 
       <div class="card">
         <div class="card-header">
-          <div class="card-title">📋 ${CURRENT_LANG === 'uz' ? "So'nggi ishlab chiqarish operatsiyalari" : "Последние производственные операции"}</div>
+          <div class="card-title">${CURRENT_LANG === 'uz' ? "So'nggi ishlab chiqarish operatsiyalari" : "Последние производственные операции"}</div>
         </div>
         <div class="table-container" id="recent-production-table">
           <!-- Rendered dynamically -->
@@ -131,13 +131,13 @@ const DashboardModule = {
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, false)">${t('th_status')} <span class="sort-icon">↕</span></th>
               </tr>
               <tr class="filter-row">
-                <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? '№...' : '№...'}" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? '№...' : '№...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" /></th>
                 <th></th>
                 <th></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="6" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="6" placeholder="${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" /></th>
               </tr>
             </thead>
             <tbody>

@@ -8,26 +8,26 @@ const OmborModule = {
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
           <div>
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-              <span>📦</span> <span>${t('mod_ombor_title')}</span>
+<span>${t('mod_ombor_title')}</span>
             </h2>
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t('mod_ombor_sub')}</p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-primary btn-sm" onclick="OmborModule.openTransferModal()" style="background: #2563eb; color: #ffffff; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
-              🔄 ${CURRENT_LANG === 'uz' ? "Ombordan Omborga O'tkazish" : "Перемещение между складами"}
+              ${CURRENT_LANG === 'uz' ? "Ombordan Omborga O'tkazish" : "Перемещение между складами"}
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="OmborModule.exportPdf()">📄 ${t('btn_export_pdf')}</button>
-            <button class="btn btn-warning btn-sm" onclick="OmborModule.openAdjustModal()">⚙️ ${t('btn_adjust_stock')}</button>
+            <button class="btn btn-secondary btn-sm" onclick="OmborModule.exportPdf()">${t('btn_export_pdf')}</button>
+            <button class="btn btn-warning btn-sm" onclick="OmborModule.openAdjustModal()">${t('btn_adjust_stock')}</button>
           </div>
         </div>
 
         <!-- Main Module View Tabs -->
         <div style="display: flex; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
           <button id="tab-btn-stock" class="btn btn-sm" onclick="OmborModule.switchView('stock')" style="font-weight: 700; padding: 8px 16px; border-radius: 8px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
-            📦 ${CURRENT_LANG === 'uz' ? 'Ombor Qoldiqlari' : 'Остатки на складах'}
+            ${CURRENT_LANG === 'uz' ? 'Ombor Qoldiqlari' : 'Остатки на складах'}
           </button>
           <button id="tab-btn-transfers" class="btn btn-sm" onclick="OmborModule.switchView('transfers')" style="font-weight: 600; padding: 8px 16px; border-radius: 8px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
-            🔄 ${CURRENT_LANG === 'uz' ? "Omborlararo O'tkazmalar Tarixi" : "История перемещений"}
+            ${CURRENT_LANG === 'uz' ? "Omborlararo O'tkazmalar Tarixi" : "История перемещений"}
           </button>
         </div>
 
@@ -37,13 +37,13 @@ const OmborModule = {
             ${CURRENT_LANG === 'uz' ? 'Barcha Omborlar' : 'Все Склады'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(1, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            🏢 ${CURRENT_LANG === 'uz' ? '1: Tayyor mahsulotlar' : '1: Готовая продукция'}
+            ${CURRENT_LANG === 'uz' ? '1: Tayyor mahsulotlar' : '1: Готовая продукция'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(2, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            🏭 ${CURRENT_LANG === 'uz' ? '2: Ishlab chiqarish materiallari' : '2: Материалы для производства'}
+            ${CURRENT_LANG === 'uz' ? '2: Ishlab chiqarish materiallari' : '2: Материалы для производства'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(3, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            📦 ${CURRENT_LANG === 'uz' ? '3: Aralash ombor' : '3: Смешанный склад'}
+            ${CURRENT_LANG === 'uz' ? '3: Aralash ombor' : '3: Смешанный склад'}
           </button>
         </div>
 
@@ -148,10 +148,10 @@ const OmborModule = {
               </th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
               <th></th>
@@ -209,7 +209,7 @@ const OmborModule = {
       if (!transfers || transfers.length === 0) {
         tableDiv.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; color: #64748b;">
-            <div style="font-size: 40px; margin-bottom: 10px;">🔄</div>
+
             <div style="font-size: 16px; font-weight: 600;">${CURRENT_LANG === 'uz' ? "Hali omborlararo o'tkazmalar amalga oshirilmagan" : "Перемещений пока нет"}</div>
             <p style="font-size: 13px; color: #94a3b8; margin-top: 4px;">${CURRENT_LANG === 'uz' ? "Yuqoridagi 'Ombordan Omborga O'tkazish' tugmasini bosib yangi o'tkazma yarating." : "Нажмите кнопку выше, чтобы создать новое перемещение."}</p>
           </div>
@@ -233,16 +233,16 @@ const OmborModule = {
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 9, false)">${t('th_description')} <span class="sort-icon">↕</span></th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 №..." oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Manba...' : 'Из...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Maqsad...' : 'В...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tovar...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="№..." oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Manba...' : 'Из...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Maqsad...' : 'В...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Tovar...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Masul...' : 'Ответственный...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="${CURRENT_LANG === 'uz' ? 'Masul...' : 'Ответственный...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
             </tr>
           </thead>
           <tbody>
@@ -250,8 +250,8 @@ const OmborModule = {
               <tr>
                 <td data-sort-value="${trf.date}">${formatDate(trf.date)}</td>
                 <td data-sort-value="${trf.transfer_number}"><code>${trf.transfer_number}</code></td>
-                <td data-sort-value="${trf.from_warehouse_name}"><span class="badge" style="background: #fef2f2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📤 ${tr(trf.from_warehouse_name)}</span></td>
-                <td data-sort-value="${trf.to_warehouse_name}"><span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 600;">📥 ${tr(trf.to_warehouse_name)}</span></td>
+                <td data-sort-value="${trf.from_warehouse_name}"><span class="badge" style="background: #fef2f2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${tr(trf.from_warehouse_name)}</span></td>
+                <td data-sort-value="${trf.to_warehouse_name}"><span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${tr(trf.to_warehouse_name)}</span></td>
                 <td data-sort-value="${trf.material_name}"><strong>${trf.material_name}</strong> <span style="font-size: 11px; color: #64748b;">(${trf.material_code})</span></td>
                 <td data-sort-value="${trf.quantity}" style="text-align: right;"><strong>${formatNumber(trf.quantity, 0, 2)} ${tr(trf.unit)}</strong></td>
                 <td data-sort-value="${trf.unit_cost_usd}" style="text-align: right;">${formatNumber(trf.unit_cost_usd, 2, 2)}</td>
@@ -272,12 +272,12 @@ const OmborModule = {
     const todayStr = new Date().toISOString().split("T")[0];
 
     showModal(
-      CURRENT_LANG === 'uz' ? "🔄 Ombordan Omborga Tovarlarni O'tkazish" : "🔄 Перемещение между складами",
+      CURRENT_LANG === 'uz' ? "Ombordan Omborga Tovarlarni O'tkazish" : "Перемещение между складами",
       `
         <form id="stock-transfer-form">
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div class="form-group">
-              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📤 ${CURRENT_LANG === 'uz' ? 'Qaysi Ombordan (Manba)' : 'Из какого склада'} *</label>
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${CURRENT_LANG === 'uz' ? 'Qaysi Ombordan (Manba)' : 'Из какого склада'} *</label>
               <select id="tr-from-wh" class="form-control" required onchange="OmborModule.populateMaterialsForTransfer()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
                 <option value="1">1: Tayyor mahsulotlar</option>
                 <option value="2">2: Ishlab chiqarish materiallari</option>
@@ -285,7 +285,7 @@ const OmborModule = {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📥 ${CURRENT_LANG === 'uz' ? 'Qaysi Omborga (Maqsad)' : 'В какой склад'} *</label>
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${CURRENT_LANG === 'uz' ? 'Qaysi Omborga (Maqsad)' : 'В какой склад'} *</label>
               <select id="tr-to-wh" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
                 <option value="2" selected>2: Ishlab chiqarish materiallari</option>
                 <option value="1">1: Tayyor mahsulotlar</option>
@@ -295,14 +295,14 @@ const OmborModule = {
           </div>
 
           <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📦 O'tkaziladigan Mahsulot / Tovar (Yozish yoki tanlash) *</label>
+            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">O'tkaziladigan Mahsulot / Tovar (Yozish yoki tanlash) *</label>
             <datalist id="tr-mat-datalist"></datalist>
             <input 
               type="text" 
               id="tr-mat-input" 
               list="tr-mat-datalist" 
               class="form-control" 
-              placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tovar kodi yoki nomini yozing...' : 'Поиск товара по коду или наименованию...'}" 
+              placeholder="${CURRENT_LANG === 'uz' ? 'Tovar kodi yoki nomini yozing...' : 'Поиск товара по коду или наименованию...'}" 
               oninput="OmborModule.onTransferMaterialInputChange()" 
               onchange="OmborModule.onTransferMaterialInputChange()"
               style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"
@@ -313,18 +313,18 @@ const OmborModule = {
 
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div class="form-group">
-              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📊 O'tkaziladigan Miqdor *</label>
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">O'tkaziladigan Miqdor *</label>
               <input type="text" id="tr-qty" class="form-control" placeholder="0" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600;" />
               <div id="tr-qty-hint" style="margin-top: 4px; font-size: 12px; font-weight: 600; color: #2563eb;"></div>
             </div>
             <div class="form-group">
-              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📅 ${t('th_date')} *</label>
+              <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_date')} *</label>
               <input type="date" id="tr-date" class="form-control" value="${todayStr}" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" />
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">📝 ${t('th_description')}</label>
+            <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_description')}</label>
             <textarea id="tr-desc" class="form-control" rows="2" placeholder="${CURRENT_LANG === 'uz' ? "Masalan: Liniyalararo material yetkazish yoki sexga o'tkazish..." : 'Описание...'}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"></textarea>
           </div>
         </form>
@@ -416,7 +416,7 @@ const OmborModule = {
       });
 
       if (!materials || materials.length === 0) {
-        inputEl.placeholder = "⚠️ Birorta ham tovar topilmadi";
+        inputEl.placeholder = "Birorta ham tovar topilmadi";
         return;
       }
 
@@ -473,10 +473,10 @@ const OmborModule = {
 
     if (matched) {
       idEl.value = matched.id;
-      qtyHint.innerHTML = `📌 Manba ombordagi mavjud maksimal qoldiq: <strong style="color: #15803d;">${formatNumber(matched.quantity, 0, 2)} ${tr(matched.unit)}</strong>`;
+      qtyHint.innerHTML = `Manba ombordagi mavjud maksimal qoldiq: <strong style="color: #15803d;">${formatNumber(matched.quantity, 0, 2)} ${tr(matched.unit)}</strong>`;
     } else {
       idEl.value = "";
-      qtyHint.innerHTML = `<span style="color: #dc2626;">⚠️ Topilmadi! Iltimos, ro'yxatdan tovar tanlang.</span>`;
+      qtyHint.innerHTML = `<span style="color: #dc2626;">Topilmadi! Iltimos, ro'yxatdan tovar tanlang.</span>`;
     }
   },
 

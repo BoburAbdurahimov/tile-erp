@@ -12,7 +12,7 @@ const SalesModule = {
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">🏷️</div>
+
                 <div>
                   <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em;">
                     ${t('mod_sotish_title')}
@@ -26,10 +26,10 @@ const SalesModule = {
 
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
               <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('sales-main-table', 'sotuvlar_realizatsiya')" style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-weight: 600;">
-                <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
               </button>
               <button class="btn btn-primary btn-sm" onclick="SalesModule.openNewSaleModal()" style="display: flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
-                <span style="font-size: 16px;">➕</span> <span>${isUz ? 'Yangi sotuv hujjatini rasmiylashtirish' : 'Новая продажа'}</span>
+<span>${isUz ? 'Yangi sotuv hujjatini rasmiylashtirish' : 'Новая продажа'}</span>
               </button>
             </div>
           </div>
@@ -119,7 +119,7 @@ const SalesModule = {
       if (!sales || sales.length === 0) {
         tableDiv.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; color: #64748b;">
-            <div style="font-size: 44px; margin-bottom: 12px; color: #0284c7;">🏷️</div>
+
             <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700; color: #0f172a;">${isUz ? 'Hozircha sotuv hujjatlari mavjud emas' : 'Пока нет документов продаж'}</h3>
             <p style="margin: 0; font-size: 13px; color: #64748b;">${isUz ? 'Yangi sotuv hujjatini rasmiylashtirish uchun yuqoridagi tugmani bosing' : 'Нажмите кнопку выше, чтобы добавить продажу'}</p>
           </div>
@@ -144,16 +144,16 @@ const SalesModule = {
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row" style="background: #f1f5f9;">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${isUz ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${isUz ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${isUz ? 'Mijoz...' : 'Клиент...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${isUz ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${isUz ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${isUz ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${isUz ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${isUz ? 'Mijoz...' : 'Клиент...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${isUz ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${isUz ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="🔍 ${isUz ? 'Valyuta...' : 'Валюта...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="🔍 ${isUz ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="${isUz ? 'Valyuta...' : 'Валюта...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="${isUz ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
             </tr>
           </thead>
@@ -202,16 +202,16 @@ const SalesModule = {
                 </td>
                 <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                   <button class="btn btn-sm" onclick="SalesModule.printInvoice(${s.id})" title="Faktura chop etish" style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 4px;">
-                    🖨️ ${isUz ? 'Faktura' : 'Счет'}
+                    ${isUz ? 'Faktura' : 'Счет'}
                   </button>
                   ${s.status === 'Tasdiqlandi' ? `
                     <button class="btn btn-sm" onclick="SalesModule.stornoSale(${s.id}, '${s.sale_number}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                      ↩️ ${t('btn_storno')}
+                      ${t('btn_storno')}
                     </button>
                   ` : ''}
                   ${CURRENT_ROLE === 'Admin' ? `
                     <button class="btn btn-danger btn-sm" onclick="SalesModule.deleteSale(${s.id}, '${s.sale_number}')" title="O'chirish" style="padding: 5px 8px; font-size: 12px; margin-left: 4px;">
-                      🗑️
+                      ${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}
                     </button>
                   ` : ''}
                 </td>
@@ -241,7 +241,7 @@ const SalesModule = {
     const isUz = CURRENT_LANG === 'uz';
 
     showModal(
-      isUz ? "🏷️ Yangi sotuv hujjatini (Realizatsiyasini) rasmiylashtirish" : "🏷️ Оформление нового документа продажи",
+      isUz ? "Yangi sotuv hujjatini (Realizatsiyasini) rasmiylashtirish" : "Оформление нового документа продажи",
       `
         <form id="new-sale-form">
           <!-- Datalists for Autocomplete & Search -->
@@ -306,9 +306,9 @@ const SalesModule = {
                   ${isUz ? 'To\'lov turi / Holati' : 'Вид оплаты'}
                 </label>
                 <select id="sale-payment-type" class="form-control" style="width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600;">
-                  <option value="credit">${isUz ? '💳 Qarzga (Nasiya / Balansga kiritiladi)' : 'В кредит (На баланс)'}</option>
-                  <option value="cash">${isUz ? '💵 Naqd pul berildi (Kassaga tushadi)' : 'Наличными'}</option>
-                  <option value="bank">${isUz ? '🏦 Bank o\'tkazmasi (Hisob-raqamga)' : 'Банковский перевод'}</option>
+                  <option value="credit">${isUz ? 'Qarzga (Nasiya / Balansga kiritiladi)' : 'В кредит (На баланс)'}</option>
+                  <option value="cash">${isUz ? 'Naqd pul berildi (Kassaga tushadi)' : 'Наличными'}</option>
+                  <option value="bank">${isUz ? 'Bank o\'tkazmasi (Hisob-raqamga)' : 'Банковский перевод'}</option>
                 </select>
               </div>
             </div>
@@ -317,7 +317,7 @@ const SalesModule = {
           <!-- Items Table Header -->
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <label class="form-label" style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 0;">
-              ${isUz ? '🧱 Sotilayotgan mahsulotlar (Kafel) ro\'yxati:' : '🧱 Список реализуемой продукции:'}
+              ${isUz ? 'Sotilayotgan mahsulotlar (Kafel) ro\'yxati:' : 'Список реализуемой продукции:'}
             </label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="SalesModule.addSaleItemRow()" style="font-size: 12.5px; padding: 6px 14px; border-radius: 8px; cursor: pointer; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; font-weight: 700;">
               ${isUz ? '+ Yangi pozitsiya qo\'shish' : '+ Добавить позицию'}
@@ -420,7 +420,7 @@ const SalesModule = {
     if (matched) {
       const balUsd = matched.balance_usd || 0;
       const statusText = balUsd < 0 ? `Qarzdorlik: $${formatNumber(Math.abs(balUsd), 2, 2)}` : `Haqdorlik: +$${formatNumber(balUsd, 2, 2)}`;
-      hint.innerHTML = `💬 <strong>${matched.name}</strong> - Balans: <span style="color: ${balUsd < 0 ? '#ef4444' : '#10b981'};">${statusText}</span>`;
+      hint.innerHTML = `<strong>${matched.name}</strong> - Balans: <span style="color: ${balUsd < 0 ? '#ef4444' : '#10b981'};">${statusText}</span>`;
       hint.style.display = "block";
     } else {
       hint.style.display = "none";
@@ -499,7 +499,7 @@ const SalesModule = {
       const availQty = stockItem ? stockItem.quantity : 0;
 
       if (hint) {
-        hint.innerHTML = `📦 Omborda: <strong style="color: ${availQty > 0 ? '#10b981' : '#ef4444'};">${formatNumber(availQty, 0, 2)} ${tr(matched.unit)}</strong>`;
+        hint.innerHTML = `Omborda: <strong style="color: ${availQty > 0 ? '#10b981' : '#ef4444'};">${formatNumber(availQty, 0, 2)} ${tr(matched.unit)}</strong>`;
         hint.style.display = "block";
       }
 
@@ -573,14 +573,14 @@ const SalesModule = {
       const totalSum = sale.total_amount || 0;
 
       showModal(
-        `🖨️ Xisob-Faktura / Nakladnaya № ${sale.sale_number}`,
+        `Xisob-Faktura / Nakladnaya № ${sale.sale_number}`,
         `
           <div id="invoice-printable-area" style="background: #ffffff; padding: 24px; font-family: 'Outfit', sans-serif; color: #0f172a;">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 16px; margin-bottom: 20px;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 28px;">🏭</span>
+
                   <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0284c7;">KAFEL ZAVODI ERP</h2>
                 </div>
                 <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Toshkent v., Zangiota t., Sanoat zonasi #4</div>
