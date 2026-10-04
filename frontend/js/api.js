@@ -36,9 +36,10 @@ function clearAuthSession() {
 
 async function apiRequest(endpoint, method = "GET", body = null) {
   const token = localStorage.getItem("erp_token") || "";
+  // Who you are is proven by the signed token; the server never trusts a
+  // role sent from the browser.
   const headers = {
     "Content-Type": "application/json",
-    "x-user-role": CURRENT_ROLE,
     "Authorization": token ? `Bearer ${token}` : ""
   };
   
@@ -53,6 +54,11 @@ async function apiRequest(endpoint, method = "GET", body = null) {
   
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, options);
+    // Expired or invalid session: back to the login screen.
+    if (res.status === 401 && token && !endpoint.startsWith("/auth/")) {
+      clearAuthSession();
+      if (typeof checkAuthAndInitialize === "function") checkAuthAndInitialize();
+    }
     if (!res.ok) {
       let errDetail = "Server error";
       const rawText = await res.text();
@@ -82,6 +88,7 @@ async function apiRequest(endpoint, method = "GET", body = null) {
 const API = {
   // Auth & Roles & Users
   login: (username, password) => apiRequest("/auth/login", "POST", { username, password }),
+  verifyOtp: (challengeId, code) => apiRequest("/auth/verify-otp", "POST", { challenge_id: challengeId, code }),
   getRoles: () => apiRequest("/auth/roles"),
   getCurrentRole: () => apiRequest("/auth/current"),
   getUsers: (includeArchived = true) => apiRequest(`/auth/users?include_archived=${includeArchived}`),

@@ -13,7 +13,7 @@ from backend.schemas import (
     PurchaseCreate, PurchaseResponse, PurchaseItemResponse,
     SaleCreate, SaleResponse, SaleItemResponse
 )
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services import sklad_service as sklad_svc
 from backend.services.inventory_service import (
     add_stock_with_avg_valuation, deduct_stock
@@ -253,8 +253,8 @@ def delete_purchase(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if role == "Admin" else "zakup", role)
-    if role != "Admin":
+    check_permission("admin_tools" if is_admin(role) else "zakup", role)
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
@@ -461,8 +461,8 @@ def delete_sale(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if role == "Admin" else "sotish", role)
-    if role != "Admin":
+    check_permission("admin_tools" if is_admin(role) else "sotish", role)
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:

@@ -14,7 +14,7 @@ from backend.database import get_db
 from backend.api.auth import get_current_user_role, check_permission
 from backend.models import (
     SkladMovement, SkladOrder, Purchase, Sale, ProductionOrder, LineExpense,
-    StockTransfer, CashTransaction,
+    StockTransfer, CashTransaction, AuditLog,
     SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_STORNO, ORDER_DELIVERED, ORDER_CANCELLED,
     SKLAD_CONFIG,
 )
@@ -30,7 +30,7 @@ KINDS = [
     "ombor_kirim", "ombor_sotuv", "ombor_storno",
     "buyurtma", "yetkazish", "buyurtma_bekor",
     "xarid", "sotuv_eski", "ishlab_chiqarish", "sarf",
-    "kochirish", "kassa_kirim", "kassa_chiqim",
+    "kochirish", "kassa_kirim", "kassa_chiqim", "amal",
 ]
 
 # Ombor movements written by other modules are shown by those modules'
@@ -204,6 +204,15 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             party=c.counterparty.name if c.counterparty else None,
             details=" — ".join(x for x in [c.category, c.description] if x),
             amount=c.amount, currency=c.currency, status=c.status,
+        ))
+
+    # --- Who did what (every change made through the API)
+    for a in (db.query(AuditLog)
+              .filter(AuditLog.created_at >= utc0, AuditLog.created_at < utc1)
+              .order_by(AuditLog.created_at.desc()).limit(limit).all()):
+        events.append(_event(
+            "amal", _local(a.created_at), ref=a.entity_id and f"#{a.entity_id}",
+            place=a.module, details=a.details, status=a.action, user=a.username or "-",
         ))
 
     events.sort(key=lambda e: e["at"] or "", reverse=True)

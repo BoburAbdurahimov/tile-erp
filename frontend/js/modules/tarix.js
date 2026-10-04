@@ -10,7 +10,7 @@
 const HistoryModule = {
   data: null,
   section: "all",
-  filters: { preset: "30", start: "", end: "", owner: "", kind: "", status: "", search: "" },
+  filters: { preset: "30", start: "", end: "", owner: "", kind: "", status: "", user: "", search: "" },
 
   KINDS: {
     ombor_kirim:      { uz: "Omborga kirim",       ru: "Приход на склад",     color: "#059669", bg: "#ecfdf5", section: "ombor" },
@@ -26,6 +26,15 @@ const HistoryModule = {
     sarf:             { uz: "Liniya sarfi",        ru: "Расход на линию",     color: "#0891b2", bg: "#ecfeff", section: "ishlab" },
     kassa_kirim:      { uz: "Kassa kirim",         ru: "Касса приход",        color: "#15803d", bg: "#f0fdf4", section: "kassa" },
     kassa_chiqim:     { uz: "Kassa chiqim",        ru: "Касса расход",        color: "#b91c1c", bg: "#fef2f2", section: "kassa" },
+    amal:             { uz: "Foydalanuvchi amali", ru: "Действие пользователя", color: "#334155", bg: "#f1f5f9", section: "amal" },
+  },
+
+  // Audit actions shown in words: POST = created, PUT = changed, DELETE = deleted.
+  ACTIONS: {
+    POST:   { uz: "Yaratdi / bajardi", ru: "Создал / выполнил" },
+    PUT:    { uz: "O'zgartirdi", ru: "Изменил" },
+    PATCH:  { uz: "O'zgartirdi", ru: "Изменил" },
+    DELETE: { uz: "O'chirdi", ru: "Удалил" },
   },
 
   SECTIONS: [
@@ -36,6 +45,7 @@ const HistoryModule = {
     ["ishlab", { uz: "Ishlab chiqarish", ru: "Производство" }],
     ["kassa",  { uz: "Kassa", ru: "Касса" }],
     ["qarz",   { uz: "Qarzlar", ru: "Долги" }],
+    ["amal",   { uz: "Foydalanuvchi amallari", ru: "Действия пользователей" }],
   ],
 
   PRESETS: [
@@ -176,6 +186,12 @@ const HistoryModule = {
             <option value="active" ${this.filters.status === "active" ? "selected" : ""}>${isUz ? "Faqat amaldagilar" : "Только действующие"}</option>
             <option value="storno" ${this.filters.status === "storno" ? "selected" : ""}>${isUz ? "Storno va bekor qilinganlar" : "Сторно и отменённые"}</option>
           </select></label>`}
+        ${isDebt ? "" : `
+        <label style="font-size:12px;font-weight:700;color:#475569;">${isUz ? "Foydalanuvchi" : "Пользователь"}
+          <select style="${f}width:100%;margin-top:4px;" onchange="HistoryModule.setFilter('user', this.value)">
+            <option value="">${isUz ? "Hammasi" : "Все"}</option>
+            ${this.users().map(u => `<option value="${escapeHtml(u)}" ${this.filters.user === u ? "selected" : ""}>${escapeHtml(u)}</option>`).join("")}
+          </select></label>`}
         <label style="font-size:12px;font-weight:700;color:#475569;">${isUz ? "Qidirish" : "Поиск"}
           <input value="${escapeHtml(this.filters.search)}" placeholder="${isUz ? "Hujjat, mijoz, telefon, o'lcham..." : "Документ, клиент, телефон, размер..."}"
             style="${f}width:100%;margin-top:4px;" oninput="HistoryModule.onSearch(this.value)"></label>
@@ -226,7 +242,7 @@ const HistoryModule = {
 
   resetFilters() {
     this.section = "all";
-    this.filters = { preset: "30", start: "", end: "", owner: "", kind: "", status: "", search: "" };
+    this.filters = { preset: "30", start: "", end: "", owner: "", kind: "", status: "", user: "", search: "" };
     [this.filters.start, this.filters.end] = this.presetRange("30");
     this.renderFilters();
     this.load();
@@ -252,6 +268,12 @@ const HistoryModule = {
       || String(e.ref || "").startsWith("STORNO-");
   },
 
+  users() {
+    const set = new Set();
+    ((this.data && this.data.events) || []).forEach(e => { if (e.user && e.user !== "-") set.add(e.user); });
+    return [...set].sort();
+  },
+
   matchesSearch(values) {
     const q = (this.filters.search || "").trim().toLowerCase();
     return !q || values.some(v => String(v || "").toLowerCase().includes(q));
@@ -260,9 +282,10 @@ const HistoryModule = {
   // Events passing every filter except the section, so tab counts stay honest.
   baseEvents() {
     if (!this.data) return [];
-    const { owner, kind, status } = this.filters;
+    const { owner, kind, status, user } = this.filters;
     return this.data.events.filter(e => {
       if (owner && e.owner !== owner) return false;
+      if (user && e.user !== user) return false;
       if (kind && e.kind !== kind) return false;
       if (status === "active" && this.isStorno(e)) return false;
       if (status === "storno" && !this.isStorno(e)) return false;
@@ -280,7 +303,7 @@ const HistoryModule = {
   sectionCounts() {
     const counts = { all: 0 };
     this.baseEvents().forEach(e => {
-      counts.all++;
+      if (e.kind !== "amal") counts.all++;
       const s = (this.KINDS[e.kind] || {}).section;
       if (s) counts[s] = (counts[s] || 0) + 1;
     });
@@ -326,8 +349,9 @@ const HistoryModule = {
     const body = document.getElementById("hist-body");
     const sum = document.getElementById("hist-summary");
     if (!body) return;
-    const events = this.baseEvents().filter(e =>
-      this.section === "all" || (this.KINDS[e.kind] || {}).section === this.section);
+    const events = this.baseEvents().filter(e => this.section === "all"
+      ? e.kind !== "amal"
+      : (this.KINDS[e.kind] || {}).section === this.section);
 
     // Totals in each currency, counting storno and cancelled rows out.
     const active = events.filter(e => !this.isStorno(e));
@@ -368,6 +392,7 @@ const HistoryModule = {
               <th>${isUz ? "Miqdor" : "Кол-во"}</th>
               <th style="text-align:right;">${isUz ? "Summa" : "Сумма"}</th>
               <th>${isUz ? "Holat" : "Статус"}</th>
+              <th>${isUz ? "Kim" : "Кто"}</th>
             </tr>
           </thead>
           <tbody>
@@ -382,7 +407,8 @@ const HistoryModule = {
                 <td style="max-width:360px;white-space:normal;">${escapeHtml(e.details || "-")}</td>
                 <td style="white-space:nowrap;">${escapeHtml(e.quantity || "-")}</td>
                 <td style="text-align:right;white-space:nowrap;font-weight:600;">${this.money(e.amount, e.currency)}</td>
-                <td>${escapeHtml(e.status || "-")}</td>
+                <td>${escapeHtml(e.kind === "amal" && this.ACTIONS[e.status] ? this.L(this.ACTIONS[e.status]) : (e.status || "-"))}</td>
+                <td>${escapeHtml(e.user || "-")}</td>
               </tr>`;
             }).join("")}
           </tbody>

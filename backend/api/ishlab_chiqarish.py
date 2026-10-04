@@ -13,7 +13,7 @@ from backend.schemas import (
     ProductionOrderCreate, ProductionOrderResponse, ProductionLineResponse,
     ConsumedMaterialResponse, LineExpenseCreate, LineExpenseResponse, LineExpenseItemResponse
 )
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services import sklad_service as sklad_svc
 from backend.services.numbering import next_number
 from backend.services.inventory_service import (
@@ -559,8 +559,8 @@ def delete_production_order(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if role == "Admin" else "ishlab_chiqarish", role)
-    if role != "Admin":
+    check_permission("admin_tools" if is_admin(role) else "ishlab_chiqarish", role)
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
     if not order:

@@ -128,7 +128,7 @@ def adjust_stock_manual(
     """
     Manual stock correction strictly permitted only for Admin role.
     """
-    if user_role != "Admin":
+    if "Admin" not in [r.strip() for r in str(user_role or "").split(",")]:
         raise HTTPException(
             status_code=403,
             detail="Ombor qoldig'ini qo'lda to'g'rilash (Manual stock adjustment) faqat Admin uchun ruxsat etilgan!"

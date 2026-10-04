@@ -6,9 +6,11 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from tests_support import use_header_roles
 from backend.database import SessionLocal
 from backend.models import MDMMaterial, MDMCounterparty, ProductionLine
 
+use_header_roles()
 client = TestClient(app)
 ADMIN = {"x-user-role": "Admin"}
 

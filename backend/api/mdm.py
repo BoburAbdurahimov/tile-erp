@@ -15,7 +15,7 @@ from backend.schemas import (
     CounterpartyCreate, CounterpartyUpdate, CounterpartyResponse,
     WarehouseCreate, WarehouseUpdate, WarehouseResponse
 )
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services.reports_service import generate_mdm_excel
 
 router = APIRouter(prefix="/mdm", tags=["MODUL 1: MDM (Master Data)"])
@@ -120,8 +120,8 @@ def delete_material(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if role == "Admin" else "mdm", role)
-    if role != "Admin":
+    check_permission("admin_tools" if is_admin(role) else "mdm", role)
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     mat = db.query(MDMMaterial).filter(MDMMaterial.id == material_id).first()
     if not mat:
@@ -257,8 +257,8 @@ def delete_counterparty(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if role == "Admin" else "mdm", role)
-    if role != "Admin":
+    check_permission("admin_tools" if is_admin(role) else "mdm", role)
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == counterparty_id).first()
     if not cp:
