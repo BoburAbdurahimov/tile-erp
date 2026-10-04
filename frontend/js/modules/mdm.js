@@ -31,6 +31,9 @@ const MdmModule = {
           <button class="tab-btn ${this.currentTab === 'materials' ? 'active' : ''}" onclick="MdmModule.switchTab('materials')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'materials' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'materials' ? '#2563eb' : '#64748b'};">
             🧱 ${t('tab_materials')}
           </button>
+          <button class="tab-btn ${this.currentTab === 'tayyor' ? 'active' : ''}" onclick="MdmModule.switchTab('tayyor')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'tayyor' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'tayyor' ? '#2563eb' : '#64748b'};">
+            📐 ${CURRENT_LANG === 'uz' ? "Tayyor mahsulot (Ombor)" : "Готовая продукция (Склад)"}
+          </button>
           <button class="tab-btn ${this.currentTab === 'clients' ? 'active' : ''}" onclick="MdmModule.switchTab('clients')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'clients' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'clients' ? '#2563eb' : '#64748b'};">
             👤 ${t('tab_clients')}
           </button>
@@ -51,6 +54,57 @@ const MdmModule = {
     await this.loadTabContent();
   },
 
+  // Finished goods (tayyor mahsulot) are not kept in MDM: they are read live
+  // from the Ombor, so sizes, stock and reservations always match it.
+  async loadFinishedGoods(tableDiv) {
+    const isUz = CURRENT_LANG === 'uz';
+    try {
+      const products = (await API.getOmborProducts()).products || [];
+      tableDiv.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:13px;">
+          <span>${isUz ? "Tayyor mahsulotlar Ombordan olinadi. Yangi mahsulot Omborda «+ Kirim» orqali qo'shiladi."
+                       : "Готовая продукция берётся со Склада. Новый товар добавляется на Складе через «+ Приход»."}</span>
+          <button class="btn btn-primary btn-sm" onclick="navigateTo('ombor')" style="padding:6px 12px;border-radius:7px;font-weight:600;">${isUz ? "Omborga o'tish" : "Перейти на склад"}</button>
+        </div>
+        <div class="table-container" style="overflow-x: auto;">
+          <table class="data-table" id="mdm-finished-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, true)" style="padding: 12px 14px;">${isUz ? "Kod" : "Код"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)" style="padding: 12px 14px;">${isUz ? "O'lcham" : "Размер"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)" style="padding: 12px 14px;">${isUz ? "Ombor (egasi)" : "Склад (владелец)"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, true)" style="padding: 12px 14px; text-align:right;">Eni <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="padding: 12px 14px; text-align:right;">${isUz ? "Omborda" : "На складе"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="padding: 12px 14px; text-align:right;">${isUz ? "Band (buyurtma)" : "Резерв"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="padding: 12px 14px; text-align:right;">${isUz ? "Bo'sh" : "Свободно"} <span class="sort-icon">↕</span></th>
+              </tr>
+              <tr class="filter-row">
+                <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${isUz ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍" oninput="TableFilterSort.filterTable(this)" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${isUz ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                <th></th><th></th><th></th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${products.length ? products.map(p => `
+                <tr>
+                  <td data-sort-value="${p.code}" style="padding: 12px 14px; font-weight:700;">${p.code}</td>
+                  <td style="padding: 12px 14px;">${p.length} × ${p.width}</td>
+                  <td style="padding: 12px 14px;">${escapeHtml(p.owner || "")}</td>
+                  <td data-sort-value="${p.eni}" style="padding: 12px 14px; text-align:right;">${p.eni}</td>
+                  <td data-sort-value="${p.quantity}" style="padding: 12px 14px; text-align:right; font-weight:700;">${formatNumber(p.quantity, 0, 0)}</td>
+                  <td data-sort-value="${p.reserved}" style="padding: 12px 14px; text-align:right; color:${p.reserved ? '#a16207' : '#94a3b8'};">${formatNumber(p.reserved, 0, 0)}</td>
+                  <td data-sort-value="${p.free}" style="padding: 12px 14px; text-align:right; font-weight:700; color:${p.free ? '#15803d' : '#b91c1c'};">${formatNumber(p.free, 0, 0)}</td>
+                </tr>`).join("")
+              : `<tr><td colspan="7" style="padding: 24px; text-align:center; color:#94a3b8;">${isUz ? "Omborda tayyor mahsulot yo'q" : "На складе нет готовой продукции"}</td></tr>`}
+            </tbody>
+          </table>
+        </div>`;
+    } catch (e) {
+      tableDiv.innerHTML = `<div style="padding: 20px; color: #b91c1c;">${escapeHtml(e.message)}</div>`;
+    }
+  },
+
   async switchTab(tab) {
     this.currentTab = tab;
     const container = document.getElementById("module-container");
@@ -60,6 +114,8 @@ const MdmModule = {
   async loadTabContent() {
     const tableDiv = document.getElementById("mdm-table-container");
     if (!tableDiv) return;
+
+    if (this.currentTab === "tayyor") return this.loadFinishedGoods(tableDiv);
 
     try {
       if (this.currentTab === "materials") {
@@ -199,6 +255,11 @@ const MdmModule = {
   },
 
   openCreateModal() {
+    if (this.currentTab === "tayyor") {
+      // Finished goods are whatever the Ombor holds; they are added by Kirim there.
+      navigateTo("ombor");
+      return;
+    }
     if (this.currentTab === "materials") {
       showModal(
         CURRENT_LANG === 'uz' ? "Yangi material / mahsulot yaratish" : "Создать новый материал / товар",

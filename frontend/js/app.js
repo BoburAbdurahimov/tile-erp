@@ -116,6 +116,7 @@ function checkAuthAndInitialize() {
   updateUserDisplay();
   updateHeaderFxRate();
   navigateTo(currentModule || "dashboard");
+  if (typeof refreshOrderBadge === "function") refreshOrderBadge();
 }
 
 async function handleLoginSubmit(event) {
@@ -364,8 +365,10 @@ async function navigateTo(moduleName) {
       await PurchasesModule.render(container);
       break;
     case "sales":
+      // Order -> delivery -> payment on the Ombor; the legacy sales
+      // documents open from a button inside the page.
       if (pageTitle) pageTitle.textContent = t("nav_sales");
-      await SalesModule.render(container);
+      await OrdersModule.render(container);
       break;
     case "finance":
       if (pageTitle) pageTitle.textContent = t("nav_finance");

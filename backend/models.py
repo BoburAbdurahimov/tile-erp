@@ -566,3 +566,99 @@ class SkladMovementItem(Base):
     @property
     def size_code(self) -> int:
         return self.length + self.width
+
+
+# ==================================================================
+#  SALES ORDERS on the dimensional warehouse
+#  1. Order    - taken with a deadline; nothing moves yet, so the order
+#                only claims stock and shows what still has to be produced.
+#  2. Delivery - goods leave the Ombor as a RASXOD movement, with the car
+#                and driver recorded on the order.
+#  3. Payment  - cash or card, posted to the Kassa as a client receipt.
+# ==================================================================
+
+ORDER_NEW = "Yangi"            # taken, awaiting production / delivery
+ORDER_DELIVERED = "Yetkazildi" # shipped; payment state is derived from Kassa
+ORDER_CANCELLED = "Bekor"
+
+PAY_CASH = "naqd"
+PAY_CARD = "karta"
+
+
+class SkladOrder(Base):
+    __tablename__ = "sklad_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_number = Column(String(50), unique=True, nullable=False)  # BUY-20261004-001
+
+    # Clients are one-off buyers, typed in with the order.
+    client_name = Column(String(150), nullable=False)
+    client_phone = Column(String(50), nullable=False)
+    client_address = Column(Text, nullable=True)
+
+    sklad_id = Column(Integer, nullable=False, index=True)
+    sell_type = Column(String(10), nullable=False, default=SELL_TYPE_METR)
+    # Local wall-clock time as entered; the countdown runs against it.
+    deadline = Column(DateTime, nullable=False, index=True)
+
+    currency = Column(String(10), nullable=False, default="UZS")
+    subtotal = Column(Float, nullable=False, default=0.0)        # before discount
+    discount_percent = Column(Float, nullable=False, default=0.0)
+    discount_amount = Column(Float, nullable=False, default=0.0)
+    total_amount = Column(Float, nullable=False, default=0.0)    # what the client owes
+
+    status = Column(String(20), nullable=False, default=ORDER_NEW, index=True)
+
+    # Delivery (stage 2)
+    delivered_at = Column(DateTime, nullable=True)
+    car_number = Column(String(30), nullable=True)
+    driver_name = Column(String(100), nullable=True)
+    driver_phone = Column(String(50), nullable=True)
+    delivery_note = Column(Text, nullable=True)
+    sklad_movement_id = Column(Integer, nullable=True)  # the RASXOD it produced
+
+    note = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    items = relationship("SkladOrderItem", back_populates="order", cascade="all, delete-orphan")
+    payments = relationship("SkladOrderPayment", back_populates="order", cascade="all, delete-orphan")
+
+
+class SkladOrderItem(Base):
+    __tablename__ = "sklad_order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("sklad_orders.id"), nullable=False, index=True)
+    length = Column(Integer, nullable=False)
+    width = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    unit_price = Column(Float, nullable=False, default=0.0)  # per metr / m.kv, before discount
+    units = Column(Float, nullable=False, default=0.0)       # metres or m.kv in the line
+    line_total = Column(Float, nullable=False, default=0.0)  # before discount
+
+    order = relationship("SkladOrder", back_populates="items")
+
+    @property
+    def size_code(self) -> int:
+        return self.length + self.width
+
+
+class SkladOrderPayment(Base):
+    __tablename__ = "sklad_order_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("sklad_orders.id"), nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    method = Column(String(10), nullable=False, default=PAY_CASH)  # naqd | karta
+    register_id = Column(Integer, nullable=False)
+    # Deliberately not a foreign key: Kassa may delete its transaction, and
+    # a payment whose transaction is gone simply stops counting.
+    cash_transaction_id = Column(Integer, nullable=True, index=True)
+    paid_date = Column(Date, nullable=False, default=date.today)
+    note = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("SkladOrder", back_populates="payments")

@@ -274,5 +274,16 @@ const API = {
       (startDate ? `?start_date=${startDate}${endDate ? `&end_date=${endDate}` : ""}` : "")),
   skladKirim: (data) => apiRequest("/sklad/kirim", "POST", data),
   skladSotish: (data) => apiRequest("/sklad/sotish", "POST", data),
-  skladPreview: (data) => apiRequest("/sklad/preview", "POST", data)
+  skladPreview: (data) => apiRequest("/sklad/preview", "POST", data),
+
+  // ---- Sales orders: order -> delivery -> payment (on the dimensional warehouse) ----
+  getOrders: (status) => apiRequest("/orders" + (status ? `?status=${encodeURIComponent(status)}` : "")),
+  getOrder: (id) => apiRequest(`/orders/${id}`),
+  getProductionPlan: () => apiRequest("/orders/production-plan"),
+  getOmborProducts: () => apiRequest("/orders/products"),
+  previewOrder: (data) => apiRequest("/orders/preview", "POST", data),
+  createOrder: (data) => apiRequest("/orders", "POST", data),
+  deliverOrder: (id, data) => apiRequest(`/orders/${id}/deliver`, "POST", data),
+  payOrder: (id, data) => apiRequest(`/orders/${id}/pay`, "POST", data),
+  cancelOrder: (id) => apiRequest(`/orders/${id}/cancel`, "POST")
 };
