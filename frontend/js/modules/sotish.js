@@ -81,7 +81,9 @@ const SalesModule = {
     const isUz = CURRENT_LANG === 'uz';
 
     try {
-      const sales = await API.getSales();
+      const [sales, rates] = await Promise.all([API.getSales(), API.getExchangeRates().catch(() => [])]);
+      // UZS sales are converted with the real rate; without one they are left out of the USD totals.
+      const fx = (rates && rates[0] && rates[0].rate_usd_uzs) || 0;
       
       // Update KPIs
       let todaySum = 0;
@@ -91,7 +93,7 @@ const SalesModule = {
 
       (sales || []).forEach(s => {
         if (s.status === "Tasdiqlandi") {
-          const amt = s.currency === "USD" ? (s.total_amount || 0) : ((s.total_amount || 0) / 12850);
+          const amt = s.currency === "USD" ? (s.total_amount || 0) : (fx ? (s.total_amount || 0) / fx : 0);
           if (s.date === todayStr) todaySum += amt;
           if (s.date && s.date.startsWith(curMonth)) monthSum += amt;
         }

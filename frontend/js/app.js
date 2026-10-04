@@ -442,7 +442,8 @@ async function updateHeaderFxRate() {
       badge.textContent = `1$ = ${rates[0].rate_usd_uzs.toLocaleString()} UZS`;
     }
   } catch (e) {
-    badge.textContent = "1$ = 12,850 UZS";
+    // No made-up rate: show that it is unknown rather than a stale number.
+    badge.textContent = "1$ = — UZS";
   }
 }
 

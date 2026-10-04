@@ -87,7 +87,11 @@ const KassaModule = {
     if (!div) return;
     try {
       const rates = await API.getExchangeRates();
-      const latest = rates[0] || { rate_usd_uzs: 12850, date: "Bugun", is_manual_override: false };
+      const latest = rates[0];
+      if (!latest) {
+        div.innerHTML = `<div style="padding: 14px 18px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-weight: 600; margin-bottom: 16px;">${CURRENT_LANG === 'uz' ? "Valyuta kursi hali kiritilmagan." : "Курс валюты ещё не задан."}</div>`;
+        return;
+      }
 
       div.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px;">

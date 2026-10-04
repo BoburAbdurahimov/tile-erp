@@ -9,6 +9,32 @@ from backend.models import (
 )
 
 client = TestClient(app)
+ADMIN = {"x-user-role": "Admin"}
+
+
+def _first_material(category):
+    db = SessionLocal()
+    try:
+        return db.query(MDMMaterial).filter(MDMMaterial.category == category).first()
+    finally:
+        db.close()
+
+
+def _receive(material_id, warehouse_id, quantity, unit_price):
+    """Put stock on a warehouse through a purchase, as a real receipt would."""
+    db = SessionLocal()
+    supplier = db.query(MDMCounterparty).filter(MDMCounterparty.type == "supplier").first()
+    db.close()
+    res = client.post("/api/savdo/purchases", json={
+        "supplier_id": supplier.id,
+        "warehouse_id": warehouse_id,
+        "date": str(date.today()),
+        "currency": "USD",
+        "items": [{"material_id": material_id, "quantity": quantity, "unit_price": unit_price}],
+        "description": "Test kirimi",
+    }, headers=ADMIN)
+    assert res.status_code == 200, res.text
+    return res.json()
 
 class TestTileERP(unittest.TestCase):
     
@@ -56,6 +82,7 @@ class TestTileERP(unittest.TestCase):
         self.assertTrue(int(cli_data["code"]) >= 20000)
 
     def test_03_ombor_stock_and_admin_adjustment(self):
+        _receive(_first_material("Xomashyo").id, 2, 5000.0, 0.05)
         # Stock balance view
         res = client.get("/api/ombor/stock", headers={"x-user-role": "Ish boshqaruvchi"})
         self.assertEqual(res.status_code, 200)
@@ -86,11 +113,24 @@ class TestTileERP(unittest.TestCase):
         res = client.get("/api/kassa/registers", headers={"x-user-role": "Admin"})
         self.assertEqual(res.status_code, 200)
         regs = res.json()
-        self.assertEqual(len(regs), 2) # USD & UZS
+        self.assertGreaterEqual(len(regs), 2) # USD & UZS (+ card register once used)
+
+        # Kassa refuses to spend money it does not have, so take some in first.
+        usd = next(r for r in regs if r["currency"] == "USD")
+        kirim = client.post("/api/kassa/transactions", json={
+            "register_id": usd["id"],
+            "type": "kirim",
+            "amount": 1000.0,
+            "currency": "USD",
+            "category": "boshqa",
+            "date": str(date.today()),
+            "description": "Test kirimi"
+        }, headers=ADMIN)
+        self.assertEqual(kirim.status_code, 200, kirim.text)
 
         # Record Chiqim (Indirect Expense: Bilvosita xarajat)
         tx_res = client.post("/api/kassa/transactions", json={
-            "register_id": 1, # USD
+            "register_id": usd["id"],
             "type": "chiqim",
             "amount": 250.0,
             "currency": "USD",
@@ -103,9 +143,10 @@ class TestTileERP(unittest.TestCase):
     def test_05_production_order_and_storno(self):
         # Find raw materials and finished material
         db = SessionLocal()
-        raw1 = db.query(MDMMaterial).filter(MDMMaterial.category == "Siryo").first()
+        raw1 = db.query(MDMMaterial).filter(MDMMaterial.category == "Xomashyo").first()
         fin1 = db.query(MDMMaterial).filter(MDMMaterial.category == "Tayyor mahsulot").first()
         db.close()
+        _receive(raw1.id, 2, 2000.0, 0.05)
 
         prod_res = client.post("/api/ishlab-chiqarish/orders", json={
             "line_id": 2,
@@ -130,7 +171,7 @@ class TestTileERP(unittest.TestCase):
         db = SessionLocal()
         supplier = db.query(MDMCounterparty).filter(MDMCounterparty.type == "supplier").first()
         client_cp = db.query(MDMCounterparty).filter(MDMCounterparty.type == "client").first()
-        raw_mat = db.query(MDMMaterial).filter(MDMMaterial.category == "Siryo").first()
+        raw_mat = db.query(MDMMaterial).filter(MDMMaterial.category == "Xomashyo").first()
         fin_mat = db.query(MDMMaterial).filter(MDMMaterial.category == "Tayyor mahsulot").first()
         db.close()
 
@@ -152,7 +193,8 @@ class TestTileERP(unittest.TestCase):
         storno_pur = client.post(f"/api/savdo/purchases/{pur_id}/storno", headers={"x-user-role": "Admin"})
         self.assertEqual(storno_pur.status_code, 200)
 
-        # Create Sale
+        # Create Sale (from finished goods put on Warehouse 1 first)
+        _receive(fin_mat.id, 1, 500.0, 5.0)
         sale_res = client.post("/api/savdo/sales", json={
             "client_id": client_cp.id,
             "warehouse_id": 1,

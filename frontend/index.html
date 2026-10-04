@@ -13,7 +13,7 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <link rel="stylesheet" href="/static/css/style.css?v=46.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=47.0" />
 </head>
 <body>
   <!-- Login Screen Overlay -->
@@ -53,82 +53,6 @@
 
   <div class="app-container" id="app-main-container">
     
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar">
-      <div class="brand-header">
-
-        <div class="brand-title">
-          <h1 data-i18n="app_title">Kafel Zavodi ERP</h1>
-          <span data-i18n="app_subtitle">Ishlab chiqarish & Boshqaruv</span>
-        </div>
-      </div>
-
-      <nav class="nav-menu">
-        <a class="nav-item active" data-nav="dashboard" onclick="navigateTo('dashboard')">
-
-          <span data-i18n="nav_dashboard">Bosh panel</span>
-        </a>
-        <a class="nav-item" data-nav="mdm" onclick="navigateTo('mdm')">
-
-          <span data-i18n="nav_mdm">MDM</span>
-        </a>
-        <a class="nav-item" data-nav="ombor" onclick="navigateTo('ombor')">
-
-          <span data-i18n="nav_ombor">Ombor</span>
-        </a>
-        <a class="nav-item" data-nav="ombor_eski" onclick="navigateTo('ombor_eski')">
-
-          <span>Material hisobi</span>
-        </a>
-        <a class="nav-item" data-nav="kassa" onclick="navigateTo('kassa')">
-
-          <span data-i18n="nav_kassa">Kassa</span>
-        </a>
-        <a class="nav-item" data-nav="production" onclick="navigateTo('production')">
-
-          <span data-i18n="nav_production">Ishlab chiqarish</span>
-        </a>
-        <a class="nav-item" data-nav="balances" onclick="navigateTo('balances')">
-
-          <span data-i18n="nav_balances">Kontragentlar balansi</span>
-        </a>
-        <a class="nav-item" data-nav="purchases" onclick="navigateTo('purchases')">
-
-          <span data-i18n="nav_purchases">Sotib olish</span>
-        </a>
-        <a class="nav-item" data-nav="sales" onclick="navigateTo('sales')">
-
-          <span data-i18n="nav_sales">Sotish</span>
-        </a>
-        <a class="nav-item" data-nav="finance" onclick="navigateTo('finance')">
-
-          <span data-i18n="nav_finance">Moliya</span>
-        </a>
-        <a class="nav-item" data-nav="salary" onclick="navigateTo('salary')">
-
-          <span data-i18n="nav_salary">Ish haqi</span>
-        </a>
-        <!-- Admin-only Users module -->
-        <a class="nav-item" data-nav="users" id="nav-users-item" onclick="navigateTo('users')" style="display: none;">
-
-          <span data-i18n="nav_users">Foydalanuvchilar</span>
-        </a>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="user-status" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="user-avatar" id="current-user-avatar">AS</div>
-            <div class="user-details">
-              <div style="font-weight: 600; color: #f8fafc;" id="current-user-name">Adminshox</div>
-              <span class="user-role-badge" id="user-role-badge">ADMIN</span>
-            </div>
-          </div>
-          <button onclick="logout()" class="btn-logout" title="Chiqish" style="background: rgba(255,255,255,0.1); border: none; color: #f87171; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 14px;">Chiqish</button>
-        </div>
-      </div>
-    </aside>
-
     <!-- Main Wrapper Area -->
     <main class="main-wrapper">
       <!-- Odoo ERP Top Parallel Header -->
@@ -208,7 +132,7 @@
 
               <!-- CBU Exchange Rate Indicator -->
               <div class="fx-rate-pill" onclick="closeHeaderMenu(); navigateTo('kassa')" title="Valyuta kursi">
-                <span id="header-fx-rate">1$ = 12,850 UZS</span>
+                <span id="header-fx-rate">1$ = … UZS</span>
               </div>
 
               <!-- Month Status Pill -->
@@ -244,8 +168,6 @@
 
       <!-- Content Body -->
       <div class="content-body" id="module-container">
-        <!-- Injected dynamically based on active module -->
-      </div>
         <!-- Injected dynamically based on active module -->
       </div>
 
@@ -304,7 +226,7 @@
 
           <div>
             <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--odoo-purple);" data-i18n="app_title">Kafel Zavodi ERP</h3>
-            <div style="font-size: 12px; color: var(--text-muted);">Odoo Style App Launcher</div>
+            <div style="font-size: 12px; color: var(--text-muted);" data-i18n="apps_all_sections">Barcha bo'limlar</div>
           </div>
         </div>
         <button onclick="toggleOdooAppsOverlay()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 4px 10px; border-radius: 6px;">✕</button>
@@ -366,22 +288,22 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- JavaScript Scripts with Cache Busting -->
-  <script src="/static/js/i18n.js?v=55.0"></script>
-  <script src="/static/js/api.js?v=55.0"></script>
-  <script src="/static/js/modules/dashboard.js?v=55.0"></script>
-  <script src="/static/js/modules/mdm.js?v=55.0"></script>
-  <script src="/static/js/modules/ombor.js?v=55.0"></script>
-  <script src="/static/js/modules/sklad.js?v=55.0"></script>
-  <script src="/static/js/modules/buyurtma.js?v=55.0"></script>
-  <script src="/static/js/modules/kassa.js?v=55.0"></script>
-  <script src="/static/js/modules/ishlab_chiqarish.js?v=55.0"></script>
-  <script src="/static/js/modules/kontragentlar.js?v=55.0"></script>
-  <script src="/static/js/modules/zakup.js?v=55.0"></script>
-  <script src="/static/js/modules/sotish.js?v=55.0"></script>
-  <script src="/static/js/modules/moliya.js?v=55.0"></script>
-  <script src="/static/js/modules/ish_haqi.js?v=55.0"></script>
-  <script src="/static/js/modules/users.js?v=55.0"></script>
-  <script src="/static/js/modules/tarix.js?v=55.0"></script>
-  <script src="/static/js/app.js?v=55.0"></script>
+  <script src="/static/js/i18n.js?v=56.0"></script>
+  <script src="/static/js/api.js?v=56.0"></script>
+  <script src="/static/js/modules/dashboard.js?v=56.0"></script>
+  <script src="/static/js/modules/mdm.js?v=56.0"></script>
+  <script src="/static/js/modules/ombor.js?v=56.0"></script>
+  <script src="/static/js/modules/sklad.js?v=56.0"></script>
+  <script src="/static/js/modules/buyurtma.js?v=56.0"></script>
+  <script src="/static/js/modules/kassa.js?v=56.0"></script>
+  <script src="/static/js/modules/ishlab_chiqarish.js?v=56.0"></script>
+  <script src="/static/js/modules/kontragentlar.js?v=56.0"></script>
+  <script src="/static/js/modules/zakup.js?v=56.0"></script>
+  <script src="/static/js/modules/sotish.js?v=56.0"></script>
+  <script src="/static/js/modules/moliya.js?v=56.0"></script>
+  <script src="/static/js/modules/ish_haqi.js?v=56.0"></script>
+  <script src="/static/js/modules/users.js?v=56.0"></script>
+  <script src="/static/js/modules/tarix.js?v=56.0"></script>
+  <script src="/static/js/app.js?v=56.0"></script>
 </body>
 </html>

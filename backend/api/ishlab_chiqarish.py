@@ -15,6 +15,7 @@ from backend.schemas import (
 )
 from backend.api.auth import get_current_user_role, check_permission
 from backend.services import sklad_service as sklad_svc
+from backend.services.numbering import next_number
 from backend.services.inventory_service import (
     get_or_create_stock_item, deduct_stock, add_stock_with_avg_valuation
 )
@@ -192,8 +193,7 @@ def create_production_order(
             raise HTTPException(status_code=404, detail="Chiqarilayotgan tayyor mahsulot topilmadi.")
 
     # Generate order number
-    count = db.query(func.count(ProductionOrder.id)).scalar() or 0
-    order_num = f"PRD-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    order_num = next_number(db, ProductionOrder.order_number, f"PRD-{payload.date.strftime('%Y%m%d')}-")
 
     # Deduct consumed raw materials from warehouses at AVG cost
     direct_cost_usd = 0.0
@@ -383,8 +383,7 @@ def create_line_expense(
     if not payload.items or len(payload.items) == 0:
         raise HTTPException(status_code=400, detail="Kamida bitta sarf materialini kiritishingiz shart.")
 
-    count = db.query(func.count(LineExpense.id)).scalar() or 0
-    exp_num = f"LINE-EXP-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    exp_num = next_number(db, LineExpense.expense_number, f"LINE-EXP-{payload.date.strftime('%Y%m%d')}-")
     line_ids_str = ",".join(str(lid) for lid in payload.line_ids)
 
     total_cost_usd = 0.0
@@ -566,6 +565,12 @@ def delete_production_order(
     order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Buyurtma topilmadi.")
+    # Deleting does not touch stock, so only a document already reversed by
+    # storno may go; otherwise its goods and materials would stay counted.
+    if order.storno_ref_id:
+        raise HTTPException(status_code=400, detail="Bu storno yozuvi - asl hujjatni o'chiring.")
+    if order.status != "Storno":
+        raise HTTPException(status_code=400, detail="Avval hujjatni STORNO qiling, keyin o'chirish mumkin (aks holda ombor qoldig'i noto'g'ri qoladi).")
     
     # Delete consumed materials first
     db.query(ProductionConsumedMaterial).filter(ProductionConsumedMaterial.production_order_id == order_id).delete()

@@ -16,6 +16,7 @@ const I18N = {
     nav_salary: "Ish haqi",
     nav_users: "Foydalanuvchilar",
     nav_history: "Tarix",
+    apps_all_sections: "Barcha bo'limlar",
     users_title: "Foydalanuvchilar va Rollar",
     
     // Header
@@ -136,6 +137,7 @@ const I18N = {
     nav_salary: "Зарплата",
     nav_users: "Пользователи",
     nav_history: "История",
+    apps_all_sections: "Все разделы",
     users_title: "Пользователи и Роли",
     
     // Header

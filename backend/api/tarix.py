@@ -16,8 +16,10 @@ from backend.models import (
     SkladMovement, SkladOrder, Purchase, Sale, ProductionOrder, LineExpense,
     StockTransfer, CashTransaction,
     SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_STORNO, ORDER_DELIVERED, ORDER_CANCELLED,
+    SKLAD_CONFIG,
 )
 from backend.services import sklad_service as sklad
+from backend.services import order_service
 
 router = APIRouter(prefix="/history", tags=["MODUL: TARIX (Barcha harakatlar)"])
 
@@ -50,13 +52,17 @@ def _at(d: Optional[date], created: Optional[datetime]) -> datetime:
 
 
 def _event(kind, at, ref=None, place=None, party=None, details=None,
-           quantity=None, amount=None, currency=None, status=None, user=None):
+           quantity=None, amount=None, currency=None, status=None, user=None,
+           sklad_id=None):
+    cfg = sklad.get_config(sklad_id) if sklad_id else None
     return {
         "kind": kind,
         "at": at.isoformat(timespec="minutes") if at and at != datetime.min else None,
         "ref": ref, "place": place, "party": party, "details": details,
         "quantity": quantity, "amount": round(amount, 2) if amount is not None else None,
         "currency": currency, "status": status, "user": user,
+        # Ombor owner (Toxir / Kodir / Istam / Aziz) for the owner filter
+        "owner": cfg["name"] if cfg else None,
     }
 
 
@@ -84,6 +90,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
         pieces = sum(i.quantity for i in m.items)
         events.append(_event(
             kind, _local(m.occurred_at), ref=f"#{m.id}", place=sklad.sklad_label(m.sklad_id),
+            sklad_id=m.sklad_id,
             party=m.client_name, details=_sizes(m.items) or m.details,
             quantity=f"{pieces} dona",
             amount=m.grand_total if m.operation == SKLAD_OP_OUT else None,
@@ -97,6 +104,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
         events.append(_event(
             "buyurtma_bekor" if o.status == ORDER_CANCELLED else "buyurtma",
             _local(o.created_at), ref=o.order_number, place=sklad.sklad_label(o.sklad_id),
+            sklad_id=o.sklad_id,
             party=f"{o.client_name} · {o.client_phone}", details=_sizes(o.items),
             quantity=f"{sum(i.quantity for i in o.items)} dona",
             amount=o.total_amount, currency=o.currency, status=o.status, user=o.created_by,
@@ -108,6 +116,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
         car = " · ".join(x for x in [o.car_number, o.driver_name, o.driver_phone] if x)
         events.append(_event(
             "yetkazish", o.delivered_at, ref=o.order_number, place=sklad.sklad_label(o.sklad_id),
+            sklad_id=o.sklad_id,
             party=f"{o.client_name} · {o.client_phone}",
             details=f"{_sizes(o.items)}" + (f" — {car}" if car else ""),
             quantity=f"{sum(i.quantity for i in o.items)} dona",
@@ -147,9 +156,11 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
               .order_by(ProductionOrder.date.desc()).limit(limit).all()):
         if o.out_sklad_id and o.out_length is not None:
             out = f"{sklad.sklad_label(o.out_sklad_id)} {o.out_length + o.out_width}"
+            prod_sklad = o.out_sklad_id
             unit = "dona"
         else:
             out = o.output_material.name if o.output_material else ""
+            prod_sklad = None
             unit = o.output_material.unit if o.output_material else ""
         used = ", ".join(f"{c.material.name if c.material else ''} {c.quantity:g}"
                          for c in o.consumed_materials)
@@ -158,7 +169,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             place=o.line.name if o.line else None,
             details=out + (f" — sarf: {used}" if used else ""),
             quantity=f"{o.quantity:g} {unit}".strip(),
-            amount=o.total_cost_usd, currency="USD", status=o.status,
+            amount=o.total_cost_usd, currency="USD", status=o.status, sklad_id=prod_sklad,
         ))
 
     # --- Line expenses (consumables issued to lines)
@@ -226,6 +237,24 @@ def history(
             q in str(e.get(f) or "").lower() for f in ("ref", "place", "party", "details", "user")
         )]
 
+    debts = [
+        {
+            "order_number": o["order_number"],
+            "client_name": o["client_name"],
+            "client_phone": o["client_phone"],
+            "place": o["sklad_label"],
+            "owner": (sklad.get_config(o["sklad_id"]) or {}).get("name"),
+            "delivered_at": o.get("delivered_at"),
+            "total": o["total_amount"],
+            "paid": o["paid_amount"],
+            "balance": round(o["total_amount"] - o["paid_amount"], 2),
+            "currency": o["currency"],
+        }
+        for o in order_service.list_orders(db, status=ORDER_DELIVERED)
+        if o["total_amount"] - o["paid_amount"] > 0.005
+    ]
+    debts.sort(key=lambda d: d["delivered_at"] or "")
+
     counts: dict[str, int] = {}
     for e in events:
         counts[e["kind"]] = counts.get(e["kind"], 0) + 1
@@ -236,4 +265,6 @@ def history(
         "kinds": KINDS,
         "counts": counts,
         "events": events[:limit],
+        "debts": debts,
+        "owners": sorted({c["name"] for c in SKLAD_CONFIG}),
     }

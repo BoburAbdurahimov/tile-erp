@@ -20,6 +20,7 @@ from backend.services.inventory_service import (
 )
 from backend.services.currency_service import get_exchange_rate_for_date
 from backend.services.month_close_service import assert_month_open
+from backend.services.numbering import next_number
 
 router = APIRouter(prefix="/savdo", tags=["MODUL 6 & 7: SOTIB OLISH VA SOTISH (Trade)"])
 
@@ -103,8 +104,7 @@ def create_purchase(
     if not payload.items:
         raise HTTPException(status_code=400, detail="Xarid qilish uchun kamida bitta tovar/material tanlanishi shart.")
 
-    count = db.query(func.count(Purchase.id)).scalar() or 0
-    pur_num = f"PUR-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    pur_num = next_number(db, Purchase.purchase_number, f"PUR-{payload.date.strftime('%Y%m%d')}-")
 
     total_amount = 0.0
     purchase_items = []
@@ -259,6 +259,11 @@ def delete_purchase(
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
         raise HTTPException(status_code=404, detail="Xarid hujjati topilmadi.")
+    # Deleting does not touch stock or balances, so only a reversed document may go.
+    if purchase.storno_ref_id:
+        raise HTTPException(status_code=400, detail="Bu storno yozuvi - asl hujjatni o'chiring.")
+    if purchase.status != "Storno":
+        raise HTTPException(status_code=400, detail="Avval xaridni STORNO qiling, keyin o'chirish mumkin (aks holda ombor va ta'minotchi balansi noto'g'ri qoladi).")
     
     # Delete purchase items
     db.query(PurchaseItem).filter(PurchaseItem.purchase_id == purchase_id).delete()
@@ -344,8 +349,7 @@ def create_sale(
     if not payload.items:
         raise HTTPException(status_code=400, detail="Sotuv uchun kamida bitta mahsulot tanlanishi shart.")
 
-    count = db.query(func.count(Sale.id)).scalar() or 0
-    sale_num = f"SAL-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    sale_num = next_number(db, Sale.sale_number, f"SAL-{payload.date.strftime('%Y%m%d')}-")
 
     total_amount = 0.0
     sale_items = []
@@ -463,6 +467,11 @@ def delete_sale(
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Sotuv hujjati topilmadi.")
+    # Deleting does not touch stock or balances, so only a reversed document may go.
+    if sale.storno_ref_id:
+        raise HTTPException(status_code=400, detail="Bu storno yozuvi - asl hujjatni o'chiring.")
+    if sale.status != "Storno":
+        raise HTTPException(status_code=400, detail="Avval sotuvni STORNO qiling, keyin o'chirish mumkin (aks holda ombor va mijoz balansi noto'g'ri qoladi).")
     
     # Delete sale items
     db.query(SaleItem).filter(SaleItem.sale_id == sale_id).delete()
