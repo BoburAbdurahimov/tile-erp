@@ -25,8 +25,8 @@ const SalesModule = {
             </div>
 
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('sales-main-table', 'sotuvlar_realizatsiya')" style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-weight: 600;">
-                <span>📊</span> <span>${t('btn_export_excel')}</span>
+              <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('sales-main-table', 'sotuvlar_realizatsiya')" style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-weight: 600;">
+                <span>📄</span> <span>${t('btn_export_pdf')}</span>
               </button>
               <button class="btn btn-primary btn-sm" onclick="SalesModule.openNewSaleModal()" style="display: flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
                 <span style="font-size: 16px;">➕</span> <span>${isUz ? 'Yangi sotuv hujjatini rasmiylashtirish' : 'Новая продажа'}</span>

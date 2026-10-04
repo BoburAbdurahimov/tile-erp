@@ -303,6 +303,8 @@ body {
   align-items: center;
   gap: 12px;
   height: 100%;
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
 }
 
@@ -390,6 +392,176 @@ body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Combined Header Dropdown Menu */
+.header-menu {
+  position: relative;
+}
+
+.header-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  padding: 3px 12px 3px 3px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.header-menu-btn:hover,
+.header-menu.open .header-menu-btn {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.header-menu-btn .user-avatar,
+.header-menu-user .user-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--odoo-teal);
+  color: #ffffff;
+  font-size: 12px;
+  border: none;
+}
+
+.header-menu-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-menu-caret {
+  font-size: 11px;
+  opacity: 0.85;
+  transition: transform 0.15s ease;
+}
+
+.header-menu.open .header-menu-caret {
+  transform: rotate(180deg);
+}
+
+.header-menu-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 260px;
+  max-width: calc(100vw - 24px);
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+  padding: 12px;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header-menu.open .header-menu-panel {
+  display: flex;
+}
+
+.header-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-menu-user-name {
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-menu-user-role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.header-menu-panel .fx-rate-pill,
+.header-menu-panel .month-status-pill,
+.header-menu-panel .select-styled {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.header-menu-panel .fx-rate-pill {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: var(--text-main);
+}
+
+.header-menu-panel .fx-rate-pill:hover {
+  background-color: #e2e8f0;
+}
+
+.header-menu-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.header-menu-logout:hover {
+  background: #fee2e2;
+}
+
+/* Medium screens: tighter tabs without icons */
+@media (max-width: 1600px) {
+  .odoo-nav-tab {
+    padding: 0 9px;
+    font-size: 12.5px;
+  }
+
+  .odoo-nav-tab .tab-icon {
+    display: none;
+  }
+}
+
+/* Tabs that don't fit are collapsed into the apps launcher (set by fitHeaderNav in app.js) */
+.top-header.nav-collapsed .odoo-parallel-nav {
+  display: none;
+}
+
+.top-header.nav-collapsed .odoo-brand-title {
+  border-right: none;
+}
+
+@media (max-width: 900px) {
+  .odoo-parallel-nav {
+    display: none;
+  }
+
+  .odoo-brand-title {
+    border-right: none;
+  }
 }
 
 /* FX Rate Indicator in Odoo Header */
@@ -1170,34 +1342,35 @@ body {
   }
 
   .top-header {
-    padding: 10px 14px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    height: auto;
+    padding: 0 10px;
+    height: 54px;
+    position: sticky;
+    top: 0;
   }
 
   .header-left {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .odoo-brand-title {
+    font-size: 14px;
+    padding-right: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .header-right {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
+    margin-left: 8px;
   }
 
-  .fx-rate-pill, .month-status-pill {
-    padding: 4px 8px;
-    font-size: 11px;
+  .header-menu-name {
+    display: none;
   }
 
-  .select-styled {
-    padding: 4px 8px;
-    font-size: 11px;
+  .header-menu-btn {
+    padding: 3px 8px 3px 3px;
+    gap: 4px;
   }
 
   .content-body {

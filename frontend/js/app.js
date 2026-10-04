@@ -230,10 +230,23 @@ function updateUserDisplay() {
     userNameEl.textContent = CURRENT_USER.full_name || CURRENT_USER.username;
   }
 
-  const avatarEl = document.getElementById("current-user-avatar");
-  if (avatarEl && CURRENT_USER) {
-    avatarEl.textContent = (CURRENT_USER.username || "KZ").substring(0, 2).toUpperCase();
-  }
+  const initials = CURRENT_USER ? (CURRENT_USER.username || "KZ").substring(0, 2).toUpperCase() : "KZ";
+  ["current-user-avatar", "header-user-avatar", "header-menu-avatar"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && CURRENT_USER) el.textContent = initials;
+  });
+
+  const displayName = CURRENT_USER ? (CURRENT_USER.full_name || CURRENT_USER.username) : "";
+  ["header-user-name", "header-menu-user-name"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && CURRENT_USER) el.textContent = displayName;
+  });
+
+  const menuRole = document.getElementById("header-menu-user-role");
+  if (menuRole) menuRole.textContent = displayRoleHeader;
+
+  const logoutLabel = document.getElementById("header-logout-label");
+  if (logoutLabel) logoutLabel.textContent = CURRENT_LANG === "uz" ? "Chiqish" : "Выйти";
 
   // Filter Odoo top parallel navigation tabs based on assigned roles
   document.querySelectorAll(".odoo-nav-tab").forEach(tab => {
@@ -259,6 +272,8 @@ function updateUserDisplay() {
     }
   });
 
+  fitHeaderNav();
+
   // Filter Odoo App Launcher cards
   document.querySelectorAll(".odoo-app-card").forEach(card => {
     const onclickAttr = card.getAttribute("onclick") || "";
@@ -268,6 +283,44 @@ function updateUserDisplay() {
     }
   });
 }
+
+// Collapse the top module tabs into the apps launcher when they don't fit the screen
+function fitHeaderNav() {
+  const header = document.querySelector(".top-header");
+  const nav = document.querySelector(".odoo-parallel-nav");
+  if (!header || !nav) return;
+  header.classList.remove("nav-collapsed");
+  if (nav.scrollWidth > nav.clientWidth + 1) header.classList.add("nav-collapsed");
+}
+
+window.addEventListener("resize", fitHeaderNav);
+
+// Combined header dropdown (FX rate, period, language, logout)
+function toggleHeaderMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById("header-menu");
+  if (!menu) return;
+  const open = menu.classList.toggle("open");
+  const btn = document.getElementById("header-menu-btn");
+  if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function closeHeaderMenu() {
+  const menu = document.getElementById("header-menu");
+  if (!menu || !menu.classList.contains("open")) return;
+  menu.classList.remove("open");
+  const btn = document.getElementById("header-menu-btn");
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("header-menu");
+  if (menu && !menu.contains(e.target)) closeHeaderMenu();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeHeaderMenu();
+});
 
 function toggleOdooAppsOverlay() {
   const overlay = document.getElementById("odoo-apps-overlay");
@@ -740,8 +793,9 @@ document.addEventListener("input", (e) => {
   }
 });
 
-// Universal Excel Exporter Utility
-function exportTableToExcel(tableRef, filename = "hisobot") {
+// Universal PDF Exporter Utility
+// Extracts visible rows (expanding multi-item document rows) into plain arrays.
+function collectTableExportData(tableRef) {
   let table = null;
   if (typeof tableRef === "string") {
     table = document.getElementById(tableRef);
@@ -750,12 +804,12 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
       table = document.querySelector("#module-container table.data-table") || document.querySelector("table.data-table");
     }
   } else {
-    table = tableRef;
+    table = tableRef || document.querySelector("#module-container table.data-table") || document.querySelector("table.data-table");
   }
 
   if (!table) {
     showToast(CURRENT_LANG === 'uz' ? "Eksport qilish uchun jadval topilmadi!" : "Таблица для экспорта не найдена!", "error");
-    return;
+    return null;
   }
 
   const theadThs = Array.from(table.querySelectorAll("thead tr:first-child th"));
@@ -772,21 +826,10 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
   });
 
   const rows = Array.from(table.querySelectorAll("tbody tr"));
-  let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-  <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
-  <body>
-  <table border="1">
-    <thead style="background-color: #f1f5f9; font-weight: bold;">
-      <tr>
-        ${headers.map(h => `<th style="background-color: #e2e8f0; padding: 6px 10px;">${escapeHtml(h)}</th>`).join("")}
-      </tr>
-    </thead>
-    <tbody>`;
+  const out = [];
 
-  let visibleCount = 0;
   rows.forEach(tr => {
     if (tr.style.display === "none") return;
-    visibleCount++;
     const cells = Array.from(tr.children);
 
     // Get leaf div elements for each valid column
@@ -800,18 +843,14 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
 
     if (maxSubRows <= 1) {
       // Normal single-item row
-      tableHtml += "<tr>";
-      validColIndices.forEach(idx => {
+      out.push(validColIndices.map(idx => {
         const cell = cells[idx];
-        let val = cell ? (cell.innerText || cell.textContent).trim() : "";
-        tableHtml += `<td style="padding: 6px 10px; vertical-align: middle;">${escapeHtml(val)}</td>`;
-      });
-      tableHtml += "</tr>";
+        return cell ? (cell.innerText || cell.textContent).trim() : "";
+      }));
     } else {
-      // Multi-item document row: expand into individual Excel rows for each item
+      // Multi-item document row: expand into individual rows for each item
       for (let i = 0; i < maxSubRows; i++) {
-        tableHtml += "<tr>";
-        validColIndices.forEach((idx, cIdx) => {
+        out.push(validColIndices.map((idx, cIdx) => {
           const cell = cells[idx];
           const subDivs = colSubDivs[cIdx];
           const colHeader = (headers[cIdx] || "").toLowerCase();
@@ -830,7 +869,7 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
               const h = (headers[k] || "").toLowerCase();
               return h.includes("miqdor") || h.includes("количество") || h.includes("объем");
             })?.[i];
-            
+
             const priceDiv = colSubDivs.find((arr, k) => {
               const h = (headers[k] || "").toLowerCase();
               return h.includes("narx") || h.includes("цена");
@@ -846,31 +885,118 @@ function exportTableToExcel(tableRef, filename = "hisobot") {
               }
             }
           }
-
-          tableHtml += `<td style="padding: 6px 10px; vertical-align: middle;">${escapeHtml(val)}</td>`;
-        });
-        tableHtml += "</tr>";
+          return val;
+        }));
       }
     }
   });
 
-  tableHtml += `</tbody></table></body></html>`;
-
-  if (visibleCount === 0) {
+  if (out.length === 0) {
     showToast(CURRENT_LANG === 'uz' ? "Eksport qilish uchun ma'lumot topilmadi!" : "Нет данных для экспорта!", "warning");
+    return null;
+  }
+
+  return { headers, rows: out };
+}
+
+const HTML2PDF_SRC = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+let html2pdfLoader = null;
+
+function loadHtml2Pdf() {
+  if (window.html2pdf) return Promise.resolve(window.html2pdf);
+  if (!html2pdfLoader) {
+    html2pdfLoader = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = HTML2PDF_SRC;
+      script.async = true;
+      script.onload = () => window.html2pdf ? resolve(window.html2pdf) : reject(new Error("html2pdf not available"));
+      script.onerror = () => {
+        html2pdfLoader = null;
+        reject(new Error("html2pdf failed to load"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return html2pdfLoader;
+}
+
+function buildPdfReportHtml(title, headers, rows) {
+  const dateStr = new Date().toLocaleString(CURRENT_LANG === 'uz' ? "uz-UZ" : "ru-RU");
+  return `
+    <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; padding: 4px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f2b48; padding-bottom: 8px; margin-bottom: 12px;">
+        <div>
+          <div style="font-size: 11px; color: #64748b; font-weight: 600;">🏭 Kafel Zavodi ERP</div>
+          <div style="font-size: 18px; font-weight: 800;">${escapeHtml(title)}</div>
+        </div>
+        <div style="font-size: 10px; color: #64748b; text-align: right;">${escapeHtml(dateStr)}<br>${rows.length} ${CURRENT_LANG === 'uz' ? "ta qator" : "строк"}</div>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+        <thead>
+          <tr>${headers.map(h => `<th style="background: #e2e8f0; border: 1px solid #cbd5e1; padding: 5px 6px; text-align: left; font-weight: 700;">${escapeHtml(h)}</th>`).join("")}</tr>
+        </thead>
+        <tbody>
+          ${rows.map((r, i) => `<tr style="page-break-inside: avoid; background: ${i % 2 ? '#f8fafc' : '#ffffff'};">${r.map(v => `<td style="border: 1px solid #e2e8f0; padding: 4px 6px; vertical-align: top;">${escapeHtml(v)}</td>`).join("")}</tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// Fallback when the PDF library can't load: open the browser print dialog ("Save as PDF").
+function printPdfReportFallback(reportHtml, docTitle) {
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;";
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(docTitle)}</title>
+    <style>@page { size: A4 landscape; margin: 10mm; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style>
+    </head><body>${reportHtml}</body></html>`);
+  doc.close();
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 1000);
+  }, 250);
+}
+
+async function exportTableToPdf(tableRef, filename = "hisobot") {
+  const data = collectTableExportData(tableRef);
+  if (!data) return;
+
+  const isUz = CURRENT_LANG === 'uz';
+  const pageTitleEl = document.getElementById("page-title");
+  const title = (pageTitleEl && pageTitleEl.textContent.trim()) || filename;
+  const fullName = `${filename}_${new Date().toISOString().slice(0, 10)}`;
+  const reportHtml = buildPdfReportHtml(title, data.headers, data.rows);
+  const landscape = data.headers.length > 5;
+
+  showToast(isUz ? "PDF tayyorlanmoqda..." : "Подготовка PDF...", "info");
+
+  let html2pdf;
+  try {
+    html2pdf = await loadHtml2Pdf();
+  } catch (e) {
+    printPdfReportFallback(reportHtml, fullName);
     return;
   }
 
-  // Add UTF-8 BOM (\ufeff) to guarantee proper character rendering in Excel
-  const blob = new Blob(["\ufeff" + tableHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `${filename}_${new Date().toISOString().slice(0, 10)}.xls`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const el = document.createElement("div");
+  el.style.width = landscape ? "1040px" : "710px";
+  el.style.background = "#ffffff";
+  el.innerHTML = reportHtml;
 
-  showToast(CURRENT_LANG === 'uz' ? "Excel fayli muvaffaqiyatli yuklab olindi!" : "Файл Excel успешно скачан!", "success");
+  try {
+    await html2pdf().set({
+      margin: [8, 8, 10, 8],
+      filename: `${fullName}.pdf`,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+      jsPDF: { unit: "mm", format: "a4", orientation: landscape ? "landscape" : "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: "tr" }
+    }).from(el).save();
+    showToast(isUz ? "PDF fayli muvaffaqiyatli yuklab olindi!" : "Файл PDF успешно скачан!", "success");
+  } catch (e) {
+    printPdfReportFallback(reportHtml, fullName);
+  }
 }

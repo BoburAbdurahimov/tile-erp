@@ -15,8 +15,8 @@ const PurchasesModule = {
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToExcel('purchases-main-table', 'xaridlar_zakup')" style="display: flex; align-items: center; gap: 6px;">
-              <span>📊</span> <span>${t('btn_export_excel')}</span>
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('purchases-main-table', 'xaridlar_zakup')" style="display: flex; align-items: center; gap: 6px;">
+              <span>📄</span> <span>${t('btn_export_pdf')}</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="PurchasesModule.openNewPurchaseModal()" style="display: flex; align-items: center; gap: 6px;">
               <span>➕</span> <span>${CURRENT_LANG === 'uz' ? 'Yangi xarid' : 'Новая закупка'}</span>
