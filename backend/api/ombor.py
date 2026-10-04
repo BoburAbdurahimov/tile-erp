@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import StockItem, Warehouse, MDMMaterial, StockTransfer
 from backend.schemas import StockItemResponse, StockAdjustmentRequest, StockTransferCreate, StockTransferResponse
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services.inventory_service import adjust_stock_manual, transfer_stock_between_warehouses
 from backend.services.reports_service import generate_stock_excel
 
@@ -70,7 +70,7 @@ def adjust_stock(
         new_quantity=payload.new_quantity,
         reason=payload.reason,
         user_role=role,
-        username="admin" if role == "Admin" else "user"
+        username="admin" if is_admin(role) else "user"
     )
     return {
         "status": "success",

@@ -10,7 +10,7 @@ from backend.schemas import (
     CashRegisterResponse, CashTransactionCreate, CashTransactionResponse,
     ExchangeRateCreate, ExchangeRateResponse
 )
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services.currency_service import (
     get_exchange_rate_for_date, set_manual_exchange_rate,
     fetch_cbu_rate_today, convert_amount
@@ -193,8 +193,8 @@ def delete_cash_transaction(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if role == "Admin" else "kassa", role)
-    if role != "Admin":
+    check_permission("admin_tools" if is_admin(role) else "kassa", role)
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     tx = db.query(CashTransaction).filter(CashTransaction.id == transaction_id).first()
     if not tx:
@@ -249,7 +249,7 @@ def set_exchange_rate(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("kassa", role)
-    if role != "Admin":
+    if not is_admin(role):
         raise HTTPException(status_code=403, detail="Valyuta kursini qo'lda o'zgartirish faqat Admin uchun ruxsat etilgan!")
         
     rate = set_manual_exchange_rate(db, payload.date, payload.rate_usd_uzs)

@@ -9,7 +9,7 @@ from backend.schemas import (
     PnLReportResponse, CashFlowReportResponse,
     MonthCloseRequest, MonthReopenRequest
 )
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services.reports_service import get_pnl_report, get_cash_flow_report
 from backend.services.month_close_service import close_month, reopen_month
 
@@ -65,7 +65,7 @@ def close_month_action(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("moliya", role)
-    if role != "Admin":
+    if not is_admin(role):
         raise HTTPException(
             status_code=403,
             detail="Oyni yopish (Month-End Closing) faqat Admin roli uchun ruxsat etilgan!"

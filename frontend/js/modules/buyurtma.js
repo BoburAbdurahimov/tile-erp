@@ -118,10 +118,6 @@ const OrdersModule = {
               ${this.isAdmin() ? `
               <button class="btn btn-secondary btn-sm" onclick="OrdersModule.loadDemo()"
                 style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">${isUz ? "Demo yuklash" : "Загрузить демо"}</button>` : ""}
-              <button class="btn btn-secondary btn-sm" onclick="OrdersModule.openLegacy()"
-                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">
-                ${isUz ? "Eski sotuv hujjatlari" : "Старые документы продаж"}
-              </button>
               <button class="btn btn-primary btn-sm" onclick="OrdersModule.openNewOrder()"
                 style="padding:9px 16px;border-radius:8px;font-weight:700;">
                 + ${isUz ? "Yangi buyurtma" : "Новый заказ"}

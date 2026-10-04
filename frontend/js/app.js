@@ -119,42 +119,101 @@ function checkAuthAndInitialize() {
   if (typeof refreshOrderBadge === "function") refreshOrderBadge();
 }
 
+// Login is two steps when the user has Telegram linked: password, then the
+// one-time code the bot sends. Without a linked Telegram it is one step.
+let loginChallengeId = null;
+
+function setLoginOtpStep(on, hint = "") {
+  const step = document.getElementById("login-otp-step");
+  const userInput = document.getElementById("login-username");
+  const passInput = document.getElementById("login-password");
+  if (step) step.style.display = on ? "block" : "none";
+  [userInput, passInput].forEach(el => {
+    if (el) el.closest("div[style*='margin-bottom']").style.display = on ? "none" : "block";
+  });
+  const hintEl = document.getElementById("login-otp-hint");
+  if (hintEl) hintEl.textContent = hint;
+  const otp = document.getElementById("login-otp");
+  if (otp) { otp.value = ""; otp.required = on; if (on) setTimeout(() => otp.focus(), 50); }
+  const btn = document.getElementById("login-btn");
+  if (btn) btn.textContent = on ? "Tasdiqlash" : "Tizimga kirish";
+  if (!on) loginChallengeId = null;
+}
+
+function showLoginError(msg) {
+  const errorMsg = document.getElementById("login-error-msg");
+  if (!errorMsg) return;
+  errorMsg.textContent = msg;
+  errorMsg.style.display = msg ? "block" : "none";
+}
+
+function finishLogin(res) {
+  setAuthSession(res.user, res.token);
+  setLoginOtpStep(false);
+  const pass = document.getElementById("login-password");
+  if (pass) pass.value = "";
+  showToast(`Xush kelibsiz, ${res.user.full_name || res.user.username}!`, "success");
+  checkAuthAndInitialize();
+}
+
+async function requestLogin() {
+  const username = (document.getElementById("login-username")?.value || "").trim();
+  const password = document.getElementById("login-password")?.value || "";
+  if (!username || !password) return;
+  const res = await API.login(username, password);
+  if (res && res.otp_required) {
+    loginChallengeId = res.challenge_id;
+    setLoginOtpStep(true, `Telegram'ga 6 xonali kod yuborildi${res.sent_to ? ` (${res.sent_to})` : ""}. Kod 5 daqiqa amal qiladi.`);
+  } else if (res && res.success) {
+    finishLogin(res);
+  }
+}
+
 async function handleLoginSubmit(event) {
   event.preventDefault();
-  const usernameInput = document.getElementById("login-username");
-  const passwordInput = document.getElementById("login-password");
-  const errorMsg = document.getElementById("login-error-msg");
   const loginBtn = document.getElementById("login-btn");
-
-  const username = usernameInput ? usernameInput.value.trim() : "";
-  const password = passwordInput ? passwordInput.value : "";
-
-  if (!username || !password) return;
-
-  if (errorMsg) errorMsg.style.display = "none";
+  const label = loginBtn ? loginBtn.textContent : "";
+  showLoginError("");
   if (loginBtn) {
     loginBtn.disabled = true;
     loginBtn.textContent = "Tekshirilmoqda...";
   }
-
   try {
-    const res = await API.login(username, password);
-    if (res && res.success) {
-      setAuthSession(res.user, res.token);
-      showToast(`Xush kelibsiz, ${res.user.full_name || res.user.username}!`, "success");
-      checkAuthAndInitialize();
+    if (loginChallengeId) {
+      const code = (document.getElementById("login-otp")?.value || "").trim();
+      if (code.length !== 6) throw new Error("6 xonali kodni kiriting.");
+      finishLogin(await API.verifyOtp(loginChallengeId, code));
+    } else {
+      await requestLogin();
     }
   } catch (err) {
-    if (errorMsg) {
-      errorMsg.textContent = err.message || "Login yoki parol noto'g'ri!";
-      errorMsg.style.display = "block";
-    }
+    showLoginError(err.message || "Login yoki parol noto'g'ri!");
+    // An expired or exhausted code means starting over from the password.
+    if (/muddati|Qaytadan kiring/.test(err.message || "")) setLoginOtpStep(false);
   } finally {
     if (loginBtn) {
       loginBtn.disabled = false;
-      loginBtn.textContent = "Tizimga kirish";
+      loginBtn.textContent = loginChallengeId ? "Tasdiqlash" : (label === "Tekshirilmoqda..." ? "Tizimga kirish" : label);
+      if (!loginChallengeId) loginBtn.textContent = "Tizimga kirish";
     }
   }
+}
+
+async function resendLoginOtp(event) {
+  if (event) event.preventDefault();
+  showLoginError("");
+  try {
+    await requestLogin();
+    showToast("Yangi kod yuborildi", "success");
+  } catch (err) {
+    showLoginError(err.message);
+  }
+}
+
+function cancelLoginOtp(event) {
+  if (event) event.preventDefault();
+  showLoginError("");
+  setLoginOtpStep(false);
 }
 
 function logout() {

@@ -328,6 +328,18 @@ class TelegramUser(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class LoginChallenge(Base):
+    """A pending two-step login: password accepted, Telegram code not yet."""
+    __tablename__ = "login_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    code_hash = Column(String(64), nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     

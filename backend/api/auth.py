@@ -1,16 +1,21 @@
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
+import hmac
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import (
-    User, TelegramUser, MDMMaterial, MDMCounterparty, StockItem,
+    User, TelegramUser, LoginChallenge, MDMMaterial, MDMCounterparty, StockItem,
     ProductionConsumedMaterial, ProductionOrder, SaleItem, Sale,
     PurchaseItem, Purchase, CashTransaction, CashRegister,
     AttendanceEntry, WorkEntry, MonthlySalaryCalculation
 )
-from backend.auth_utils import hash_password, verify_password
+from backend.auth_utils import (
+    hash_password, verify_password, create_token, decode_token,
+    new_otp_code, hash_otp, OTP_TTL_SECONDS, OTP_MAX_ATTEMPTS,
+)
+from backend.services import telegram_otp
 
 router = APIRouter(prefix="/auth", tags=["Authentication & User Management"])
 
@@ -58,8 +63,29 @@ def get_combined_permissions(role_str: str) -> List[str]:
             perms.add(p)
     return list(perms)
 
-def get_current_user_role(x_user_role: str = Header(default="Admin")) -> str:
-    return x_user_role
+def is_admin(role_str: str) -> bool:
+    return "Admin" in parse_roles(role_str)
+
+def get_current_user(
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User:
+    """The logged-in user, from a signed Bearer token. 401 otherwise."""
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    data = decode_token(token)
+    if not data:
+        raise HTTPException(status_code=401, detail="Tizimga qayta kiring (sessiya tugagan).")
+    user = db.query(User).filter(User.id == data.get("uid")).first()
+    if not user or user.is_archived or not user.is_active:
+        raise HTTPException(status_code=401, detail="Foydalanuvchi faol emas. Tizimga qayta kiring.")
+    return user
+
+def get_current_user_role(user: User = Depends(get_current_user)) -> str:
+    """The role always comes from the database, never from the browser."""
+    return user.role or ""
+
+def get_current_username(user: User = Depends(get_current_user)) -> str:
+    return user.username
 
 def check_permission(module: str, role_str: str):
     roles = parse_roles(role_str)
@@ -98,22 +124,10 @@ class TelegramUserApproveRequest(BaseModel):
 
 # ==================== AUTH ENDPOINTS ====================
 
-@router.post("/login")
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username.ilike(payload.username.strip())).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="Login yoki parol noto'g'ri!")
-    
-    if user.is_archived or not user.is_active:
-        raise HTTPException(status_code=403, detail="Ushbu foydalanuvchi hisobi nofaol yoki arxivlangan!")
-
-    if not verify_password(payload.password, user.password_hash or ""):
-        raise HTTPException(status_code=400, detail="Login yoki parol noto'g'ri!")
-
-    token = f"erp_token_{user.id}_{int(datetime.utcnow().timestamp())}"
+def _session(user: User) -> dict:
     return {
         "success": True,
-        "token": token,
+        "token": create_token(user.id, user.username),
         "user": {
             "id": user.id,
             "username": user.username,
@@ -124,6 +138,79 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "permissions": get_combined_permissions(user.role)
         }
     }
+
+def _mask_phone(phone: str) -> str:
+    digits = "".join(ch for ch in str(phone or "") if ch.isdigit())
+    return f"+{digits[:3]} ** ***-**-{digits[-2:]}" if len(digits) >= 9 else ""
+
+@router.post("/login")
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username.ilike(payload.username.strip())).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Login yoki parol noto'g'ri!")
+
+    if user.is_archived or not user.is_active:
+        raise HTTPException(status_code=403, detail="Ushbu foydalanuvchi hisobi nofaol yoki arxivlangan!")
+
+    if not verify_password(payload.password, user.password_hash or ""):
+        raise HTTPException(status_code=400, detail="Login yoki parol noto'g'ri!")
+
+    # Second step: a one-time code sent to the user's Telegram. Users with no
+    # Telegram linked by phone (or no bot configured) sign in by password.
+    tg = telegram_otp.find_telegram_chat(db, user) if telegram_otp.can_send() else None
+    if not tg:
+        return _session(user)
+
+    challenge = LoginChallenge(
+        user_id=user.id,
+        expires_at=datetime.utcnow() + timedelta(seconds=OTP_TTL_SECONDS),
+    )
+    db.add(challenge)
+    db.flush()
+    code = new_otp_code()
+    challenge.code_hash = hash_otp(challenge.id, code)
+    db.commit()
+
+    if not telegram_otp.send_code(tg.telegram_id, code, tg.language or "uz"):
+        challenge.used = True
+        db.commit()
+        raise HTTPException(status_code=502, detail="Telegram kodini yuborib bo'lmadi. Birozdan keyin qayta urinib ko'ring.")
+
+    return {
+        "success": True,
+        "otp_required": True,
+        "challenge_id": challenge.id,
+        "sent_to": _mask_phone(tg.phone_number),
+        "expires_in": OTP_TTL_SECONDS,
+    }
+
+class OtpVerifyRequest(BaseModel):
+    challenge_id: int
+    code: str
+
+@router.post("/verify-otp")
+def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)):
+    ch = db.query(LoginChallenge).filter(LoginChallenge.id == payload.challenge_id).first()
+    if not ch or ch.used or ch.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Kod muddati tugagan. Qaytadan kiring.")
+    if (ch.attempts or 0) >= OTP_MAX_ATTEMPTS:
+        ch.used = True
+        db.commit()
+        raise HTTPException(status_code=429, detail="Urinishlar ko'p bo'ldi. Qaytadan kiring.")
+
+    ch.attempts = (ch.attempts or 0) + 1
+    code = "".join(c for c in (payload.code or "") if c.isdigit())
+    if not ch.code_hash or not hmac.compare_digest(ch.code_hash, hash_otp(ch.id, code)):
+        db.commit()
+        left = OTP_MAX_ATTEMPTS - ch.attempts
+        raise HTTPException(status_code=400, detail=f"Kod noto'g'ri. Yana {left} ta urinish qoldi.")
+
+    ch.used = True
+    user = db.query(User).filter(User.id == ch.user_id).first()
+    db.commit()
+    if not user or user.is_archived or not user.is_active:
+        raise HTTPException(status_code=403, detail="Ushbu foydalanuvchi hisobi nofaol yoki arxivlangan!")
+    return _session(user)
 
 @router.get("/roles")
 def list_roles():
@@ -141,16 +228,18 @@ def list_roles():
     ]
 
 @router.get("/current")
-def get_current_status(role: str = Depends(get_current_user_role)):
+def get_current_status(user: User = Depends(get_current_user)):
     return {
-        "role": role,
-        "permissions": ROLE_PERMISSIONS.get(role, [])
+        "username": user.username,
+        "role": user.role,
+        "permissions": get_combined_permissions(user.role)
     }
 
 # ==================== USER MANAGEMENT (ADMIN ONLY) ====================
 
 @router.get("/users")
 def get_users(include_archived: bool = True, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    check_permission("users", role)
     query = db.query(User)
     if not include_archived:
         query = query.filter(User.is_archived == False)
@@ -172,6 +261,7 @@ def get_users(include_archived: bool = True, db: Session = Depends(get_db), role
 
 @router.post("/users")
 def create_user(payload: UserCreateRequest, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    check_permission("users", role)
     # Check if username exists
     existing = db.query(User).filter(User.username.ilike(payload.username.strip())).first()
     if existing:
@@ -203,6 +293,7 @@ def create_user(payload: UserCreateRequest, db: Session = Depends(get_db), role:
 
 @router.put("/users/{user_id}")
 def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    check_permission("users", role)
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi!")
@@ -243,6 +334,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
 @router.put("/users/{user_id}/toggle-archive")
 @router.post("/users/{user_id}/archive")
 def toggle_archive_user(user_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    check_permission("users", role)
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi!")
@@ -261,6 +353,7 @@ def toggle_archive_user(user_id: int, db: Session = Depends(get_db), role: str =
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    check_permission("users", role)
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Foydalanuvchi topilmadi!")
@@ -279,6 +372,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db), role: str = Depends
 
 @router.get("/telegram-users")
 def get_telegram_users(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    check_permission("users", role)
     users = db.query(TelegramUser).order_by(TelegramUser.created_at.desc()).all()
     return [
         {
@@ -303,6 +397,7 @@ def approve_telegram_user(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
+    check_permission("users", role)
     user = db.query(TelegramUser).filter(TelegramUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Telegram foydalanuvchisi topilmadi!")
@@ -326,6 +421,7 @@ def delete_telegram_user(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
+    check_permission("users", role)
     user = db.query(TelegramUser).filter(TelegramUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Telegram foydalanuvchisi topilmadi!")

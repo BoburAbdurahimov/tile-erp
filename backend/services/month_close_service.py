@@ -36,7 +36,7 @@ def close_month(db: Session, year_month: str, username: str, notes: str = None) 
     return existing
 
 def reopen_month(db: Session, year_month: str, user_role: str) -> MonthClosing:
-    if user_role != "Admin":
+    if "Admin" not in [r.strip() for r in str(user_role or "").split(",")]:
         raise HTTPException(
             status_code=403,
             detail="Faqat Admin roli yopilgan oyni qayta ochish (Re-open) huquqiga ega!"
