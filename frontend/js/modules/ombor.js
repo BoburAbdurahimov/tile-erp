@@ -8,9 +8,9 @@ const OmborModule = {
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
           <div>
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-<span>${t('mod_ombor_title')}</span>
+<span>${t('nav_xomashyo')}</span>
             </h2>
-            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t('mod_ombor_sub')}</p>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${CURRENT_LANG === 'uz' ? "Xomashyo, ehtiyot qismlar va yordamchi materiallar qoldig'i. Tayyor kafel «Ombor» bo'limida." : "Остатки сырья, запчастей и вспомогательных материалов. Готовая плитка — в разделе «Склад»."}</p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-primary btn-sm" onclick="OmborModule.openTransferModal()" style="background: #2563eb; color: #ffffff; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
@@ -35,9 +35,6 @@ const OmborModule = {
         <div class="tabs-nav" id="warehouse-tabs" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
           <button class="tab-btn active" onclick="OmborModule.filterWarehouse(null, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid #2563eb; color: #2563eb;">
             ${CURRENT_LANG === 'uz' ? 'Barcha Omborlar' : 'Все Склады'}
-          </button>
-          <button class="tab-btn" onclick="OmborModule.filterWarehouse(1, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            ${CURRENT_LANG === 'uz' ? '1: Tayyor mahsulotlar' : '1: Готовая продукция'}
           </button>
           <button class="tab-btn" onclick="OmborModule.filterWarehouse(2, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
             ${CURRENT_LANG === 'uz' ? '2: Ishlab chiqarish materiallari' : '2: Материалы для производства'}
@@ -110,7 +107,8 @@ const OmborModule = {
 
     try {
       const rawStock = await API.getStockBalances(this.currentWarehouseId, "", "");
-      const stock = (rawStock || []).filter(s => s.quantity > 0);
+      // Finished tiles are kept in the Ombor (owner + size), not here.
+      const stock = (rawStock || []).filter(s => s.quantity > 0 && s.material_category !== "Tayyor mahsulot");
       
       let grandTotalUsd = 0;
       let grandTotalUzs = 0;
@@ -279,7 +277,6 @@ const OmborModule = {
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${CURRENT_LANG === 'uz' ? 'Qaysi Ombordan (Manba)' : 'Из какого склада'} *</label>
               <select id="tr-from-wh" class="form-control" required onchange="OmborModule.populateMaterialsForTransfer()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                <option value="1">1: Tayyor mahsulotlar</option>
                 <option value="2">2: Ishlab chiqarish materiallari</option>
                 <option value="3">3: Aralash ombor</option>
               </select>
@@ -287,9 +284,8 @@ const OmborModule = {
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${CURRENT_LANG === 'uz' ? 'Qaysi Omborga (Maqsad)' : 'В какой склад'} *</label>
               <select id="tr-to-wh" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                <option value="2" selected>2: Ishlab chiqarish materiallari</option>
-                <option value="1">1: Tayyor mahsulotlar</option>
-                <option value="3">3: Aralash ombor</option>
+                <option value="2">2: Ishlab chiqarish materiallari</option>
+                <option value="3" selected>3: Aralash ombor</option>
               </select>
             </div>
           </div>
@@ -493,7 +489,6 @@ const OmborModule = {
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_warehouse')} *</label>
             <select id="adj-wh" class="form-control" required onchange="OmborModule.populateMaterialsForAdjust()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
-              <option value="1">1: Tayyor mahsulotlar</option>
               <option value="2" selected>2: Ishlab chiqarish uchun materiallar</option>
               <option value="3">3: Aralash ombor</option>
             </select>

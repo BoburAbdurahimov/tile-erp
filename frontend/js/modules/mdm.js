@@ -113,7 +113,8 @@ const MdmModule = {
 
     try {
       if (this.currentTab === "materials") {
-        const materials = await API.getMaterials(null, true);
+        // Finished tiles are managed in the Ombor (see the "Tayyor mahsulot" tab).
+        const materials = (await API.getMaterials(null, true)).filter(m => m.category !== "Tayyor mahsulot");
         tableDiv.innerHTML = `
           <div class="table-container" style="overflow-x: auto;">
             <table class="data-table" id="mdm-materials-table" style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -272,7 +273,6 @@ const MdmModule = {
                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_category')}</label>
                 <select id="mat-category" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
                   <option value="Xomashyo">${CURRENT_LANG === 'uz' ? 'Xomashyo' : 'Сырье'}</option>
-                  <option value="Tayyor mahsulot">${CURRENT_LANG === 'uz' ? 'Tayyor mahsulot' : 'Готовая продукция'}</option>
                   <option value="Ehtiyot qism">${CURRENT_LANG === 'uz' ? 'Ehtiyot qism' : 'Запчасти'}</option>
                   <option value="Yordamchi">${CURRENT_LANG === 'uz' ? 'Yordamchi material' : 'Вспомогательные материалы'}</option>
                 </select>

@@ -155,7 +155,8 @@ const PurchasesModule = {
     ]);
 
     this.suppliersList = suppliers || [];
-    this.rawMaterialsList = materials || [];
+    // Finished tiles come in through the Ombor (Kirim / production), not here.
+    this.rawMaterialsList = (materials || []).filter(m => m.category !== "Tayyor mahsulot");
     this.stockBalances = stockBalances || [];
 
     const isUz = CURRENT_LANG === 'uz';
@@ -203,7 +204,7 @@ const PurchasesModule = {
                 ${isUz ? 'Qabul qiluvchi ombor *' : 'Склад поступления *'}
               </label>
               <select id="pur-warehouse" class="form-control" onchange="PurchasesModule.onWarehouseChange(this)" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;" required>
-                ${warehouses.map(w => `<option value="${w.id}" ${w.id === 2 ? 'selected' : ''}>${tr(w.name)}</option>`).join("")}
+                ${warehouses.filter(w => w.id !== 1).map(w => `<option value="${w.id}" ${w.id === 2 ? 'selected' : ''}>${tr(w.name)}</option>`).join("")}
               </select>
             </div>
             <div>
