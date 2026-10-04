@@ -491,6 +491,7 @@ SKLAD_CONFIG = [
 SKLAD_OP_IN = "PRIXOD"      # goods received
 SKLAD_OP_OUT = "RASXOD"     # goods sold
 SKLAD_OP_CLEAR = "CLEAR"
+SKLAD_OP_STORNO = "STORNO"  # a receipt taken back (e.g. production storno)
 
 # How a sale is priced.
 SELL_TYPE_METR = "metr"     # linear metres: (length + width) / 100

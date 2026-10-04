@@ -52,6 +52,7 @@ class DeliverRequest(BaseModel):
     driver_name: Optional[str] = None
     driver_phone: str
     note: Optional[str] = None
+    sklad_id: Optional[int] = None   # ship from another owner (same eni)
 
 
 class PayRequest(BaseModel):
@@ -120,6 +121,13 @@ def clear_demo(db: Session = Depends(get_db), role: str = Depends(get_current_us
     return demo_service.clear_demo(db)
 
 
+@router.get("/{order_id}/delivery-options")
+def delivery_options(order_id: int, db: Session = Depends(get_db),
+                     role: str = Depends(get_current_user_role)):
+    check_permission("sotish", role)
+    return _guard(lambda: svc.delivery_options(db, order_id))
+
+
 @router.get("/{order_id}")
 def get_order(order_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
     check_permission("sotish", role)
@@ -155,6 +163,7 @@ def deliver(order_id: int, payload: DeliverRequest, db: Session = Depends(get_db
     _guard(lambda: svc.deliver_order(
         db, order_id, payload.car_number, payload.driver_name,
         payload.driver_phone, payload.note, created_by=role,
+        sklad_id=payload.sklad_id,
     ))
     return svc.get_order(db, order_id)
 

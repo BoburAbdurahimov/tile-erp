@@ -428,9 +428,11 @@ const OrdersModule = {
         <div style="display:flex;gap:6px;flex-wrap:wrap;">${this.itemChips(o)}</div>
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
           <span style="font-weight:700;color:#0f172a;">${this.money(o.total_amount)} · ${escapeHtml(o.sklad_label)}</span>
-          <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})" ${o.shortfall_pieces > 0 ? "disabled title='" + (isUz ? "Omborda yetarli emas" : "Не хватает на складе") + "'" : ""}
-            style="background:${o.shortfall_pieces > 0 ? "#94a3b8" : "#059669"};color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:${o.shortfall_pieces > 0 ? "not-allowed" : "pointer"};">
-            ${o.shortfall_pieces > 0 ? (isUz ? `${o.shortfall_pieces} ta yetmaydi` : `Не хватает ${o.shortfall_pieces}`) : "" + (isUz ? "Yetkazildi deb belgilash" : "Отметить доставку")}
+          <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})"
+            style="background:${o.shortfall_pieces > 0 ? "#d97706" : "#059669"};color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">
+            ${o.shortfall_pieces > 0
+              ? (isUz ? `${o.shortfall_pieces} ta yetmaydi — boshqa ombor` : `Не хватает ${o.shortfall_pieces} — другой склад`)
+              : (isUz ? "Yetkazildi deb belgilash" : "Отметить доставку")}
           </button>
         </div>
       </div>`;
@@ -770,22 +772,52 @@ const OrdersModule = {
 
   find(id) { return this.orders.find(o => o.id === id); },
 
-  openDeliver(id) {
+  async openDeliver(id) {
     const isUz = this.isUz();
     const o = this.find(id);
     if (!o) return;
+    let options = [];
+    try {
+      options = (await API.getDeliveryOptions(id)).options || [];
+    } catch (e) {
+      showToast(e.message, "error");
+      return;
+    }
+    // Default to the order's own warehouse if it can ship, else the first that can.
+    const pick = options.find(op => op.is_order_sklad && op.can_ship) || options.find(op => op.can_ship)
+      || options.find(op => op.is_order_sklad) || options[0];
     const f = "width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13.5px;box-sizing:border-box;";
     const l = "display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;";
-    const warn = o.shortfall_pieces > 0
-      ? `<div style="padding:10px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;font-weight:600;">
-           ${isUz ? `Omborda ${o.shortfall_pieces} ta yetmaydi — avval ishlab chiqaring.` : `Не хватает ${o.shortfall_pieces} шт — сначала произведите.`}</div>` : "";
+    const card = op => {
+      const short = op.lines.filter(x => x.shortfall > 0)
+        .map(x => `${x.code}: ${isUz ? "yetmaydi" : "не хватает"} ${x.shortfall}`).join(", ");
+      return `
+        <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;cursor:pointer;
+                      border:2px solid ${op.can_ship ? "#bbf7d0" : "#fecaca"};background:${op.can_ship ? "#f0fdf4" : "#fef2f2"};">
+          <input type="radio" name="dlv-sklad" value="${op.sklad_id}" ${pick && op.sklad_id === pick.sklad_id ? "checked" : ""}
+            style="width:18px;height:18px;margin-top:2px;" onchange="OrdersModule.onDeliverySkladChange()">
+          <span style="flex:1;">
+            <b style="font-size:14px;">${escapeHtml(op.name)}</b>
+            <span style="color:#64748b;font-size:12px;">(${isUz ? "eni" : "ширина"} ${op.eni})</span>
+            ${op.is_order_sklad ? `<span style="font-size:11px;font-weight:700;color:#2563eb;margin-left:4px;">${isUz ? "buyurtma ombori" : "склад заказа"}</span>` : ""}
+            <span style="display:block;font-size:12px;font-weight:600;color:${op.can_ship ? "#15803d" : "#b91c1c"};">
+              ${op.can_ship ? (isUz ? "Hammasi bor" : "Всё в наличии") : escapeHtml(short)}
+            </span>
+          </span>
+        </label>`;
+    };
     showModal(`${isUz ? "Yetkazib berish" : "Доставка"} — ${o.order_number}`, `
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px;">
           <b>${escapeHtml(o.client_name)}</b> · ${escapeHtml(o.client_phone)}${o.client_address ? " · " + escapeHtml(o.client_address) : ""}<br>
           ${o.items.map(it => `${it.code} × ${it.quantity}`).join(", ")} · <b>${this.money(o.total_amount)}</b>
         </div>
-        ${warn}
+        <div>
+          <label style="${l}">${isUz ? "Qaysi ombordan yuboriladi?" : "С какого склада отправить?"}</label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">
+            ${options.map(card).join("")}
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
           <div><label style="${l}">${isUz ? "Mashina raqami" : "Номер машины"} *</label>
             <input id="dlv-car" style="${f}text-transform:uppercase;" placeholder="01 A 123 BC"></div>
@@ -795,18 +827,37 @@ const OrdersModule = {
             <input id="dlv-phone" type="tel" style="${f}" placeholder="+998 90 123 45 67"></div>
         </div>
         <div><label style="${l}">${isUz ? "Izoh" : "Примечание"}</label><input id="dlv-note" style="${f}"></div>
-        <p style="margin:0;font-size:12px;color:#64748b;">${isUz ? "Saqlanganda mahsulot Ombordan chiqim qilinadi." : "При сохранении товар списывается со склада."}</p>
+        <p style="margin:0;font-size:12px;color:#64748b;">${isUz ? "Saqlanganda mahsulot tanlangan ombordan chiqim qilinadi." : "При сохранении товар списывается с выбранного склада."}</p>
       </div>`, async () => {
         const v = id => (document.getElementById(id)?.value || "").trim();
+        const chosen = parseInt(document.querySelector("input[name='dlv-sklad']:checked")?.value || "0", 10);
+        const opt = options.find(op => op.sklad_id === chosen);
+        if (!opt) {
+          showToast(isUz ? "Omborni tanlang" : "Выберите склад", "error");
+          return false;
+        }
+        if (!opt.can_ship) {
+          showToast(isUz ? `${opt.name} omborida yetarli mahsulot yo'q` : `На складе ${opt.name} недостаточно товара`, "error");
+          return false;
+        }
         if (!v("dlv-car") || !v("dlv-phone")) {
           showToast(isUz ? "Mashina raqami va haydovchi telefonini kiriting" : "Укажите номер машины и телефон водителя", "error");
           return false;
         }
-        await API.deliverOrder(id, { car_number: v("dlv-car"), driver_name: v("dlv-driver") || null, driver_phone: v("dlv-phone"), note: v("dlv-note") || null });
-        showToast(isUz ? "Yetkazildi. Endi to'lovni qabul qiling." : "Доставлено. Теперь примите оплату.", "success");
+        await API.deliverOrder(id, {
+          car_number: v("dlv-car"), driver_name: v("dlv-driver") || null, driver_phone: v("dlv-phone"),
+          note: v("dlv-note") || null, sklad_id: chosen,
+        });
+        showToast(isUz ? `Yetkazildi (${opt.name}). Endi to'lovni qabul qiling.` : `Доставлено (${opt.name}). Теперь примите оплату.`, "success");
         await this.reload();
         return true;
       });
+  },
+
+  onDeliverySkladChange() {
+    document.querySelectorAll("input[name='dlv-sklad']").forEach(r => {
+      r.closest("label").style.outline = r.checked ? "2px solid #2563eb" : "none";
+    });
   },
 
   openPay(id) {

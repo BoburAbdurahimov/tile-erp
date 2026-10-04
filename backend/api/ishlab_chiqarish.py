@@ -171,6 +171,8 @@ def create_production_order(
     # backwards compatibility, to the legacy product stock.
     out_length = out_width = None
     if payload.out_sklad_id:
+        if payload.quantity != int(payload.quantity):
+            raise HTTPException(status_code=400, detail="Omborga chiqarilganda miqdor butun dona bo'lishi kerak.")
         if not sklad_svc.get_config(payload.out_sklad_id):
             raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
         try:
@@ -496,8 +498,23 @@ def storno_production_order(
         
     assert_month_open(db, order.date)
 
-    # 1. Deduct output finished goods from Warehouse 1
-    deduct_stock(db, 1, order.output_material_id, order.quantity)
+    # 1. Take the finished goods back out of stock
+    if order.out_sklad_id and order.out_length is not None:
+        try:
+            sklad_svc.reverse_receipt(
+                db,
+                sklad_id=order.out_sklad_id,
+                length=order.out_length,
+                width=order.out_width,
+                quantity=int(order.quantity),
+                client_name=f"Storno {order.order_number}",
+                created_by=role,
+            )
+        except sklad_svc.SkladError as e:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        deduct_stock(db, 1, order.output_material_id, order.quantity)
 
     # 2. Return consumed raw materials back to warehouses
     for c in order.consumed_materials:
@@ -524,7 +541,10 @@ def storno_production_order(
         total_cost_usd=-order.total_cost_usd,
         unit_cost_usd=order.unit_cost_usd,
         storno_ref_id=order.id,
-        notes=f"Stornolangan buyurtma: {order.order_number}"
+        notes=f"Stornolangan buyurtma: {order.order_number}",
+        out_sklad_id=order.out_sklad_id,
+        out_length=order.out_length,
+        out_width=order.out_width,
     )
     db.add(mirror_order)
 

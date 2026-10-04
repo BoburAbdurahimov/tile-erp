@@ -15,6 +15,7 @@ const I18N = {
     nav_finance: "Moliya",
     nav_salary: "Ish haqi",
     nav_users: "Foydalanuvchilar",
+    nav_history: "Tarix",
     users_title: "Foydalanuvchilar va Rollar",
     
     // Header
@@ -77,7 +78,7 @@ const I18N = {
     
     // Module Titles & Subtitles
     mod_mdm_title: "MDM: Ma'lumotnomalar va Asosiy Ma'lumotlar",
-    mod_mdm_sub: "Materiallar, xomashyo, mijozlar va yetkazib beruvchilar ma'lumotnomasi",
+    mod_mdm_sub: "Materiallar, xomashyo, yetkazib beruvchilar va omborlar ma'lumotnomasi",
     mod_ombor_title: "Ombor hisobi va Materiallar qoldig'i",
     mod_ombor_sub: "Real vaqtdagi xomashyo va tayyor mahsulotlar skladi",
     mod_kassa_title: "Kassa hisobi va Pul oqimi",
@@ -134,6 +135,7 @@ const I18N = {
     nav_finance: "Финансы",
     nav_salary: "Зарплата",
     nav_users: "Пользователи",
+    nav_history: "История",
     users_title: "Пользователи и Роли",
     
     // Header
@@ -196,7 +198,7 @@ const I18N = {
     
     // Module Titles & Subtitles
     mod_mdm_title: "MDM: Справочники и Мастер-данные",
-    mod_mdm_sub: "Справочники материалов, сырья, клиентов и поставщиков",
+    mod_mdm_sub: "Справочники материалов, сырья, поставщиков и складов",
     mod_ombor_title: "Складской учет и Остатки материалов",
     mod_ombor_sub: "Учет сырья и готовой продукции в реальном времени",
     mod_kassa_title: "Учет денежных средств (Касса)",

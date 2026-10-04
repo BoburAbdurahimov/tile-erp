@@ -31,9 +31,6 @@ const MdmModule = {
           <button class="tab-btn ${this.currentTab === 'tayyor' ? 'active' : ''}" onclick="MdmModule.switchTab('tayyor')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'tayyor' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'tayyor' ? '#2563eb' : '#64748b'};">
             ${CURRENT_LANG === 'uz' ? "Tayyor mahsulot (Ombor)" : "Готовая продукция (Склад)"}
           </button>
-          <button class="tab-btn ${this.currentTab === 'clients' ? 'active' : ''}" onclick="MdmModule.switchTab('clients')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'clients' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'clients' ? '#2563eb' : '#64748b'};">
-            ${t('tab_clients')}
-          </button>
           <button class="tab-btn ${this.currentTab === 'suppliers' ? 'active' : ''}" onclick="MdmModule.switchTab('suppliers')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'suppliers' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'suppliers' ? '#2563eb' : '#64748b'};">
             ${t('tab_suppliers')}
           </button>

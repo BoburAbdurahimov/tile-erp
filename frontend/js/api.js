@@ -284,6 +284,13 @@ const API = {
   previewOrder: (data) => apiRequest("/orders/preview", "POST", data),
   createOrder: (data) => apiRequest("/orders", "POST", data),
   deliverOrder: (id, data) => apiRequest(`/orders/${id}/deliver`, "POST", data),
+  getDeliveryOptions: (id) => apiRequest(`/orders/${id}/delivery-options`),
+  getHistory: (params = {}) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, v); });
+    const qs = q.toString();
+    return apiRequest("/history" + (qs ? `?${qs}` : ""));
+  },
   payOrder: (id, data) => apiRequest(`/orders/${id}/pay`, "POST", data),
   cancelOrder: (id) => apiRequest(`/orders/${id}/cancel`, "POST"),
   loadOrderDemo: () => apiRequest("/orders/demo", "POST"),

@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication & User Management"])
 # RBAC Module Permissions mapping
 ROLE_PERMISSIONS = {
     # Super Admin
-    "Admin": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "moliya", "users", "mini_app", "admin_tools"],
+    "Admin": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "moliya", "users", "mini_app", "admin_tools", "tarix"],
     
     # Granular individual permissions
     "Mini App": ["mini_app"],
@@ -34,9 +34,9 @@ ROLE_PERMISSIONS = {
     "MDM": ["mdm"],
 
     # Legacy role aliases
-    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app"],
-    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app"],
-    "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app"],
+    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
+    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app", "tarix"],
+    "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
     "Omborchi": ["dashboard", "ombor", "mdm", "zakup", "mini_app"],
     "Kassir": ["dashboard", "kassa", "kontragentlar", "mini_app"],
     "Sex boshlig'i": ["dashboard", "ishlab_chiqarish", "ombor", "mini_app"],

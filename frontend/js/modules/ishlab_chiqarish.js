@@ -1,6 +1,5 @@
 const ProductionModule = {
   rawMaterialsList: [],
-  finishedMaterialsList: [],
   allStockBalances: [],
   activeTab: 'orders',
 
@@ -239,22 +238,21 @@ const ProductionModule = {
     const todayStr = new Date().toISOString().split("T")[0];
     
     // Fetch materials, lines, and stock balances from Warehouse 2 (Ishlab chiqarish uchun materiallar)
-    const [lines, finishedMaterials, rawStockItems] = await Promise.all([
+    const [lines, skladConfig, rawStockItems] = await Promise.all([
       API.getProductionLines(),
-      API.getMaterials("Tayyor mahsulot"),
+      API.getSkladConfig(),
       API.getStockBalances(2)
     ]);
-    
-    this.finishedMaterialsList = finishedMaterials || [];
+
+    // Finished sheets go into the Ombor: owner + sheet width (eni) + size code.
+    this.skladConfig = skladConfig || { warehouses: [], lengths: [], widths: [] };
+    const owners = [...new Set(this.skladConfig.warehouses.map(w => w.name))];
+    const enis = [...new Set(this.skladConfig.warehouses.map(w => w.eni))];
     this.wh2StockItems = (rawStockItems || []).filter(s => s.quantity > 0);
 
     showModal(
       CURRENT_LANG === 'uz' ? "Yangi Ishlab Chiqarish hujjati kiritish" : "Ввод документа выпуска готовой продукции",
       `
-        <datalist id="prod-output-mat-datalist">
-          ${(this.finishedMaterialsList || []).map(m => `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${m.code} - ${m.name}</option>`).join("")}
-        </datalist>
-
         <datalist id="prod-consumed-wh2-datalist">
           ${this.wh2StockItems.map(s => `<option value="${s.material_code} - ${s.material_name} (${tr(s.unit)})" data-id="${s.material_id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("")}
         </datalist>
@@ -273,24 +271,30 @@ const ProductionModule = {
             </div>
           </div>
 
-          <div class="form-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 6px;">
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Chiqarilayotgan Tayyor kafel plitasi *' : 'Выпускаемая готовая плитка *'}</label>
-              <input 
-                type="text" 
-                id="po-output-mat-input" 
-                list="prod-output-mat-datalist" 
-                class="form-control" 
-                placeholder="${CURRENT_LANG === 'uz' ? 'Kafel kodi yoki nomini yozing...' : 'Код или наименование плитки...'}" 
-                value="" 
-                style="width: 100%; padding: 8px 12px; border-radius: 8px;"
-                required 
-              />
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Qaysi omborga *' : 'На какой склад *'}</label>
+              <select id="po-owner" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+                ${owners.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Chiqarilgan hajm (dona) *' : 'Объем выпуска (шт) *'}</label>
-              <input type="number" step="any" id="po-quantity" class="form-control" placeholder="1000" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Eni *' : 'Ширина листа *'}</label>
+              <select id="po-eni" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+                ${enis.map(e => `<option value="${e}">${e}</option>`).join("")}
+              </select>
             </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? "O'lcham kodi *" : 'Код размера *'}</label>
+              <input type="text" inputmode="numeric" id="po-size-code" class="form-control" placeholder="680" style="width: 100%; padding: 8px 12px; border-radius: 8px;" oninput="ProductionModule.updateSizeHint()" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Miqdor (dona) *' : 'Количество (шт) *'}</label>
+              <input type="number" step="1" min="1" id="po-quantity" class="form-control" placeholder="100" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
+            </div>
+          </div>
+          <div id="po-size-hint" style="font-size: 12px; color: #64748b; margin-bottom: 14px;">
+            ${CURRENT_LANG === 'uz' ? "O'lcham bitta kod bilan: 680 = 600×80" : 'Размер одним кодом: 680 = 600×80'}
           </div>
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -324,17 +328,20 @@ const ProductionModule = {
       async () => {
         const lineId = parseInt(document.getElementById("po-line").value);
         const d = document.getElementById("po-date").value;
-        const outMatInput = document.getElementById("po-output-mat-input").value.trim();
         const qty = parseFloat(document.getElementById("po-quantity").value);
         const notes = document.getElementById("po-notes").value.trim();
+        const outSklad = ProductionModule.selectedSklad();
+        const size = ProductionModule.decodeSize(document.getElementById("po-size-code").value);
 
-        const matchedOutMat = ProductionModule.findFinishedMaterialByInput(outMatInput);
-        if (!matchedOutMat || !outMatInput) {
-          showToast(CURRENT_LANG === 'uz' ? "Chiqarilayotgan tayyor mahsulotni tanlang!" : "Пожалуйста, выберите готовую продукцию из списка!", "warning");
+        if (!outSklad) {
+          showToast(CURRENT_LANG === 'uz' ? "Omborni tanlang!" : "Выберите склад!", "warning");
           return false;
         }
-
-        if (!lineId || isNaN(qty) || qty <= 0) {
+        if (!size) {
+          showToast(CURRENT_LANG === 'uz' ? "O'lcham kodini to'g'ri kiriting (masalan 680)!" : "Введите корректный код размера (например 680)!", "warning");
+          return false;
+        }
+        if (!lineId || isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) {
           showToast(CURRENT_LANG === 'uz' ? "Chiqarilgan hajmni to'g'ri kiriting!" : "Укажите корректный объем!", "warning");
           return false;
         }
@@ -353,7 +360,8 @@ const ProductionModule = {
         try {
           await API.createProductionOrder({
             line_id: lineId,
-            output_material_id: matchedOutMat.id,
+            out_sklad_id: outSklad.id,
+            out_code: size.length + size.width,
             quantity: qty,
             date: d,
             consumed_materials: consumed,
@@ -559,15 +567,6 @@ const ProductionModule = {
     }
   },
 
-  findFinishedMaterialByInput(inputVal) {
-    if (!inputVal) return null;
-    const lower = inputVal.toLowerCase().trim();
-    return (this.finishedMaterialsList || []).find(m => {
-      const full = `${m.code} - ${m.name} (${tr(m.unit)})`.toLowerCase();
-      return full === lower || m.code.toLowerCase() === lower || m.name.toLowerCase() === lower || full.includes(lower) || lower.includes(m.code.toLowerCase());
-    }) || null;
-  },
-
   async stornoOrder(id, orderNum) {
     if (!confirm(`${orderNum} buyurtmasini STORNO qilishni tasdiqlaysizmi?\nBarcha sarflangan xomashyo omborga qaytariladi va tayyor mahsulot qoldig'i kamaytiriladi.`)) {
       return;
@@ -593,6 +592,39 @@ const ProductionModule = {
       await this.loadOrders();
     } catch (e) {
       showToast(e.message, "error");
+    }
+  },
+
+  selectedSklad() {
+    const owner = document.getElementById("po-owner")?.value;
+    const eni = parseInt(document.getElementById("po-eni")?.value || "0", 10);
+    return ((this.skladConfig || {}).warehouses || []).find(w => w.name === owner && w.eni === eni) || null;
+  },
+
+  decodeSize(code) {
+    const c = parseInt(String(code || "").trim(), 10);
+    if (!c) return null;
+    const length = Math.floor(c / 100) * 100, width = c % 100;
+    const cfg = this.skladConfig || { lengths: [], widths: [] };
+    if (!cfg.lengths.includes(length) || !cfg.widths.includes(width)) return null;
+    return { length, width };
+  },
+
+  updateSizeHint() {
+    const el = document.getElementById("po-size-hint");
+    if (!el) return;
+    const isUz = CURRENT_LANG === 'uz';
+    const raw = document.getElementById("po-size-code").value.trim();
+    const size = this.decodeSize(raw);
+    if (!raw) {
+      el.style.color = "#64748b";
+      el.textContent = isUz ? "O'lcham bitta kod bilan: 680 = 600×80" : "Размер одним кодом: 680 = 600×80";
+    } else if (size) {
+      el.style.color = "#15803d";
+      el.textContent = `${raw} = ${size.length}×${size.width}`;
+    } else {
+      el.style.color = "#b91c1c";
+      el.textContent = isUz ? `${raw} — bunday o'lcham yo'q` : `${raw} — такого размера нет`;
     }
   },
 
