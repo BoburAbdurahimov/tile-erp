@@ -15,6 +15,8 @@ const I18N = {
     nav_finance: "Moliya",
     nav_salary: "Ish haqi",
     nav_users: "Foydalanuvchilar",
+    nav_history: "Tarix",
+    apps_all_sections: "Barcha bo'limlar",
     users_title: "Foydalanuvchilar va Rollar",
     
     // Header
@@ -77,7 +79,7 @@ const I18N = {
     
     // Module Titles & Subtitles
     mod_mdm_title: "MDM: Ma'lumotnomalar va Asosiy Ma'lumotlar",
-    mod_mdm_sub: "Materiallar, xomashyo, mijozlar va yetkazib beruvchilar ma'lumotnomasi",
+    mod_mdm_sub: "Materiallar, xomashyo, yetkazib beruvchilar va omborlar ma'lumotnomasi",
     mod_ombor_title: "Ombor hisobi va Materiallar qoldig'i",
     mod_ombor_sub: "Real vaqtdagi xomashyo va tayyor mahsulotlar skladi",
     mod_kassa_title: "Kassa hisobi va Pul oqimi",
@@ -94,9 +96,9 @@ const I18N = {
     mod_finance_sub: "Foyda va zararlar (PnL), bilvosita xarajatlar taqsimoti",
     
     // Kassa specifics
-    kassa_income_btn: "📥 Kirim",
-    kassa_expense_btn: "📤 Chiqim",
-    kassa_cbu_sync_btn: "🔄 CBU dan olish",
+    kassa_income_btn: "Kirim",
+    kassa_expense_btn: "Chiqim",
+    kassa_cbu_sync_btn: "CBU dan olish",
     kassa_rate_title: "Valyuta kursi & Markaziy Bank (CBU)",
     kassa_rate_official: "JORIY RASMIY KURS (1 USD)",
     kassa_recent_rates: "So'nggi sanalar kursi:",
@@ -134,6 +136,8 @@ const I18N = {
     nav_finance: "Финансы",
     nav_salary: "Зарплата",
     nav_users: "Пользователи",
+    nav_history: "История",
+    apps_all_sections: "Все разделы",
     users_title: "Пользователи и Роли",
     
     // Header
@@ -196,7 +200,7 @@ const I18N = {
     
     // Module Titles & Subtitles
     mod_mdm_title: "MDM: Справочники и Мастер-данные",
-    mod_mdm_sub: "Справочники материалов, сырья, клиентов и поставщиков",
+    mod_mdm_sub: "Справочники материалов, сырья, поставщиков и складов",
     mod_ombor_title: "Складской учет и Остатки материалов",
     mod_ombor_sub: "Учет сырья и готовой продукции в реальном времени",
     mod_kassa_title: "Учет денежных средств (Касса)",
@@ -213,9 +217,9 @@ const I18N = {
     mod_finance_sub: "Отчет о прибылях и убытках (PnL), распределение косвенных расходов",
 
     // Kassa specifics
-    kassa_income_btn: "📥 Приход",
-    kassa_expense_btn: "📤 Расход",
-    kassa_cbu_sync_btn: "🔄 Получить с ЦБ (CBU)",
+    kassa_income_btn: "Приход",
+    kassa_expense_btn: "Расход",
+    kassa_cbu_sync_btn: "Получить с ЦБ (CBU)",
     kassa_rate_title: "Курс валют & ЦБ РУз (CBU)",
     kassa_rate_official: "ТЕКУЩИЙ ОФИЦИАЛЬНЫЙ КУРС (1 USD)",
     kassa_recent_rates: "Курсы за последние даты:",

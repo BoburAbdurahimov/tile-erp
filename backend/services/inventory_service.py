@@ -102,11 +102,11 @@ def deduct_stock(
         raise HTTPException(
             status_code=400,
             detail=(
-                f"❌ Omborda yetarli qoldiq mavjud emas!\n"
-                f"🏢 Ombor: {wh_name}\n"
-                f"📦 Mahsulot: {mat_name}\n"
-                f"🔻 Talab qilingan: {quantity:,.2f} {mat_unit}\n"
-                f"📊 Ombordagi mavjud qoldiq: {stock_item.quantity:,.2f} {mat_unit}\n"
+                f"Omborda yetarli qoldiq mavjud emas!\n"
+                f"Ombor: {wh_name}\n"
+                f"Mahsulot: {mat_name}\n"
+                f"Talab qilingan: {quantity:,.2f} {mat_unit}\n"
+                f"Ombordagi mavjud qoldiq: {stock_item.quantity:,.2f} {mat_unit}\n"
                 f"Operatsiya bekor qilindi, ombor manfiy songa tushishiga yo'l qo'yilmaydi."
             )
         )

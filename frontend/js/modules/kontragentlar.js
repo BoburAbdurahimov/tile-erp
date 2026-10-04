@@ -6,17 +6,17 @@ const BalancesModule = {
     container.innerHTML = `
       <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div class="card-title">👥 ${t('mod_balances_title')}</div>
+          <div class="card-title">${t('mod_balances_title')}</div>
           <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
             <div style="display: flex; gap: 8px; align-items: center;">
               <label style="font-size: 13px; font-weight: 600;">${CURRENT_LANG === 'uz' ? 'Valyuta:' : 'Валюта:'}</label>
               <div style="display: flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
-                <button class="btn ${this.viewCurrency === 'USD' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="BalancesModule.setCurrency('USD')">💵 USD ($)</button>
-                <button class="btn ${this.viewCurrency === 'UZS' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="BalancesModule.setCurrency('UZS')">🇺🇿 UZS</button>
+                <button class="btn ${this.viewCurrency === 'USD' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="BalancesModule.setCurrency('USD')">USD ($)</button>
+                <button class="btn ${this.viewCurrency === 'UZS' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="BalancesModule.setCurrency('UZS')">UZS</button>
               </div>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('balances-main-table', 'kontragentlar_balansi')" style="display: flex; align-items: center; gap: 6px;">
-              <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
             </button>
           </div>
         </div>
@@ -29,10 +29,10 @@ const BalancesModule = {
         <!-- Tabs -->
         <div class="tabs-nav" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
           <button class="tab-btn ${this.currentTab === 'clients' ? 'active' : ''}" onclick="BalancesModule.switchTab('clients')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'clients' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'clients' ? '#2563eb' : '#64748b'};">
-            👤 ${CURRENT_LANG === 'uz' ? 'Mijozlar' : 'Клиенты'}
+            ${CURRENT_LANG === 'uz' ? 'Mijozlar' : 'Клиенты'}
           </button>
           <button class="tab-btn ${this.currentTab === 'suppliers' ? 'active' : ''}" onclick="BalancesModule.switchTab('suppliers')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'suppliers' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'suppliers' ? '#2563eb' : '#64748b'};">
-            🚚 ${CURRENT_LANG === 'uz' ? 'Yetkazib beruvchilar' : 'Поставщики'}
+            ${CURRENT_LANG === 'uz' ? 'Yetkazib beruvchilar' : 'Поставщики'}
           </button>
         </div>
 
@@ -68,12 +68,12 @@ const BalancesModule = {
       if (kpiGrid) {
         kpiGrid.innerHTML = `
           <div class="kpi-card" style="border-left: 4px solid #10b981;">
-            <span class="kpi-title">${CURRENT_LANG === 'uz' ? '👤 Jami mijozlar balansi' : '👤 Общий баланс клиентов'}</span>
+            <span class="kpi-title">${CURRENT_LANG === 'uz' ? 'Jami mijozlar balansi' : 'Общий баланс клиентов'}</span>
             <span class="kpi-value" style="color: #10b981;">${isUsd ? '$' : ''}${summary.total_clients_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}${!isUsd ? ' UZS' : ''}</span>
             <span class="kpi-sub">${CURRENT_LANG === 'uz' ? 'Debitorlik qoldig\'i' : 'Дебиторская задолженность'}</span>
           </div>
           <div class="kpi-card" style="border-left: 4px solid #ef4444;">
-            <span class="kpi-title">${CURRENT_LANG === 'uz' ? '🏢 Jami yetkazib beruvchilar balansi' : '🏢 Общий баланс поставщиков'}</span>
+            <span class="kpi-title">${CURRENT_LANG === 'uz' ? 'Jami yetkazib beruvchilar balansi' : 'Общий баланс поставщиков'}</span>
             <span class="kpi-value" style="color: #ef4444;">${isUsd ? '$' : ''}${Math.abs(summary.total_suppliers_balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}${!isUsd ? ' UZS' : ''}</span>
             <span class="kpi-sub">${CURRENT_LANG === 'uz' ? 'Kreditorlik qoldig\'i' : 'Кредиторская задолженность'}</span>
           </div>
@@ -96,10 +96,10 @@ const BalancesModule = {
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Viloyat...' : 'Регион...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tel...' : 'Тел...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Viloyat...' : 'Регион...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Tel...' : 'Тел...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
               <th></th>
@@ -132,7 +132,7 @@ const BalancesModule = {
                   <td data-sort-value="${altVal}" style="text-align: right;">${altFormatted}</td>
                   <td style="text-align: right;">
                     <button class="btn btn-secondary btn-sm" onclick="BalancesModule.openActSverka(${cp.id}, '${cp.name}')">
-                      📜 ${CURRENT_LANG === 'uz' ? 'Akt-Sverka' : 'Акт-Сверка'}
+                      ${CURRENT_LANG === 'uz' ? 'Akt-Sverka' : 'Акт-Сверка'}
                     </button>
                   </td>
                 </tr>
@@ -157,7 +157,7 @@ const BalancesModule = {
       const curBalUsd = data.current_balance_usd ?? 0;
 
       showModal(
-        CURRENT_LANG === 'uz' ? `📑 O'zaro hisob-kitob tarixi (Akt Sverka): ${data.code} - ${data.name}` : `📑 Акт-Сверка взаиморасчетов: ${data.code} - ${data.name}`,
+        CURRENT_LANG === 'uz' ? `O'zaro hisob-kitob tarixi (Akt Sverka): ${data.code} - ${data.name}` : `Акт-Сверка взаиморасчетов: ${data.code} - ${data.name}`,
         `
           <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 12px 16px; border-radius: 8px;">
             <div>

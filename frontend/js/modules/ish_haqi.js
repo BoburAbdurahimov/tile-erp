@@ -10,13 +10,13 @@ const IshHaqiModule = (function () {
   let jobTypesList = [];
 
   const DEPARTMENTS = [
-    { id: "all", name: { uz: "Barchasi", ru: "Все отделы" }, icon: "🌐" },
-    { id: "Ma'muriyat", name: { uz: "Ma'muriyat & Ofis", ru: "Администрация & Офис" }, icon: "👑" },
-    { id: "1-Liniya", name: { uz: "1-Liniya (30x30 Standart Zavod)", ru: "1-Линия (30x30 Стандарт Завод)" }, icon: "🏭" },
-    { id: "2-Liniya", name: { uz: "2-Liniya (60x60 Katta Zavod)", ru: "2-Линия (60x60 Большой Завод)" }, icon: "🏭" },
-    { id: "3-Liniya", name: { uz: "3-Liniya (60x120 Granit Zavod)", ru: "3-Линия (60x120 Гранит Завод)" }, icon: "🏭" },
-    { id: "4-Liniya", name: { uz: "4-Liniya (40x40 Premium Zavod)", ru: "4-Линия (40x40 Премиум Завод)" }, icon: "🏭" },
-    { id: "5-Liniya", name: { uz: "5-Liniya (80x80 Keramogranit Zavod)", ru: "5-Линия (80x80 Керамогранит Завод)" }, icon: "🏭" }
+    { id: "all", name: { uz: "Barchasi", ru: "Все отделы" }, icon: "" },
+    { id: "Ma'muriyat", name: { uz: "Ma'muriyat & Ofis", ru: "Администрация & Офис" }, icon: "" },
+    { id: "1-Liniya", name: { uz: "1-Liniya (30x30 Standart Zavod)", ru: "1-Линия (30x30 Стандарт Завод)" }, icon: "" },
+    { id: "2-Liniya", name: { uz: "2-Liniya (60x60 Katta Zavod)", ru: "2-Линия (60x60 Большой Завод)" }, icon: "" },
+    { id: "3-Liniya", name: { uz: "3-Liniya (60x120 Granit Zavod)", ru: "3-Линия (60x120 Гранит Завод)" }, icon: "" },
+    { id: "4-Liniya", name: { uz: "4-Liniya (40x40 Premium Zavod)", ru: "4-Линия (40x40 Премиум Завод)" }, icon: "" },
+    { id: "5-Liniya", name: { uz: "5-Liniya (80x80 Keramogranit Zavod)", ru: "5-Линия (80x80 Керамогранит Завод)" }, icon: "" }
   ];
 
   function formatNumber(num) {
@@ -43,33 +43,33 @@ const IshHaqiModule = (function () {
     return {
       title: isUz ? "Ish haqi va Xodimlar boshqaruvi" : "Управление зарплатой и персоналом",
       subtitle: isUz ? "6 ta bo'lim (5 ta liniya + Ma'muriyat), fiks va ishbay oyliklar hisobi" : "6 отделов (5 линий + Администрация), окладный и сдельный расчет ЗП",
-      tab_payroll: isUz ? "📊 Oylik hisob-kitob" : "📊 Ведомость ЗП",
-      tab_daily: isUz ? "📅 Kunlik davomat & Ishlar" : "📅 Ежедневный учет",
-      tab_employees: isUz ? "👥 Xodimlar ro'yxati" : "👥 Сотрудники",
-      tab_job_types: isUz ? "🛠️ Ish turlari & Narxlar" : "🛠️ Виды работ и Расценки",
+      tab_payroll: isUz ? "Oylik hisob-kitob" : "Ведомость ЗП",
+      tab_daily: isUz ? "Kunlik davomat & Ishlar" : "Ежедневный учет",
+      tab_employees: isUz ? "Xodimlar ro'yxati" : "Сотрудники",
+      tab_job_types: isUz ? "Ish turlari & Narxlar" : "Виды работ и Расценки",
       
       kpi_total: isUz ? "Jami hisoblangan ish haqi" : "Общий фонд начисленной ЗП",
       kpi_fixed: isUz ? "Fiksalangan maoshlar" : "Окладная часть",
       kpi_piecework: isUz ? "Ishbay to'lovlar" : "Сдельная часть",
       kpi_paid: isUz ? "To'langan / Qoldiq" : "Выплачено / Остаток",
       
-      btn_recalc: isUz ? "🔄 Qayta hisoblash" : "🔄 Пересчитать",
-      btn_finalize: isUz ? "🔒 Oyni tasdiqlash" : "🔒 Зафиксировать",
-      btn_reopen: isUz ? "🔓 Qayta ochish" : "🔓 Открыть для правок",
-      btn_pdf: isUz ? "📄 PDF yuklab olish" : "📄 Скачать PDF",
-      btn_add_emp: isUz ? "➕ Yangi xodim qo'shish" : "➕ Добавить сотрудника",
-      btn_add_job: isUz ? "➕ Yangi ish turi" : "➕ Новый вид работы",
-      btn_add_work: isUz ? "➕ Ishbay naryad qo'shish" : "➕ Добавить наряд",
-      btn_save_att: isUz ? "💾 Davomatni saqlash" : "💾 Сохранить табель",
+      btn_recalc: isUz ? "Qayta hisoblash" : "Пересчитать",
+      btn_finalize: isUz ? "Oyni tasdiqlash" : "Зафиксировать",
+      btn_reopen: isUz ? "Qayta ochish" : "Открыть для правок",
+      btn_pdf: isUz ? "PDF yuklab olish" : "Скачать PDF",
+      btn_add_emp: isUz ? "Yangi xodim qo'shish" : "Добавить сотрудника",
+      btn_add_job: isUz ? "Yangi ish turi" : "Новый вид работы",
+      btn_add_work: isUz ? "Ishbay naryad qo'shish" : "Добавить наряд",
+      btn_save_att: isUz ? "Davomatni saqlash" : "Сохранить табель",
       
-      type_fixed: isUz ? "🏢 Fiksalangan" : "🏢 Оклад",
-      type_piecework: isUz ? "🔨 Ishbay" : "🔨 Сдельный",
+      type_fixed: isUz ? "Fiksalangan" : "Оклад",
+      type_piecework: isUz ? "Ishbay" : "Сдельный",
       
-      status_draft: isUz ? "🟡 Qoralama" : "🟡 Черновик",
-      status_finalized: isUz ? "🟢 Tasdiqlangan" : "🟢 Зафиксирован",
-      status_paid: isUz ? "✅ To'langan" : "✅ Выплачено",
+      status_draft: isUz ? "Qoralama" : "Черновик",
+      status_finalized: isUz ? "Tasdiqlangan" : "Зафиксирован",
+      status_paid: isUz ? "To'langan" : "Выплачено",
       
-      locked_warning: isUz ? "⚠️ Ushbu oy qulflangan. Tahrirlash uchun avval 'Qayta ochish' tugmasini bosing." : "⚠️ Этот месяц зафиксирован. Для внесения изменений сначала откройте период."
+      locked_warning: isUz ? "Ushbu oy qulflangan. Tahrirlash uchun avval 'Qayta ochish' tugmasini bosing." : "Этот месяц зафиксирован. Для внесения изменений сначала откройте период."
     };
   }
 
@@ -77,16 +77,16 @@ const IshHaqiModule = (function () {
     const d = dept || "Ma'muriyat";
     let color = "#3b82f6";
     let bg = "#eff6ff";
-    let icon = "🏢";
+    let icon = "";
 
-    if (d === "Ma'muriyat") { color = "#dc2626"; bg = "#fef2f2"; icon = "👑"; }
-    else if (d === "1-Liniya") { color = "#d97706"; bg = "#fffbeb"; icon = "🏭"; }
-    else if (d === "2-Liniya") { color = "#0284c7"; bg = "#f0f9ff"; icon = "🎨"; }
-    else if (d === "3-Liniya") { color = "#ea580c"; bg = "#fff7ed"; icon = "🔥"; }
-    else if (d === "4-Liniya") { color = "#7c3aed"; bg = "#f5f3ff"; icon = "🔍"; }
-    else if (d === "5-Liniya") { color = "#059669"; bg = "#ecfdf5"; icon = "📦"; }
+    if (d === "Ma'muriyat") { color = "#dc2626"; bg = "#fef2f2"; icon = ""; }
+    else if (d === "1-Liniya") { color = "#d97706"; bg = "#fffbeb"; icon = ""; }
+    else if (d === "2-Liniya") { color = "#0284c7"; bg = "#f0f9ff"; icon = ""; }
+    else if (d === "3-Liniya") { color = "#ea580c"; bg = "#fff7ed"; icon = ""; }
+    else if (d === "4-Liniya") { color = "#7c3aed"; bg = "#f5f3ff"; icon = ""; }
+    else if (d === "5-Liniya") { color = "#059669"; bg = "#ecfdf5"; icon = ""; }
 
-    return `<span class="badge" style="background:${bg}; color:${color}; border:1px solid ${color}30; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;">${icon} ${escapeHtml(d)}</span>`;
+    return `<span class="badge" style="background:${bg}; color:${color}; border:1px solid ${color}30; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;">${escapeHtml(d)}</span>`;
   }
 
   function renderDeptFilterBar() {
@@ -99,7 +99,7 @@ const IshHaqiModule = (function () {
           return `
             <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment('${d.id}')" 
               style="padding: 6px 12px; font-size: 12.5px; font-weight: ${isActive ? '700' : '600'}; border-radius: 8px; border: ${isActive ? '1px solid #2563eb' : '1px solid #cbd5e1'}; background: ${isActive ? '#eff6ff' : '#f8fafc'}; color: ${isActive ? '#1d4ed8' : '#475569'}; cursor: pointer; transition: all 0.2s;">
-              <span>${d.icon}</span> <span>${label}</span>
+              <span>${label}</span>
             </button>
           `;
         }).join("")}
@@ -118,7 +118,7 @@ const IshHaqiModule = (function () {
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
             <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-              <span>👷</span> <span>${t.title}</span>
+<span>${t.title}</span>
             </h2>
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t.subtitle}</p>
           </div>
@@ -127,7 +127,7 @@ const IshHaqiModule = (function () {
             <button class="tab-btn ${activeTab === 'daily' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('daily')">${t.tab_daily}</button>
             <button class="tab-btn ${activeTab === 'employees' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('employees')">${t.tab_employees}</button>
             <button class="tab-btn ${activeTab === 'job_types' ? 'active' : ''}" onclick="IshHaqiModule.switchTab('job_types')">${t.tab_job_types}</button>
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px; padding: 6px 12px; font-weight: 600;">📄 ${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px; padding: 6px 12px; font-weight: 600;">${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}</button>
           </div>
         </div>
       </div>
@@ -244,9 +244,9 @@ const IshHaqiModule = (function () {
             </td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
-              <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openDetailsModal(${c.id})" title="${isUz ? "Batafsil hisob-kitob" : "Детали начисления"}">👁️</button>
+              <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openDetailsModal(${c.id})" title="${isUz ? "Batafsil hisob-kitob" : "Детали начисления"}">${CURRENT_LANG === 'uz' ? "Batafsil" : "Подробнее"}</button>
               ${c.status !== "paid" 
-                ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, '${escapeHtml(c.full_name)}', ${c.final_amount})" style="margin-left: 4px;">💵 ${isUz ? "To'lash" : "Выплатить"}</button>`
+                ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, '${escapeHtml(c.full_name)}', ${c.final_amount})" style="margin-left: 4px;">${isUz ? "To'lash" : "Выплатить"}</button>`
                 : `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 4px;">✓ ${isUz ? "To'langan" : "Оплачено"}</span>`
               }
             </td>
@@ -271,8 +271,8 @@ const IshHaqiModule = (function () {
             <label style="font-size: 13px; font-weight: 700; color: #0f172a;">${isUz ? "Hisob davri (Oy):" : "Период (Месяц):"}</label>
             <input type="month" id="payroll-month-select" class="form-control" value="${currentYearMonth}" onchange="IshHaqiModule.changePayrollMonth(this.value)" style="width: 170px; padding: 6px 12px; font-weight: 600;">
             ${isLocked 
-              ? `<span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:6px 12px; font-size:12px;">🔒 ${isUz ? "Oy qulflangan" : "Период зафиксирован"}</span>` 
-              : `<span class="badge badge-warning" style="padding:6px 12px; font-size:12px;">✏️ ${isUz ? "Ochiq (Qoralama)" : "Открыт (Черновик)"}</span>`}
+              ? `<span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:6px 12px; font-size:12px;">${isUz ? "Oy qulflangan" : "Период зафиксирован"}</span>` 
+              : `<span class="badge badge-warning" style="padding:6px 12px; font-size:12px;">${isUz ? "Ochiq (Qoralama)" : "Открыт (Черновик)"}</span>`}
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -317,7 +317,7 @@ const IshHaqiModule = (function () {
       <div class="card">
         <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div class="card-title" style="font-size: 16px; font-weight: 700;">📋 ${isUz ? "Xodimlar bo'yicha hisob-kitob vedomosti" : "Расчетная ведомость по сотрудникам"}</div>
+            <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Xodimlar bo'yicha hisob-kitob vedomosti" : "Расчетная ведомость по сотрудникам"}</div>
             <div style="font-size: 12px; color: #64748b;">${calculations.length} ${isUz ? "ta yozuv ko'rsatilmoqda" : "записей"}</div>
           </div>
           ${renderDeptFilterBar()}
@@ -330,15 +330,15 @@ const IshHaqiModule = (function () {
                 <th style="width: 40px; text-align: center;">№</th>
                 <th>
                   <div>${isUz ? "Xodim (F.I.SH.)" : "Сотрудник (Ф.И.О.)"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
                   <div>${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
                   <div>${isUz ? "Turi" : "Тип"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th style="text-align: right;">${isUz ? "Asosiy / Ishbay" : "Оклад / Сдельно"}</th>
                 <th style="text-align: center;">${isUz ? "Reja kun" : "Раб. дней"}</th>
@@ -459,7 +459,7 @@ const IshHaqiModule = (function () {
             <div style="display: flex; align-items: center; gap: 10px;">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: ${emp.is_absent ? '#ef4444' : '#10b981'};">
                 <input type="checkbox" class="att-checkbox" data-empid="${emp.id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.id})">
-                <span>${emp.is_absent ? (isUz ? '🔴 Kelmadi' : '🔴 Не вышел') : (isUz ? '🟢 Ishda' : '🟢 На работе')}</span>
+                <span>${emp.is_absent ? (isUz ? 'Kelmadi' : 'Не вышел') : (isUz ? 'Ishda' : 'На работе')}</span>
               </label>
               <input type="text" id="att-reason-${emp.id}" class="form-control" placeholder="${isUz ? 'Sababi...' : 'Причина...'}" value="${escapeHtml(emp.reason || '')}" style="width: 140px; padding: 4px 8px; font-size: 12px; display: ${emp.is_absent ? 'block' : 'none'};" ${isLocked ? 'disabled' : ''}>
             </div>
@@ -484,7 +484,7 @@ const IshHaqiModule = (function () {
             <td style="text-align: right; font-family: monospace; color: #64748b;">${formatNumber(p.unit_price)}</td>
             <td style="text-align: right; font-family: monospace; font-weight: 800; color: #d97706;">${formatNumber(p.total_amount)} <small>UZS</small></td>
             <td style="text-align: center;">
-              ${!isLocked ? `<button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteWorkEntry(${p.id})">🗑️</button>` : `<span style="color:#94a3b8;">-</span>`}
+              ${!isLocked ? `<button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteWorkEntry(${p.id})">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : `<span style="color:#94a3b8;">-</span>`}
             </td>
           </tr>
         `;
@@ -508,7 +508,7 @@ const IshHaqiModule = (function () {
         <!-- Section 1: Fixed Employees Absences -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="card-title" style="font-size: 15px; font-weight: 700;">🏢 ${isUz ? "Fiksalangan xodimlar davomati" : "Табель окладных сотрудников"}</div>
+            <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Fiksalangan xodimlar davomati" : "Табель окладных сотрудников"}</div>
             ${!isLocked ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveAttendance()">${t.btn_save_att}</button>` : ''}
           </div>
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
@@ -522,7 +522,7 @@ const IshHaqiModule = (function () {
         <!-- Section 2: Piecework Jobs Entry -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="card-title" style="font-size: 15px; font-weight: 700;">🔨 ${isUz ? "Ishbay xodimlar naryadlari" : "Сдельные наряды"}</div>
+            <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Ishbay xodimlar naryadlari" : "Сдельные наряды"}</div>
             ${!isLocked ? `<button class="btn btn-warning btn-sm" onclick="IshHaqiModule.openAddWorkModal()">${t.btn_add_work}</button>` : ''}
           </div>
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
@@ -563,11 +563,11 @@ const IshHaqiModule = (function () {
     const span = chk.nextElementSibling;
     const reasonInput = document.getElementById(`att-reason-${empId}`);
     if (chk.checked) {
-      span.innerText = isUz ? "🔴 Kelmadi" : "🔴 Не вышел";
+      span.innerText = isUz ? "Kelmadi" : "Не вышел";
       span.parentElement.style.color = "#ef4444";
       if (reasonInput) reasonInput.style.display = "block";
     } else {
-      span.innerText = isUz ? "🟢 Ishda" : "🟢 На работе";
+      span.innerText = isUz ? "Ishda" : "На работе";
       span.parentElement.style.color = "#10b981";
       if (reasonInput) {
         reasonInput.style.display = "none";
@@ -647,8 +647,8 @@ const IshHaqiModule = (function () {
           : `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">${t.type_piecework}</span>`;
 
         const statusBadge = e.is_active 
-          ? `<span class="badge badge-success">${isUz ? "🟢 Faol" : "🟢 Активен"}</span>` 
-          : `<span class="badge badge-danger">${isUz ? "📁 Nofaol" : "📁 В архиве"}</span>`;
+          ? `<span class="badge badge-success">${isUz ? "Faol" : "Активен"}</span>` 
+          : `<span class="badge badge-danger">${isUz ? "Nofaol" : "В архиве"}</span>`;
 
         const salaryStr = isFixed 
           ? `${formatNumber(e.monthly_salary)} <small>UZS</small>` 
@@ -665,12 +665,12 @@ const IshHaqiModule = (function () {
             <td style="text-align: center; color: #64748b; font-size: 12px;">${e.phone_number || '-'}</td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
-              <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditEmployeeModal(${e.id})">✏️ ${isUz ? "Tahrirlash" : "Изм."}</button>
+              <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditEmployeeModal(${e.id})">${isUz ? "Tahrirlash" : "Изм."}</button>
               <button class="btn ${e.is_active ? 'btn-secondary' : 'btn-success'} btn-sm" onclick="IshHaqiModule.toggleEmployeeStatus(${e.id})" style="margin-left: 4px;">
-                ${e.is_active ? (isUz ? "📁 Arxiv" : "📁 В архив") : (isUz ? "♻️ Tiklash" : "♻️ Восстановить")}
+                ${e.is_active ? (isUz ? "Arxiv" : "В архив") : (isUz ? "Tiklash" : "Восстановить")}
               </button>
               <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteEmployee(${e.id}, '${escapeHtml(e.full_name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">
-                🗑️
+                ${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}
               </button>
             </td>
           </tr>
@@ -683,7 +683,7 @@ const IshHaqiModule = (function () {
         <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-              <div class="card-title" style="font-size: 16px; font-weight: 700;">👥 ${isUz ? "Fabrika xodimlari ro'yxati (6 ta bo'lim bo'yicha)" : "Штатное расписание (по 6 отделам)"}</div>
+              <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Fabrika xodimlari ro'yxati (6 ta bo'lim bo'yicha)" : "Штатное расписание (по 6 отделам)"}</div>
               <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${filteredList.length} ${isUz ? "nafar xodim" : "сотрудников"}</p>
             </div>
             <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddEmployeeModal()">${t.btn_add_emp}</button>
@@ -698,19 +698,19 @@ const IshHaqiModule = (function () {
                 <th style="width: 40px; text-align: center;">№</th>
                 <th>
                   <div>${isUz ? "F.I.SH." : "Ф.И.О."}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
                   <div>${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
                   <div>${isUz ? "Lavozimi" : "Должность"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
                   <div>${isUz ? "To'lov turi" : "Тип оплаты"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th style="text-align: right;">${isUz ? "Oylik maosh" : "Оклад"}</th>
                 <th style="text-align: center;">${isUz ? "Telefon" : "Телефон"}</th>
@@ -770,8 +770,8 @@ const IshHaqiModule = (function () {
     } else {
       jobTypesList.forEach((j, idx) => {
         const statusBadge = j.is_active 
-          ? `<span class="badge badge-success">${isUz ? "🟢 Faol" : "🟢 Активен"}</span>` 
-          : `<span class="badge badge-danger">${isUz ? "📁 Nofaol" : "📁 Отключен"}</span>`;
+          ? `<span class="badge badge-success">${isUz ? "Faol" : "Активен"}</span>` 
+          : `<span class="badge badge-danger">${isUz ? "Nofaol" : "Отключен"}</span>`;
 
         rowsHtml += `
           <tr>
@@ -781,8 +781,8 @@ const IshHaqiModule = (function () {
             <td style="text-align: right; font-weight: 800; font-family: monospace; color: #2563eb; font-size: 14px;">${formatNumber(j.price_per_unit)} <small>UZS</small></td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
-              <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditJobTypeModal(${j.id})">✏️ ${isUz ? "Tahrirlash" : "Изм."}</button>
-              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, '${escapeHtml(j.name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">🗑️</button>
+              <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditJobTypeModal(${j.id})">${isUz ? "Tahrirlash" : "Изм."}</button>
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, '${escapeHtml(j.name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
             </td>
           </tr>
         `;
@@ -793,7 +793,7 @@ const IshHaqiModule = (function () {
       <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <div class="card-title" style="font-size: 16px; font-weight: 700;">🛠️ ${isUz ? "Ishbay narxlar spravochnigi" : "Справочник расценок сдельных работ"}</div>
+            <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Ishbay narxlar spravochnigi" : "Справочник расценок сдельных работ"}</div>
             <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${jobTypesList.length} ${isUz ? "ta ish turi" : "видов работ"}</p>
           </div>
           <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddJobTypeModal()">${t.btn_add_job}</button>
@@ -805,7 +805,7 @@ const IshHaqiModule = (function () {
                 <th style="width: 40px; text-align: center;">№</th>
                 <th>
                   <div>${isUz ? "Ish nomi / Operatsiya" : "Наименование работы"}</div>
-                  <input type="text" class="table-col-filter" placeholder="🔎 ${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                  <input type="text" class="table-col-filter" placeholder="${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th style="text-align: center;">${isUz ? "Birligi" : "Ед. изм."}</th>
                 <th style="text-align: right;">${isUz ? "Birlik narxi (Tarif)" : "Расценка за единицу"}</th>
@@ -828,7 +828,7 @@ const IshHaqiModule = (function () {
   function getDeptOptions(selectedDept = "Ma'muriyat") {
     const isUz = isUzbek();
     return DEPARTMENTS.filter(d => d.id !== "all").map(d => `
-      <option value="${d.id}" ${d.id === selectedDept ? 'selected' : ''}>${d.icon} ${isUz ? d.name.uz : d.name.ru}</option>
+      <option value="${d.id}" ${d.id === selectedDept ? 'selected' : ''}>${isUz ? d.name.uz : d.name.ru}</option>
     `).join("");
   }
 
@@ -839,7 +839,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="emp-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">➕ ${isUz ? "Yangi xodim qo'shish" : "Добавление нового сотрудника"}</div>
+            <div class="modal-title">${isUz ? "Yangi xodim qo'shish" : "Добавление нового сотрудника"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('emp-modal')">&times;</button>
           </div>
           <form onsubmit="IshHaqiModule.handleCreateEmployee(event)">
@@ -859,8 +859,8 @@ const IshHaqiModule = (function () {
                 <div class="form-group" style="flex: 1;">
                   <label class="form-label">${isUz ? "Oylik hisoblash turi" : "Тип оплаты"} *</label>
                   <select id="emp-type" class="form-control" onchange="IshHaqiModule.handleEmpTypeChange(this.value)">
-                    <option value="fixed">${isUz ? "🏢 Fiksalangan oylik (Oklad)" : "🏢 Оклад (Фиксированная ЗП)"}</option>
-                    <option value="piecework">${isUz ? "🔨 Ishbay (Sdelnaya)" : "🔨 Сдельная (За объем работ)"}</option>
+                    <option value="fixed">${isUz ? "Fiksalangan oylik (Oklad)" : "Оклад (Фиксированная ЗП)"}</option>
+                    <option value="piecework">${isUz ? "Ishbay (Sdelnaya)" : "Сдельная (За объем работ)"}</option>
                   </select>
                 </div>
               </div>
@@ -952,7 +952,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="emp-edit-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">✏️ ${isUz ? "Xodim ma'lumotlarini tahrirlash" : "Редактирование сотрудника"}</div>
+            <div class="modal-title">${isUz ? "Xodim ma'lumotlarini tahrirlash" : "Редактирование сотрудника"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('emp-edit-modal')">&times;</button>
           </div>
           <form onsubmit="IshHaqiModule.handleUpdateEmployee(event, ${emp.id})">
@@ -1048,7 +1048,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="jt-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">➕ ${isUz ? "Yangi ish turi qo'shish" : "Новый вид сдельной работы"}</div>
+            <div class="modal-title">${isUz ? "Yangi ish turi qo'shish" : "Новый вид сдельной работы"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('jt-modal')">&times;</button>
           </div>
           <form onsubmit="IshHaqiModule.handleCreateJobType(event)">
@@ -1115,7 +1115,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="jt-edit-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">✏️ ${isUz ? "Ish turini tahrirlash" : "Редактирование расценки"}</div>
+            <div class="modal-title">${isUz ? "Ish turini tahrirlash" : "Редактирование расценки"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('jt-edit-modal')">&times;</button>
           </div>
           <form onsubmit="IshHaqiModule.handleUpdateJobType(event, ${jt.id})">
@@ -1207,7 +1207,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="work-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">🔨 ${isUz ? "Bajarilgan ishbay ishni kiritish" : "Внесение сдельного наряда"}</div>
+            <div class="modal-title">${isUz ? "Bajarilgan ishbay ishni kiritish" : "Внесение сдельного наряда"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('work-modal')">&times;</button>
           </div>
           <form onsubmit="IshHaqiModule.handleCreateWorkEntry(event)">
@@ -1313,7 +1313,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="pay-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">💵 ${isUz ? "Ish haqi to'lash" : "Выплата заработной платы"}</div>
+            <div class="modal-title">${isUz ? "Ish haqi to'lash" : "Выплата заработной платы"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('pay-modal')">&times;</button>
           </div>
           <form onsubmit="IshHaqiModule.handlePaySalary(event, ${calcId})">
@@ -1344,7 +1344,7 @@ const IshHaqiModule = (function () {
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" onclick="IshHaqiModule.closeModal('pay-modal')">${isUz ? "Bekor qilish" : "Отмена"}</button>
-              <button type="submit" class="btn btn-success">✅ ${isUz ? "To'lovni tasdiqlash" : "Подтвердить выплату"}</button>
+              <button type="submit" class="btn btn-success">${isUz ? "To'lovni tasdiqlash" : "Подтвердить выплату"}</button>
             </div>
           </form>
         </div>
@@ -1387,7 +1387,7 @@ const IshHaqiModule = (function () {
       <div class="modal-overlay active" id="details-modal">
         <div class="modal-content">
           <div class="modal-header">
-            <div class="modal-title">🔍 ${isUz ? "Ish haqi hisob-kitob tafsilotlari" : "Детализация расчета ЗП"}</div>
+            <div class="modal-title">${isUz ? "Ish haqi hisob-kitob tafsilotlari" : "Детализация расчета ЗП"}</div>
             <button class="modal-close" onclick="IshHaqiModule.closeModal('details-modal')">&times;</button>
           </div>
           <div class="modal-body">
@@ -1401,7 +1401,7 @@ const IshHaqiModule = (function () {
               </div>
               <div style="text-align: right;">
                 <span class="badge" style="${isFixed ? 'background:#eff6ff; color:#1d4ed8;' : 'background:#fef3c7; color:#92400e;'} font-size:12px;">
-                  ${isFixed ? (isUz ? "🏢 Fiksalangan oklad" : "🏢 Оклад") : (isUz ? "🔨 Ishbay to'lov" : "🔨 Сдельно")}
+                  ${isFixed ? (isUz ? "Fiksalangan oklad" : "Оклад") : (isUz ? "Ishbay to'lov" : "Сдельно")}
                 </span>
               </div>
             </div>

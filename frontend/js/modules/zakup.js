@@ -8,7 +8,7 @@ const PurchasesModule = {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div>
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-              <span>🛒</span> <span>${t('mod_zakup_title')}</span>
+<span>${t('mod_zakup_title')}</span>
             </h2>
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">
               ${t('mod_zakup_sub')}
@@ -16,10 +16,10 @@ const PurchasesModule = {
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('purchases-main-table', 'xaridlar_zakup')" style="display: flex; align-items: center; gap: 6px;">
-              <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="PurchasesModule.openNewPurchaseModal()" style="display: flex; align-items: center; gap: 6px;">
-              <span>➕</span> <span>${CURRENT_LANG === 'uz' ? 'Yangi xarid' : 'Новая закупка'}</span>
+<span>${CURRENT_LANG === 'uz' ? 'Yangi xarid' : 'Новая закупка'}</span>
             </button>
           </div>
         </div>
@@ -42,7 +42,7 @@ const PurchasesModule = {
       if (!purchases || purchases.length === 0) {
         tableDiv.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; color: #64748b;">
-            <div style="font-size: 40px; margin-bottom: 10px;">📦</div>
+
             <h3>${CURRENT_LANG === 'uz' ? 'Hozircha xarid hujjatlari mavjud emas' : 'Пока нет документов закупок'}</h3>
             <p>${CURRENT_LANG === 'uz' ? 'Yangi xarid qo\'shish uchun yuqoridagi tugmani bosing' : 'Нажмите кнопку выше, чтобы добавить закупку'}</p>
           </div>
@@ -67,16 +67,16 @@ const PurchasesModule = {
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Postavshik...' : 'Поставщик...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Postavshik...' : 'Поставщик...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Valyuta...' : 'Валюта...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="8" placeholder="${CURRENT_LANG === 'uz' ? 'Valyuta...' : 'Валюта...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="9" placeholder="${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
             </tr>
           </thead>
@@ -126,12 +126,12 @@ const PurchasesModule = {
                 <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
                   ${p.status === 'Tasdiqlandi' ? `
                     <button class="btn btn-sm" onclick="PurchasesModule.stornoPurchase(${p.id}, '${p.purchase_number}')" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                      ↩️ ${t('btn_storno')}
+                      ${t('btn_storno')}
                     </button>
                   ` : '<span style="color: #94a3b8; font-size: 12px;">-</span>'}
                   ${CURRENT_ROLE === 'Admin' ? `
                     <button class="btn btn-danger btn-sm" onclick="PurchasesModule.deletePurchase(${p.id}, '${p.purchase_number}')" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">
-                      🗑️
+                      ${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}
                     </button>
                   ` : ''}
                 </td>
@@ -219,7 +219,7 @@ const PurchasesModule = {
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
-              ${isUz ? '📦 Xarid qilinayotgan tovarlar ro\'yxati:' : '📦 Список закупаемых товаров:'}
+              ${isUz ? 'Xarid qilinayotgan tovarlar ro\'yxati:' : 'Список закупаемых товаров:'}
             </label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="PurchasesModule.addPurchaseItemRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
               ${isUz ? '+ Tovar qo\'shish' : '+ Добавить товар'}
@@ -376,7 +376,7 @@ const PurchasesModule = {
         <input type="text" class="form-control row-total" value="0.00" style="width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; background: #f8fafc; font-weight: 700;" readonly />
       </td>
       <td style="padding: 6px 8px; text-align: center;">
-        <button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; cursor: pointer;">❌</button>
+        <button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; cursor: pointer;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
       </td>
     `;
     tbody.appendChild(tr);

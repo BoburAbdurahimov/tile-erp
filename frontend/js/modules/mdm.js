@@ -7,7 +7,7 @@ const MdmModule = {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div>
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-              <span>🗂️</span> <span>${t('mod_mdm_title')}</span>
+<span>${t('mod_mdm_title')}</span>
             </h2>
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">
               ${t('mod_mdm_sub')}
@@ -15,10 +15,10 @@ const MdmModule = {
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" onclick="MdmModule.exportPdf()" style="display: flex; align-items: center; gap: 6px;">
-              <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
             </button>
             <button class="btn btn-primary btn-sm" onclick="MdmModule.openCreateModal()" style="display: flex; align-items: center; gap: 6px;">
-              <span>➕</span> <span>${t('btn_create')}</span>
+<span>${t('btn_create')}</span>
             </button>
           </div>
         </div>
@@ -26,19 +26,16 @@ const MdmModule = {
         <!-- Navigation Tabs -->
         <div class="tabs-nav" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
           <button class="tab-btn ${this.currentTab === 'materials' ? 'active' : ''}" onclick="MdmModule.switchTab('materials')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'materials' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'materials' ? '#2563eb' : '#64748b'};">
-            🧱 ${t('tab_materials')}
+            ${t('tab_materials')}
           </button>
           <button class="tab-btn ${this.currentTab === 'tayyor' ? 'active' : ''}" onclick="MdmModule.switchTab('tayyor')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'tayyor' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'tayyor' ? '#2563eb' : '#64748b'};">
-            📐 ${CURRENT_LANG === 'uz' ? "Tayyor mahsulot (Ombor)" : "Готовая продукция (Склад)"}
-          </button>
-          <button class="tab-btn ${this.currentTab === 'clients' ? 'active' : ''}" onclick="MdmModule.switchTab('clients')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'clients' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'clients' ? '#2563eb' : '#64748b'};">
-            👤 ${t('tab_clients')}
+            ${CURRENT_LANG === 'uz' ? "Tayyor mahsulot (Ombor)" : "Готовая продукция (Склад)"}
           </button>
           <button class="tab-btn ${this.currentTab === 'suppliers' ? 'active' : ''}" onclick="MdmModule.switchTab('suppliers')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'suppliers' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'suppliers' ? '#2563eb' : '#64748b'};">
-            🚚 ${t('tab_suppliers')}
+            ${t('tab_suppliers')}
           </button>
           <button class="tab-btn ${this.currentTab === 'warehouses' ? 'active' : ''}" onclick="MdmModule.switchTab('warehouses')" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${this.currentTab === 'warehouses' ? '#2563eb' : 'transparent'}; color: ${this.currentTab === 'warehouses' ? '#2563eb' : '#64748b'};">
-            🏢 ${t('tab_warehouses')}
+            ${t('tab_warehouses')}
           </button>
         </div>
 
@@ -76,9 +73,9 @@ const MdmModule = {
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, true)" style="padding: 12px 14px; text-align:right;">${isUz ? "Bo'sh" : "Свободно"} <span class="sort-icon">↕</span></th>
               </tr>
               <tr class="filter-row">
-                <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${isUz ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍" oninput="TableFilterSort.filterTable(this)" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${isUz ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${isUz ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="" oninput="TableFilterSort.filterTable(this)" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${isUz ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                 <th></th><th></th><th></th><th></th>
               </tr>
             </thead>
@@ -130,11 +127,11 @@ const MdmModule = {
                   <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
                 </tr>
                 <tr class="filter-row">
-                  <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Birlik...' : 'Ед...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Birlik...' : 'Ед...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th></th>
                 </tr>
               </thead>
@@ -147,9 +144,9 @@ const MdmModule = {
                     <td data-sort-value="${m.unit}" style="padding: 12px 14px;">${tr(m.unit)}</td>
                     <td data-sort-value="${m.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${m.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${m.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(m.is_archived ? 'Arxiv' : 'Faol')}</span></td>
                     <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editMaterial(${m.id})" title="${t('btn_edit')}">✏️</button>
-                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.toggleArchiveMaterial(${m.id})" title="${t('btn_archive')}">${m.is_archived ? '♻️' : '📁'}</button>
-                      ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="MdmModule.deleteMaterial(${m.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">🗑️</button>` : ''}
+                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editMaterial(${m.id})" title="${t('btn_edit')}">${CURRENT_LANG === 'uz' ? "Tahrirlash" : "Изменить"}</button>
+                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.toggleArchiveMaterial(${m.id})" title="${t('btn_archive')}">${m.is_archived ? (CURRENT_LANG === 'uz' ? 'Tiklash' : 'Восстановить') : (CURRENT_LANG === 'uz' ? 'Arxivlash' : 'В архив')}</button>
+                      ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="MdmModule.deleteMaterial(${m.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                     </td>
                   </tr>
                 `).join("")}
@@ -174,12 +171,12 @@ const MdmModule = {
                   <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
                 </tr>
                 <tr class="filter-row">
-                  <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Viloyat...' : 'Регион...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Rezident...' : 'Резидент...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tel...' : 'Тел...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Viloyat...' : 'Регион...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Rezident...' : 'Резидент...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Tel...' : 'Тел...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th></th>
                 </tr>
               </thead>
@@ -193,9 +190,9 @@ const MdmModule = {
                     <td data-sort-value="${cp.phone || ''}" style="padding: 12px 14px;">${cp.phone || '-'}</td>
                     <td data-sort-value="${cp.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 12px 14px;"><span class="badge" style="background: ${cp.is_archived ? '#fef2f2' : '#dcfce7'}; color: ${cp.is_archived ? '#dc2626' : '#166534'}; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(cp.is_archived ? 'Arxiv' : 'Faol')}</span></td>
                     <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editCounterparty(${cp.id})" title="${t('btn_edit')}">✏️</button>
-                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.toggleArchiveCp(${cp.id})" title="${t('btn_archive')}">${cp.is_archived ? '♻️' : '📁'}</button>
-                      ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="MdmModule.deleteCounterparty(${cp.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">🗑️</button>` : ''}
+                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editCounterparty(${cp.id})" title="${t('btn_edit')}">${CURRENT_LANG === 'uz' ? "Tahrirlash" : "Изменить"}</button>
+                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.toggleArchiveCp(${cp.id})" title="${t('btn_archive')}">${cp.is_archived ? (CURRENT_LANG === 'uz' ? 'Tiklash' : 'Восстановить') : (CURRENT_LANG === 'uz' ? 'Arxivlash' : 'В архив')}</button>
+                      ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="MdmModule.deleteCounterparty(${cp.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                     </td>
                   </tr>
                 `).join("")}
@@ -219,10 +216,10 @@ const MdmModule = {
                 </tr>
                 <tr class="filter-row">
                   <th></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tur...' : 'Тип...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Tur...' : 'Тип...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
                   <th></th>
                 </tr>
               </thead>
@@ -235,8 +232,8 @@ const MdmModule = {
                     <td data-sort-value="${w.is_system_default ? 'Standart Tizim Skladi' : 'Qo‘shimcha'}" style="padding: 12px 14px;"><span class="badge" style="background: #f0fdf4; color: #15803d; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(w.is_system_default ? 'Standart Tizim Skladi' : "Qo'shimcha")}</span></td>
                     <td data-sort-value="${w.description || ''}" style="padding: 12px 14px;">${tr(w.description) || '-'}</td>
                     <td style="padding: 12px 14px; text-align: right;">
-                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editWarehouse(${w.id})" title="${t('btn_edit')}">✏️</button>
-                      ${!w.is_system_default ? `<button class="btn btn-secondary btn-sm" onclick="MdmModule.deleteWarehouse(${w.id})" title="${t('btn_delete')}" style="color: #dc2626;">🗑️</button>` : ''}
+                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editWarehouse(${w.id})" title="${t('btn_edit')}">${CURRENT_LANG === 'uz' ? "Tahrirlash" : "Изменить"}</button>
+                      ${!w.is_system_default ? `<button class="btn btn-secondary btn-sm" onclick="MdmModule.deleteWarehouse(${w.id})" title="${t('btn_delete')}" style="color: #dc2626;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                     </td>
                   </tr>
                 `).join("")}

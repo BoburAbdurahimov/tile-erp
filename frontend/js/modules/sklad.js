@@ -27,7 +27,7 @@ const SkladModule = {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
           <div>
             <h2 style="margin:0;font-size:22px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px;">
-              <span>📐</span><span>${isUz ? "Ombor (o'lcham bo'yicha)" : "Склад (по размерам)"}</span>
+<span>${isUz ? "Ombor (o'lcham bo'yicha)" : "Склад (по размерам)"}</span>
             </h2>
             <p style="margin:4px 0 0 0;color:#64748b;font-size:13px;">
               ${isUz
@@ -185,7 +185,7 @@ const SkladModule = {
     const isUz = CURRENT_LANG === "uz";
     if (!this.movements.length) {
       return `${this.picker()}<div style="text-align:center;padding:44px;color:#64748b;">
-        <div style="font-size:36px;margin-bottom:10px;">📋</div>
+
         <p style="margin:0;">${isUz ? "Harakatlar yo'q" : "Движений нет"}</p></div>`;
     }
     const col = op => op === "PRIXOD" ? "#059669" : (op === "RASXOD" ? "#dc2626" : "#64748b");

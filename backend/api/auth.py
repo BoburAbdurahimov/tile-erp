@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication & User Management"])
 # RBAC Module Permissions mapping
 ROLE_PERMISSIONS = {
     # Super Admin
-    "Admin": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "moliya", "users", "mini_app", "admin_tools"],
+    "Admin": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "moliya", "users", "mini_app", "admin_tools", "tarix"],
     
     # Granular individual permissions
     "Mini App": ["mini_app"],
@@ -34,9 +34,9 @@ ROLE_PERMISSIONS = {
     "MDM": ["mdm"],
 
     # Legacy role aliases
-    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app"],
-    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app"],
-    "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app"],
+    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
+    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app", "tarix"],
+    "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
     "Omborchi": ["dashboard", "ombor", "mdm", "zakup", "mini_app"],
     "Kassir": ["dashboard", "kassa", "kontragentlar", "mini_app"],
     "Sex boshlig'i": ["dashboard", "ishlab_chiqarish", "ombor", "mini_app"],
@@ -128,16 +128,16 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/roles")
 def list_roles():
     return [
-        {"role": "Admin", "name": "👑 Admin (Barcha modullar + Foydalanuvchilar)", "desc": "Barcha huquqlar"},
-        {"role": "Mini App", "name": "🚀 Mini App (Telegram Mini App ochish)", "desc": "Telegram botda Mini App tugmasi"},
-        {"role": "Ombor", "name": "📦 Ombor (Sklad qoldiqlari)", "desc": "Ombor hisobi va qoldiqlari"},
-        {"role": "Kassa", "name": "💵 Kassa (Kirim & Chiqim)", "desc": "Kassa operatsiyalari"},
-        {"role": "Ishlab chiqarish", "name": "🏭 Ishlab chiqarish (Liniyalar)", "desc": "5 ta ishlab chiqarish liniyasi"},
-        {"role": "Kontragentlar & Balanslar", "name": "👥 Kontragentlar & Balanslar", "desc": "Mijoz va Yetkazib beruvchi qarzlari"},
-        {"role": "Sotib olish (Zakup)", "name": "🛒 Sotib olish (Zakup)", "desc": "Xaridlar va ta'minot"},
-        {"role": "Sotish (Realizatsiya)", "name": "🏷️ Sotish (Realizatsiya)", "desc": "Tayyor kafel sotish"},
-        {"role": "Moliya & PnL", "name": "📈 Moliya & PnL", "desc": "Foyda-zarar va moliyaviy hisobotlar"},
-        {"role": "MDM (Spravochniklar)", "name": "🗂️ MDM (Spravochniklar)", "desc": "Kataloglar va narxlar"}
+        {"role": "Admin", "name": "Admin (Barcha modullar + Foydalanuvchilar)", "desc": "Barcha huquqlar"},
+        {"role": "Mini App", "name": "Mini App (Telegram Mini App ochish)", "desc": "Telegram botda Mini App tugmasi"},
+        {"role": "Ombor", "name": "Ombor (Sklad qoldiqlari)", "desc": "Ombor hisobi va qoldiqlari"},
+        {"role": "Kassa", "name": "Kassa (Kirim & Chiqim)", "desc": "Kassa operatsiyalari"},
+        {"role": "Ishlab chiqarish", "name": "Ishlab chiqarish (Liniyalar)", "desc": "5 ta ishlab chiqarish liniyasi"},
+        {"role": "Kontragentlar & Balanslar", "name": "Kontragentlar & Balanslar", "desc": "Mijoz va Yetkazib beruvchi qarzlari"},
+        {"role": "Sotib olish (Zakup)", "name": "Sotib olish (Zakup)", "desc": "Xaridlar va ta'minot"},
+        {"role": "Sotish (Realizatsiya)", "name": "Sotish (Realizatsiya)", "desc": "Tayyor kafel sotish"},
+        {"role": "Moliya & PnL", "name": "Moliya & PnL", "desc": "Foyda-zarar va moliyaviy hisobotlar"},
+        {"role": "MDM (Spravochniklar)", "name": "MDM (Spravochniklar)", "desc": "Kataloglar va narxlar"}
     ]
 
 @router.get("/current")

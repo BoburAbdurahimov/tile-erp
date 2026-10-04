@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from backend.models import (
     SkladInventory, SkladMovement, SkladMovementItem,
     SKLAD_CONFIG, SKLAD_LENGTHS, SKLAD_WIDTHS,
-    SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_CLEAR,
+    SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_CLEAR, SKLAD_OP_STORNO,
     SELL_TYPE_METR, SELL_TYPE_MKV,
 )
 
@@ -216,6 +216,49 @@ def receive_stock(
 
     db.commit()
     db.refresh(movement)
+    return movement
+
+
+def reverse_receipt(
+    db: Session,
+    sklad_id: int,
+    length: int,
+    width: int,
+    quantity: int,
+    client_name: Optional[str] = None,
+    created_by: Optional[str] = None,
+) -> SkladMovement:
+    """Take back pieces that were received (STORNO). Does not commit."""
+    qty = int(quantity or 0)
+    if qty <= 0:
+        raise SkladError("Miqdor noldan katta bo'lishi kerak.")
+    row = db.query(SkladInventory).filter(
+        SkladInventory.sklad_id == sklad_id,
+        SkladInventory.length == length,
+        SkladInventory.width == width,
+    ).first()
+    on_hand = (row.quantity or 0) if row else 0
+    if on_hand < qty:
+        raise SkladError(
+            f"{sklad_label(sklad_id)}: {length + width} o'lchamdan omborda {on_hand} ta bor, "
+            f"{qty} ta qaytarib bo'lmaydi - mahsulot allaqachon sotilgan."
+        )
+    movement = SkladMovement(
+        sklad_id=sklad_id,
+        operation=SKLAD_OP_STORNO,
+        details=f"{qty} TA {length + width}",
+        occurred_at=datetime.utcnow(),
+        client_name=client_name,
+        created_by=created_by,
+    )
+    db.add(movement)
+    db.flush()
+    _apply_delta(db, sklad_id, length, width, -qty)
+    db.add(SkladMovementItem(
+        movement_id=movement.id,
+        length=length, width=width, quantity=qty,
+        eni=(get_config(sklad_id) or {}).get("eni", 120),
+    ))
     return movement
 
 

@@ -1,6 +1,5 @@
 const ProductionModule = {
   rawMaterialsList: [],
-  finishedMaterialsList: [],
   allStockBalances: [],
   activeTab: 'orders',
 
@@ -8,16 +7,16 @@ const ProductionModule = {
     container.innerHTML = `
       <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-          <div class="card-title" style="font-size: 20px; font-weight: 700;">🏭 ${t('mod_prod_title')}</div>
+          <div class="card-title" style="font-size: 20px; font-weight: 700;">${t('mod_prod_title')}</div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-secondary" onclick="ProductionModule.exportPdf()" style="font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
             </button>
             <button class="btn btn-warning" onclick="ProductionModule.openLineExpenseModal()" style="font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 5px rgba(234, 179, 8, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer; background: #eab308; color: #ffffff; border: none;">
-              <span>⚙️</span> <span>${CURRENT_LANG === 'uz' ? '+ Sarf materiallari (Aralash ombor)' : '+ Расход материалов (Оборудование)'}</span>
+<span>${CURRENT_LANG === 'uz' ? '+ Sarf materiallari (Aralash ombor)' : '+ Расход материалов (Оборудование)'}</span>
             </button>
             <button class="btn btn-primary" onclick="ProductionModule.openNewOrderModal()" style="font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <span>➕</span> <span>${t('btn_new_production')}</span>
+<span>${t('btn_new_production')}</span>
             </button>
           </div>
         </div>
@@ -30,10 +29,10 @@ const ProductionModule = {
         <!-- Tabs Header -->
         <div style="display: flex; gap: 10px; margin-top: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap;">
           <button id="prod-tab-orders" class="btn" onclick="ProductionModule.switchTab('orders')" style="font-weight: 700; font-size: 14px; padding: 8px 18px; border-radius: 6px; background: #2563eb; color: #ffffff; cursor: pointer;">
-            📋 ${CURRENT_LANG === 'uz' ? 'Buyurtmalar va Chiqarilgan Tayyor Mahsulotlar' : 'История выпуска готовой продукции'}
+            ${CURRENT_LANG === 'uz' ? 'Buyurtmalar va Chiqarilgan Tayyor Mahsulotlar' : 'История выпуска готовой продукции'}
           </button>
           <button id="prod-tab-expenses" class="btn" onclick="ProductionModule.switchTab('expenses')" style="font-weight: 700; font-size: 14px; padding: 8px 18px; border-radius: 6px; background: #f1f5f9; color: #475569; cursor: pointer;">
-            ⚙️ ${CURRENT_LANG === 'uz' ? 'Liniyalar Sarf Materiallari (Zapchastlar)' : 'Расход материалов на линии'}
+            ${CURRENT_LANG === 'uz' ? 'Liniyalar Sarf Materiallari (Zapchastlar)' : 'Расход материалов на линии'}
           </button>
         </div>
 
@@ -119,12 +118,12 @@ const ProductionModule = {
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Liniyalar...' : 'Линии...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Zapchast...' : 'Деталь...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniyalar...' : 'Линии...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Zapchast...' : 'Деталь...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Izoh...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="${CURRENT_LANG === 'uz' ? 'Izoh...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
             </tr>
@@ -133,7 +132,7 @@ const ProductionModule = {
             ${expenses.length === 0 ? `
               <tr>
                 <td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">
-                  ⚠️ ${CURRENT_LANG === 'uz' ? 'Hozircha birorta ham liniya sarf materiali yozilmagan' : 'Записей расходов пока нет'}
+                  ${CURRENT_LANG === 'uz' ? 'Hozircha birorta ham liniya sarf materiali yozilmagan' : 'Записей расходов пока нет'}
                 </td>
               </tr>
             ` : expenses.map(e => `
@@ -158,7 +157,7 @@ const ProductionModule = {
                 <td style="text-align: right; white-space: nowrap;">
                   ${e.status === 'Tasdiqlandi' ? `
                     <button class="btn btn-storno btn-sm" onclick="ProductionModule.stornoLineExpense(${e.id}, '${e.expense_number}')">
-                      ↩️ ${t('btn_storno')}
+                      ${t('btn_storno')}
                     </button>
                   ` : '<span style="color: #94a3b8; font-size: 12px;">-</span>'}
                 </td>
@@ -191,12 +190,12 @@ const ProductionModule = {
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
             </tr>
           </thead>
@@ -216,12 +215,12 @@ const ProductionModule = {
                 <td style="text-align: right; white-space: nowrap;">
                   ${o.status === 'Tasdiqlandi' ? `
                     <button class="btn btn-storno btn-sm" onclick="ProductionModule.stornoOrder(${o.id}, '${o.order_number}')">
-                      ↩️ ${t('btn_storno')}
+                      ${t('btn_storno')}
                     </button>
                   ` : '<span style="color: #94a3b8; font-size: 12px;">-</span>'}
                   ${CURRENT_ROLE === 'Admin' ? `
                     <button class="btn btn-danger btn-sm" onclick="ProductionModule.deleteOrder(${o.id}, '${o.order_number}')" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">
-                      🗑️
+                      ${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}
                     </button>
                   ` : ''}
                 </td>
@@ -239,22 +238,21 @@ const ProductionModule = {
     const todayStr = new Date().toISOString().split("T")[0];
     
     // Fetch materials, lines, and stock balances from Warehouse 2 (Ishlab chiqarish uchun materiallar)
-    const [lines, finishedMaterials, rawStockItems] = await Promise.all([
+    const [lines, skladConfig, rawStockItems] = await Promise.all([
       API.getProductionLines(),
-      API.getMaterials("Tayyor mahsulot"),
+      API.getSkladConfig(),
       API.getStockBalances(2)
     ]);
-    
-    this.finishedMaterialsList = finishedMaterials || [];
+
+    // Finished sheets go into the Ombor: owner + sheet width (eni) + size code.
+    this.skladConfig = skladConfig || { warehouses: [], lengths: [], widths: [] };
+    const owners = [...new Set(this.skladConfig.warehouses.map(w => w.name))];
+    const enis = [...new Set(this.skladConfig.warehouses.map(w => w.eni))];
     this.wh2StockItems = (rawStockItems || []).filter(s => s.quantity > 0);
 
     showModal(
       CURRENT_LANG === 'uz' ? "Yangi Ishlab Chiqarish hujjati kiritish" : "Ввод документа выпуска готовой продукции",
       `
-        <datalist id="prod-output-mat-datalist">
-          ${(this.finishedMaterialsList || []).map(m => `<option value="${m.code} - ${m.name} (${tr(m.unit)})" data-id="${m.id}">${m.code} - ${m.name}</option>`).join("")}
-        </datalist>
-
         <datalist id="prod-consumed-wh2-datalist">
           ${this.wh2StockItems.map(s => `<option value="${s.material_code} - ${s.material_name} (${tr(s.unit)})" data-id="${s.material_id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("")}
         </datalist>
@@ -273,29 +271,35 @@ const ProductionModule = {
             </div>
           </div>
 
-          <div class="form-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 6px;">
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Chiqarilayotgan Tayyor kafel plitasi *' : 'Выпускаемая готовая плитка *'}</label>
-              <input 
-                type="text" 
-                id="po-output-mat-input" 
-                list="prod-output-mat-datalist" 
-                class="form-control" 
-                placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kafel kodi yoki nomini yozing...' : 'Код или наименование плитки...'}" 
-                value="" 
-                style="width: 100%; padding: 8px 12px; border-radius: 8px;"
-                required 
-              />
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Qaysi omborga *' : 'На какой склад *'}</label>
+              <select id="po-owner" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+                ${owners.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Chiqarilgan hajm (dona) *' : 'Объем выпуска (шт) *'}</label>
-              <input type="number" step="any" id="po-quantity" class="form-control" placeholder="1000" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Eni *' : 'Ширина листа *'}</label>
+              <select id="po-eni" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+                ${enis.map(e => `<option value="${e}">${e}</option>`).join("")}
+              </select>
             </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? "O'lcham kodi *" : 'Код размера *'}</label>
+              <input type="text" inputmode="numeric" id="po-size-code" class="form-control" placeholder="680" style="width: 100%; padding: 8px 12px; border-radius: 8px;" oninput="ProductionModule.updateSizeHint()" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Miqdor (dona) *' : 'Количество (шт) *'}</label>
+              <input type="number" step="1" min="1" id="po-quantity" class="form-control" placeholder="100" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
+            </div>
+          </div>
+          <div id="po-size-hint" style="font-size: 12px; color: #64748b; margin-bottom: 14px;">
+            ${CURRENT_LANG === 'uz' ? "O'lcham bitta kod bilan: 680 = 600×80" : 'Размер одним кодом: 680 = 600×80'}
           </div>
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
-              🧪 ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo va materiallar (2: Ishlab chiqarish uchun materiallar ombori):' : 'Израсходованное сырье (Склад 2):'}
+              ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo va materiallar (2: Ishlab chiqarish uchun materiallar ombori):' : 'Израсходованное сырье (Склад 2):'}
             </label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="ProductionModule.addConsumedRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
               ${CURRENT_LANG === 'uz' ? '+ Xomashyo qo\'shish' : '+ Добавить сырье'}
@@ -324,17 +328,20 @@ const ProductionModule = {
       async () => {
         const lineId = parseInt(document.getElementById("po-line").value);
         const d = document.getElementById("po-date").value;
-        const outMatInput = document.getElementById("po-output-mat-input").value.trim();
         const qty = parseFloat(document.getElementById("po-quantity").value);
         const notes = document.getElementById("po-notes").value.trim();
+        const outSklad = ProductionModule.selectedSklad();
+        const size = ProductionModule.decodeSize(document.getElementById("po-size-code").value);
 
-        const matchedOutMat = ProductionModule.findFinishedMaterialByInput(outMatInput);
-        if (!matchedOutMat || !outMatInput) {
-          showToast(CURRENT_LANG === 'uz' ? "Chiqarilayotgan tayyor mahsulotni tanlang!" : "Пожалуйста, выберите готовую продукцию из списка!", "warning");
+        if (!outSklad) {
+          showToast(CURRENT_LANG === 'uz' ? "Omborni tanlang!" : "Выберите склад!", "warning");
           return false;
         }
-
-        if (!lineId || isNaN(qty) || qty <= 0) {
+        if (!size) {
+          showToast(CURRENT_LANG === 'uz' ? "O'lcham kodini to'g'ri kiriting (masalan 680)!" : "Введите корректный код размера (например 680)!", "warning");
+          return false;
+        }
+        if (!lineId || isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) {
           showToast(CURRENT_LANG === 'uz' ? "Chiqarilgan hajmni to'g'ri kiriting!" : "Укажите корректный объем!", "warning");
           return false;
         }
@@ -353,7 +360,8 @@ const ProductionModule = {
         try {
           await API.createProductionOrder({
             line_id: lineId,
-            output_material_id: matchedOutMat.id,
+            out_sklad_id: outSklad.id,
+            out_code: size.length + size.width,
             quantity: qty,
             date: d,
             consumed_materials: consumed,
@@ -387,7 +395,7 @@ const ProductionModule = {
           type="text" 
           list="prod-consumed-wh2-datalist" 
           class="form-control row-mat-input" 
-          placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
+          placeholder="${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
           style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
           required 
         />
@@ -396,7 +404,7 @@ const ProductionModule = {
         <input type="number" step="any" class="form-control row-qty" placeholder="0" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" required />
       </td>
       <td style="padding: 6px 8px; text-align: center;">
-        <button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; cursor: pointer;">❌</button>
+        <button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; cursor: pointer;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
       </td>
     `;
     tbody.appendChild(trEl);
@@ -412,7 +420,7 @@ const ProductionModule = {
     const availableStock = (stockItems || []).filter(s => s.quantity > 0);
 
     showModal(
-      CURRENT_LANG === 'uz' ? "⚙️ Liniyalar uchun Sarf materiallari (Aralash ombor) kiritish" : "⚙️ Списание материалов на линии (Склад 3)",
+      CURRENT_LANG === 'uz' ? "Liniyalar uchun Sarf materiallari (Aralash ombor) kiritish" : "Списание материалов на линии (Склад 3)",
       `
         <datalist id="le-mat-datalist">
           ${availableStock.map(s => `<option value="${s.material_code} - ${s.material_name} (${tr(s.unit)})" data-id="${s.material_id}">${CURRENT_LANG === 'uz' ? 'Mavjud' : 'Доступно'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("")}
@@ -427,7 +435,7 @@ const ProductionModule = {
           </div>
 
           <div class="form-group" style="margin-bottom: 16px;">
-            <label class="form-label" style="font-weight: 700; font-size: 13px; color: #0f172a;">⚙️ ${CURRENT_LANG === 'uz' ? 'Sarf qilingan Ishlab chiqarish liniyalari * (Bir nechta tanlash imkoni)' : 'Задействованные линии *'}</label>
+            <label class="form-label" style="font-weight: 700; font-size: 13px; color: #0f172a;">${CURRENT_LANG === 'uz' ? 'Sarf qilingan Ishlab chiqarish liniyalari * (Bir nechta tanlash imkoni)' : 'Задействованные линии *'}</label>
             <div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
               ${lines.map(l => `
                 <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer; color: #1e293b;">
@@ -440,7 +448,7 @@ const ProductionModule = {
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
-              📦 ${CURRENT_LANG === 'uz' ? '3-Aralash ombordan sarflangan zapchast / materiallar:' : 'Списанные материалы со Склада 3:'}
+              ${CURRENT_LANG === 'uz' ? '3-Aralash ombordan sarflangan zapchast / materiallar:' : 'Списанные материалы со Склада 3:'}
             </label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="ProductionModule.addLineExpenseRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
               ${CURRENT_LANG === 'uz' ? '+ Material qo\'shish' : '+ Добавить материал'}
@@ -530,7 +538,7 @@ const ProductionModule = {
           type="text" 
           list="le-mat-datalist" 
           class="form-control le-mat-input" 
-          placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Zapchast kodi yoki nomini yozing...' : 'Код или наименование...'}" 
+          placeholder="${CURRENT_LANG === 'uz' ? 'Zapchast kodi yoki nomini yozing...' : 'Код или наименование...'}" 
           style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
           required 
         />
@@ -539,7 +547,7 @@ const ProductionModule = {
         <input type="number" step="any" class="form-control le-qty" placeholder="1" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" required />
       </td>
       <td style="padding: 6px 8px; text-align: center;">
-        <button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; cursor: pointer;">❌</button>
+        <button type="button" class="btn btn-sm" onclick="this.closest('tr').remove()" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; border-radius: 6px; cursor: pointer;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
       </td>
     `;
     tbody.appendChild(trEl);
@@ -557,15 +565,6 @@ const ProductionModule = {
     } catch (e) {
       showToast(e.message, "error");
     }
-  },
-
-  findFinishedMaterialByInput(inputVal) {
-    if (!inputVal) return null;
-    const lower = inputVal.toLowerCase().trim();
-    return (this.finishedMaterialsList || []).find(m => {
-      const full = `${m.code} - ${m.name} (${tr(m.unit)})`.toLowerCase();
-      return full === lower || m.code.toLowerCase() === lower || m.name.toLowerCase() === lower || full.includes(lower) || lower.includes(m.code.toLowerCase());
-    }) || null;
   },
 
   async stornoOrder(id, orderNum) {
@@ -593,6 +592,39 @@ const ProductionModule = {
       await this.loadOrders();
     } catch (e) {
       showToast(e.message, "error");
+    }
+  },
+
+  selectedSklad() {
+    const owner = document.getElementById("po-owner")?.value;
+    const eni = parseInt(document.getElementById("po-eni")?.value || "0", 10);
+    return ((this.skladConfig || {}).warehouses || []).find(w => w.name === owner && w.eni === eni) || null;
+  },
+
+  decodeSize(code) {
+    const c = parseInt(String(code || "").trim(), 10);
+    if (!c) return null;
+    const length = Math.floor(c / 100) * 100, width = c % 100;
+    const cfg = this.skladConfig || { lengths: [], widths: [] };
+    if (!cfg.lengths.includes(length) || !cfg.widths.includes(width)) return null;
+    return { length, width };
+  },
+
+  updateSizeHint() {
+    const el = document.getElementById("po-size-hint");
+    if (!el) return;
+    const isUz = CURRENT_LANG === 'uz';
+    const raw = document.getElementById("po-size-code").value.trim();
+    const size = this.decodeSize(raw);
+    if (!raw) {
+      el.style.color = "#64748b";
+      el.textContent = isUz ? "O'lcham bitta kod bilan: 680 = 600×80" : "Размер одним кодом: 680 = 600×80";
+    } else if (size) {
+      el.style.color = "#15803d";
+      el.textContent = `${raw} = ${size.length}×${size.width}`;
+    } else {
+      el.style.color = "#b91c1c";
+      el.textContent = isUz ? `${raw} — bunday o'lcham yo'q` : `${raw} — такого размера нет`;
     }
   },
 

@@ -53,7 +53,7 @@ function setupLiveMoneyInput(inputEl, hintEl = null, getCurrency = () => '') {
       const num = parseFloat(raw);
       if (!isNaN(num) && num > 0) {
         const curr = typeof getCurrency === 'function' ? getCurrency() : getCurrency;
-        hintEl.innerHTML = `💡 <strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
+        hintEl.innerHTML = `<strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
         hintEl.style.display = "block";
       } else {
         hintEl.style.display = "none";
@@ -152,7 +152,7 @@ async function handleLoginSubmit(event) {
   } finally {
     if (loginBtn) {
       loginBtn.disabled = false;
-      loginBtn.textContent = "🚀 Tizimga kirish";
+      loginBtn.textContent = "Tizimga kirish";
     }
   }
 }
@@ -201,6 +201,7 @@ function hasModuleAccess(moduleName) {
   if (moduleName === "finance") return roles.includes("Moliya & PnL") || roles.includes("Moliya") || roles.includes("Moliyachi") || roles.includes("Direktor") || roles.includes("Buxgalter");
   if (moduleName === "salary") return roles.includes("Ish haqi") || roles.includes("Ish haqi & Xodimlar") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "users") return roles.includes("Admin");
+  if (moduleName === "history") return isDirector || roles.includes("Buxgalter");
   return false;
 }
 
@@ -419,6 +420,10 @@ async function navigateTo(moduleName) {
       container.innerHTML = `<div id="salary-module"></div>`;
       await IshHaqiModule.render();
       break;
+    case "history":
+      if (pageTitle) pageTitle.textContent = t("nav_history");
+      await HistoryModule.render(container);
+      break;
     case "users":
       if (pageTitle) pageTitle.textContent = t("nav_users");
       await UsersModule.render(container);
@@ -437,7 +442,8 @@ async function updateHeaderFxRate() {
       badge.textContent = `1$ = ${rates[0].rate_usd_uzs.toLocaleString()} UZS`;
     }
   } catch (e) {
-    badge.textContent = "1$ = 12,850 UZS";
+    // No made-up rate: show that it is unknown rather than a stale number.
+    badge.textContent = "1$ = — UZS";
   }
 }
 
@@ -510,7 +516,7 @@ function showToast(message, type = "info") {
 
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <span>${message}</span>`;
+  toast.innerHTML = `<span>${message}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -703,7 +709,7 @@ const TableFilterSort = {
     if (top7.length > 0) {
       itemsHtml += top7.map(val => `
         <div class="filter-dropdown-item" onmousedown="TableFilterSort.selectSuggestion('${val.replace(/'/g, "\\'")}')">
-          <span style="overflow: hidden; text-overflow: ellipsis;">🔹 ${val}</span>
+          <span style="overflow: hidden; text-overflow: ellipsis;">${val}</span>
           <span style="font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 10px;">${valueCountMap[val]}</span>
         </div>
       `).join("");
@@ -718,7 +724,7 @@ const TableFilterSort = {
     if (inputEl.value) {
       itemsHtml += `
         <div class="filter-dropdown-clear" onmousedown="TableFilterSort.clearSuggestion()">
-          <span>✖</span> <span>${CURRENT_LANG === 'uz' ? "Filtrni tozalash" : "Сбросить фильтр"}</span>
+<span>${CURRENT_LANG === 'uz' ? "Filtrni tozalash" : "Сбросить фильтр"}</span>
         </div>
       `;
     }
@@ -913,7 +919,7 @@ function buildPdfReportHtml(title, headers, rows) {
     <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; padding: 4px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f2b48; padding-bottom: 8px; margin-bottom: 12px;">
         <div>
-          <div style="font-size: 11px; color: #64748b; font-weight: 600;">🏭 Kafel Zavodi ERP</div>
+          <div style="font-size: 11px; color: #64748b; font-weight: 600;">Kafel Zavodi ERP</div>
           <div style="font-size: 18px; font-weight: 800;">${escapeHtml(title)}</div>
         </div>
         <div style="font-size: 10px; color: #64748b; text-align: right;">${escapeHtml(dateStr)}<br>${rows.length} ${CURRENT_LANG === 'uz' ? "ta qator" : "строк"}</div>

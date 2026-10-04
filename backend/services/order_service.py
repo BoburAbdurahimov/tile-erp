@@ -22,7 +22,7 @@ from backend.models import (
     SkladOrder, SkladOrderItem, SkladOrderPayment, SkladInventory,
     CashRegister, CashTransaction,
     ORDER_NEW, ORDER_DELIVERED, ORDER_CANCELLED, PAY_CASH, PAY_CARD,
-    SELL_TYPE_METR, SELL_TYPE_MKV,
+    SELL_TYPE_METR, SELL_TYPE_MKV, SKLAD_CONFIG,
 )
 from backend.services import sklad_service as sklad
 from backend.services.sklad_service import SkladError
@@ -165,11 +165,14 @@ def paid_amounts(db: Session, order_ids: list[int]) -> dict[int, float]:
     return out
 
 
-def allocate(db: Session) -> dict[int, list[dict]]:
+def allocate(db: Session, override: Optional[dict[int, int]] = None) -> dict[int, list[dict]]:
     """Share free stock among open orders, earliest deadline first.
 
     Returns, per open order, each line's claimed and missing quantity.
+    `override` maps an order id to a warehouse to try it against instead of
+    its own, so delivery can check another owner's stock without saving.
     """
+    override = override or {}
     stock = {
         (r.sklad_id, r.length, r.width): r.quantity or 0
         for r in db.query(SkladInventory).all()
@@ -182,9 +185,10 @@ def allocate(db: Session) -> dict[int, list[dict]]:
     )
     result: dict[int, list[dict]] = {}
     for o in open_orders:
+        sid = override.get(o.id, o.sklad_id)
         lines = []
         for it in o.items:
-            key = (o.sklad_id, it.length, it.width)
+            key = (sid, it.length, it.width)
             free = max(stock.get(key, 0), 0)
             claimed = min(free, it.quantity)
             stock[key] = free - claimed
@@ -395,8 +399,50 @@ def create_order(db: Session, data: dict, created_by: Optional[str]) -> SkladOrd
     return order
 
 
+def owner_warehouses(sklad_id: int) -> list[dict]:
+    """The same sheet width (eni) at each owner - where an order may ship from."""
+    cfg = sklad.get_config(sklad_id)
+    if not cfg:
+        return []
+    out, seen = [], set()
+    for s in SKLAD_CONFIG:
+        if s["eni"] == cfg["eni"] and s["name"] not in seen:
+            seen.add(s["name"])
+            out.append(s)
+    return out
+
+
+def delivery_options(db: Session, order_id: int) -> dict:
+    """For each owner, whether the order could ship from there right now."""
+    o = db.query(SkladOrder).filter(SkladOrder.id == order_id).first()
+    if not o:
+        raise SkladError("Buyurtma topilmadi.")
+    items_by_id = {it.id: it for it in o.items}
+    options = []
+    for cfg in owner_warehouses(o.sklad_id):
+        lines = allocate(db, {o.id: cfg["id"]}).get(o.id, [])
+        short = [a for a in lines if a["shortfall"] > 0]
+        options.append({
+            "sklad_id": cfg["id"],
+            "name": cfg["name"],
+            "eni": cfg["eni"],
+            "label": sklad.sklad_label(cfg["id"]),
+            "is_order_sklad": cfg["id"] == o.sklad_id,
+            "can_ship": not short,
+            "shortfall_pieces": sum(a["shortfall"] for a in lines),
+            "lines": [{
+                "code": items_by_id[a["item_id"]].size_code,
+                "quantity": items_by_id[a["item_id"]].quantity,
+                "available": a["claimed"],
+                "shortfall": a["shortfall"],
+            } for a in lines],
+        })
+    return {"order_id": o.id, "options": options}
+
+
 def deliver_order(db: Session, order_id: int, car_number: str, driver_name: Optional[str],
-                  driver_phone: str, note: Optional[str], created_by: Optional[str]) -> SkladOrder:
+                  driver_phone: str, note: Optional[str], created_by: Optional[str],
+                  sklad_id: Optional[int] = None) -> SkladOrder:
     o = db.query(SkladOrder).filter(SkladOrder.id == order_id).first()
     if not o:
         raise SkladError("Buyurtma topilmadi.")
@@ -407,9 +453,17 @@ def deliver_order(db: Session, order_id: int, car_number: str, driver_name: Opti
     if not (driver_phone or "").strip():
         raise SkladError("Haydovchi telefon raqamini kiriting.")
 
+    # The order may ship from another owner's warehouse of the same sheet
+    # width; prices were set for that width, so it must not change.
+    target = o.sklad_id
+    if sklad_id and sklad_id != o.sklad_id:
+        if sklad_id not in {c["id"] for c in owner_warehouses(o.sklad_id)}:
+            raise SkladError("Bu ombordan yetkazib bo'lmaydi - eni buyurtmanikidan farq qiladi.")
+        target = sklad_id
+
     # Earlier deadlines are served first: stock they have claimed is not
     # available here, even though it is physically on the shelf.
-    short = [a for a in allocate(db).get(o.id, []) if a["shortfall"] > 0]
+    short = [a for a in allocate(db, {o.id: target}).get(o.id, []) if a["shortfall"] > 0]
     if short:
         items_by_id = {it.id: it for it in o.items}
         detail = ", ".join(
@@ -426,6 +480,7 @@ def deliver_order(db: Session, order_id: int, car_number: str, driver_name: Opti
     items = [{"length": it.length, "width": it.width, "quantity": it.quantity,
               "unit_price": round(it.unit_price * factor, 4)} for it in o.items]
 
+    o.sklad_id = target
     o.status = ORDER_DELIVERED
     o.delivered_at = local_now()
     o.car_number = car_number.strip().upper()

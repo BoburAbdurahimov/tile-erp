@@ -5,7 +5,7 @@ const KassaModule = {
         <!-- Cash Registers Card -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div class="card-title" style="font-size: 18px; font-weight: 700;">💵 ${t('mod_kassa_title')}</div>
+            <div class="card-title" style="font-size: 18px; font-weight: 700;">${t('mod_kassa_title')}</div>
             <div style="display: flex; gap: 10px;">
               <button class="btn btn-success" onclick="KassaModule.openTransactionModal('kirim')" style="font-weight: 700; font-size: 15px; padding: 9px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer;">
                 ${t('kassa_income_btn')}
@@ -23,13 +23,13 @@ const KassaModule = {
         <!-- Exchange Rate & CBU Integration Card -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div class="card-title" style="font-size: 18px; font-weight: 700;">📈 ${t('kassa_rate_title')}</div>
+            <div class="card-title" style="font-size: 18px; font-weight: 700;">${t('kassa_rate_title')}</div>
             <div style="display: flex; gap: 8px;">
               <button class="btn btn-secondary btn-sm" onclick="KassaModule.syncCbuLive()" style="font-weight: 600;">
                 ${t('kassa_cbu_sync_btn')}
               </button>
               <button class="btn btn-warning btn-sm" onclick="KassaModule.openRateModal()" style="font-weight: 600;">
-                ✏️ ${t('rate_edit')}
+                ${t('rate_edit')}
               </button>
             </div>
           </div>
@@ -42,9 +42,9 @@ const KassaModule = {
       <!-- Cash Transactions Table -->
       <div class="card" style="margin-top: 20px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <div class="card-title" style="font-size: 18px; font-weight: 700;">📑 ${t('kassa_history_title')}</div>
+          <div class="card-title" style="font-size: 18px; font-weight: 700;">${t('kassa_history_title')}</div>
           <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('kassa-transactions-table', 'kassa_operatsiyalari')" style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; padding: 6px 14px; border-radius: 8px;">
-            <span>📄</span> <span>${t('btn_export_pdf')}</span>
+<span>${t('btn_export_pdf')}</span>
           </button>
         </div>
         <div class="table-container" id="kassa-tx-table-container">
@@ -87,7 +87,11 @@ const KassaModule = {
     if (!div) return;
     try {
       const rates = await API.getExchangeRates();
-      const latest = rates[0] || { rate_usd_uzs: 12850, date: "Bugun", is_manual_override: false };
+      const latest = rates[0];
+      if (!latest) {
+        div.innerHTML = `<div style="padding: 14px 18px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-weight: 600; margin-bottom: 16px;">${CURRENT_LANG === 'uz' ? "Valyuta kursi hali kiritilmagan." : "Курс валюты ещё не задан."}</div>`;
+        return;
+      }
 
       div.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px;">
@@ -136,14 +140,14 @@ const KassaModule = {
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
-              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kassa...' : 'Касса...'}" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tur...' : 'Тип...'}" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Kontragent...' : 'Контрагент...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Kassa...' : 'Касса...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Tur...' : 'Тип...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Kategoriya...' : 'Категория...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Kontragent...' : 'Контрагент...'}" /></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="6" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Valyuta...' : 'Валюта...'}" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="7" placeholder="🔍 ${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="6" placeholder="${CURRENT_LANG === 'uz' ? 'Valyuta...' : 'Валюта...'}" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="7" placeholder="${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" /></th>
               <th></th>
             </tr>
           </thead>
@@ -157,7 +161,7 @@ const KassaModule = {
                   <td data-sort-value="${tx.register_name}"><strong>${tr(tx.register_name)}</strong></td>
                   <td data-sort-value="${tx.type}">
                     <span class="badge" style="background: ${isKirim ? '#dcfce7' : '#fee2e2'}; color: ${isKirim ? '#15803d' : '#b91c1c'}; padding: 4px 8px; border-radius: 6px; font-weight: 600;">
-                      ${isKirim ? (CURRENT_LANG === 'uz' ? '📥 Kirim' : '📥 Приход') : (CURRENT_LANG === 'uz' ? '📤 Chiqim' : '📤 Расход')}
+                      ${isKirim ? (CURRENT_LANG === 'uz' ? 'Kirim' : 'Приход') : (CURRENT_LANG === 'uz' ? 'Chiqim' : 'Расход')}
                     </span>
                   </td>
                   <td data-sort-value="${tr(tx.category)}"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${tr(tx.category)}</span></td>
@@ -174,7 +178,7 @@ const KassaModule = {
                   </td>
                   <td data-sort-value="${tx.description || ''}">${tr(tx.description) || '-'}</td>
                   <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-                    ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">🗑️</button>` : ''}
+                    ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                   </td>
                 </tr>
               `;
@@ -257,8 +261,8 @@ const KassaModule = {
 
     const defaultCatKey = isKirim ? "Mijoz to'lovi" : "Elektr energiya (Svet)";
     const defaultCatLabel = isKirim 
-      ? (isUz ? "👤 Mijoz to'lovi (Debitorlik)" : "👤 Оплата от клиента (Погашение дебиторки)")
-      : (isUz ? "⚡ Elektr energiya (Svet)" : "⚡ Электроэнергия (Свет)");
+      ? (isUz ? "Mijoz to'lovi (Debitorlik)" : "Оплата от клиента (Погашение дебиторки)")
+      : (isUz ? "Elektr energiya (Svet)" : "Электроэнергия (Свет)");
 
     showModal(
       title,
@@ -294,7 +298,7 @@ const KassaModule = {
                 onmouseout="this.style.borderColor='#cbd5e1'"
               >
                 <span id="tx-category-selected-label" style="color: #1e293b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${defaultCatLabel}</span>
-                <span style="color: #2563eb; font-size: 11px; font-weight: 600; margin-left: 6px; flex-shrink: 0;">🔍 ${isUz ? 'Tanlash' : 'Выбрать'}</span>
+                <span style="color: #2563eb; font-size: 11px; font-weight: 600; margin-left: 6px; flex-shrink: 0;">${isUz ? 'Tanlash' : 'Выбрать'}</span>
               </div>
             </div>
           </div>
@@ -307,7 +311,7 @@ const KassaModule = {
               id="tx-counterparty-input" 
               list="tx-cp-datalist" 
               class="form-control" 
-              placeholder="${isUz ? '🔍 Kod yoki nom yozing (masalan: 10001 yoki Ali)...' : '🔍 Введите код или наименование...'}" 
+              placeholder="${isUz ? 'Kod yoki nom yozing (masalan: 10001 yoki Ali)...' : 'Введите код или наименование...'}" 
               style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"
             />
             <datalist id="tx-cp-datalist"></datalist>
@@ -376,7 +380,7 @@ const KassaModule = {
           const num = parseFormattedNumber(amtInput.value);
           if (num > 0 && amtHint) {
             const curr = regSelect.value === "1" ? "USD" : "UZS";
-            amtHint.innerHTML = `💡 <strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
+            amtHint.innerHTML = `<strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
           }
         }
       });
@@ -389,45 +393,45 @@ const KassaModule = {
 
     const categoriesData = isKirim ? [
       {
-        group: isUz ? "📥 Asosiy Kirim Turlari" : "📥 Основные поступления",
+        group: isUz ? "Asosiy Kirim Turlari" : "Основные поступления",
         items: [
-          { key: "Mijoz to'lovi", label: isUz ? "👤 Mijoz to'lovi (Debitorlik)" : "👤 Оплата от клиента (Погашение дебиторки)" },
-          { key: "Postavshikdan qaytgan pul", label: isUz ? "🚚 Postavshikdan qaytgan pul" : "🚚 Возврат средств от поставщика" },
-          { key: "Asoschidan investitsiya", label: isUz ? "💼 Asoschidan investitsiya" : "💼 Инвестиции учредителя" },
-          { key: "Boshqa kirim", label: isUz ? "💰 Boshqa daromadlar va kirimlar" : "💰 Прочие доходы и поступления" }
+          { key: "Mijoz to'lovi", label: isUz ? "Mijoz to'lovi (Debitorlik)" : "Оплата от клиента (Погашение дебиторки)" },
+          { key: "Postavshikdan qaytgan pul", label: isUz ? "Postavshikdan qaytgan pul" : "Возврат средств от поставщика" },
+          { key: "Asoschidan investitsiya", label: isUz ? "Asoschidan investitsiya" : "Инвестиции учредителя" },
+          { key: "Boshqa kirim", label: isUz ? "Boshqa daromadlar va kirimlar" : "Прочие доходы и поступления" }
         ]
       }
     ] : [
       {
-        group: isUz ? "⚡ Bilvosita ishlab chiqarish xarajatlari (Sex)" : "⚡ Косвенные производственные расходы (Цех)",
+        group: isUz ? "Bilvosita ishlab chiqarish xarajatlari (Sex)" : "Косвенные производственные расходы (Цех)",
         items: [
-          { key: "Elektr energiya (Svet)", label: isUz ? "⚡ Elektr energiya (Svet)" : "⚡ Электроэнергия (Свет)" },
-          { key: "Tabiiy gaz", label: isUz ? "🔥 Tabiiy gaz" : "🔥 Природный газ" },
-          { key: "Suv va kanalizatsiya", label: isUz ? "💧 Suv va kanalizatsiya" : "💧 Водоснабжение и канализация" },
-          { key: "Uskunalar ta'miri va ehtiyot qismlar", label: isUz ? "🛠️ Uskunalar ta'miri va ehtiyot qismlar" : "🛠️ Ремонт оборудования и запчасти" },
-          { key: "Sex ijarasi va xizmatlar", label: isUz ? "🏭 Sex ijarasi va xizmatlar" : "🏭 Аренда цеха и услуги" },
-          { key: "Transport va yoqilg'i", label: isUz ? "🚚 Transport va yoqilg'i (GSM)" : "🚚 Транспорт и ГСМ" },
-          { key: "Ishchilar oyligi / Avans", label: isUz ? "👥 Ishchilar oyligi / Avans" : "👥 Зарплата рабочих / Аванс" },
-          { key: "Boshqa sex xarajatlari", label: isUz ? "📦 Boshqa sex xarajatlari" : "📦 Прочие цеховые расходы" }
+          { key: "Elektr energiya (Svet)", label: isUz ? "Elektr energiya (Svet)" : "Электроэнергия (Свет)" },
+          { key: "Tabiiy gaz", label: isUz ? "Tabiiy gaz" : "Природный газ" },
+          { key: "Suv va kanalizatsiya", label: isUz ? "Suv va kanalizatsiya" : "Водоснабжение и канализация" },
+          { key: "Uskunalar ta'miri va ehtiyot qismlar", label: isUz ? "Uskunalar ta'miri va ehtiyot qismlar" : "Ремонт оборудования и запчасти" },
+          { key: "Sex ijarasi va xizmatlar", label: isUz ? "Sex ijarasi va xizmatlar" : "Аренда цеха и услуги" },
+          { key: "Transport va yoqilg'i", label: isUz ? "Transport va yoqilg'i (GSM)" : "Транспорт и ГСМ" },
+          { key: "Ishchilar oyligi / Avans", label: isUz ? "Ishchilar oyligi / Avans" : "Зарплата рабочих / Аванс" },
+          { key: "Boshqa sex xarajatlari", label: isUz ? "Boshqa sex xarajatlari" : "Прочие цеховые расходы" }
         ]
       },
       {
-        group: isUz ? "🏢 Ma'muriy va boshqaruv xarajatlari" : "🏢 Административные и управленческие расходы",
+        group: isUz ? "Ma'muriy va boshqaruv xarajatlari" : "Административные и управленческие расходы",
         items: [
-          { key: "Ofis ijarasi", label: isUz ? "🏢 Ofis ijarasi" : "🏢 Аренда офиса" },
-          { key: "Aloqa, Internet va IT", label: isUz ? "💻 Aloqa, Internet va IT" : "💻 Связь, интернет и IT" },
-          { key: "Buxgalteriya va audit", label: isUz ? "📑 Buxgalteriya va konsalting" : "📑 Бухгалтерия и консалтинг" },
-          { key: "Reklama va marketing", label: isUz ? "📢 Reklama va marketing" : "📢 Реклама и маркетинг" },
-          { key: "Soliqlar va davlat bojlari", label: isUz ? "🏛️ Soliqlar va davlat bojlari" : "🏛️ Налоги и госпошлины" },
-          { key: "Ofis va xo'jalik xarajatlari", label: isUz ? "☕ Ofis va xo'jalik xarajatlari" : "☕ Хозяйственные расходы" },
-          { key: "Boshqa ma'muriy xarajatlar", label: isUz ? "📁 Boshqa ma'muriy xarajatlar" : "📁 Прочие админ расходы" }
+          { key: "Ofis ijarasi", label: isUz ? "Ofis ijarasi" : "Аренда офиса" },
+          { key: "Aloqa, Internet va IT", label: isUz ? "Aloqa, Internet va IT" : "Связь, интернет и IT" },
+          { key: "Buxgalteriya va audit", label: isUz ? "Buxgalteriya va konsalting" : "Бухгалтерия и консалтинг" },
+          { key: "Reklama va marketing", label: isUz ? "Reklama va marketing" : "Реклама и маркетинг" },
+          { key: "Soliqlar va davlat bojlari", label: isUz ? "Soliqlar va davlat bojlari" : "Налоги и госпошлины" },
+          { key: "Ofis va xo'jalik xarajatlari", label: isUz ? "Ofis va xo'jalik xarajatlari" : "Хозяйственные расходы" },
+          { key: "Boshqa ma'muriy xarajatlar", label: isUz ? "Boshqa ma'muriy xarajatlar" : "Прочие админ расходы" }
         ]
       },
       {
-        group: isUz ? "🚚 Kontragentlar va boshqa to'lovlar" : "🚚 Расчеты с поставщиками и прочее",
+        group: isUz ? "Kontragentlar va boshqa to'lovlar" : "Расчеты с поставщиками и прочее",
         items: [
-          { key: "Postavshikka to'lov", label: isUz ? "🚚 Postavshikka to'lov (Qarz yopish)" : "🚚 Оплата поставщику (Погашение долга)" },
-          { key: "Boshqa chiqim", label: isUz ? "💼 Boshqa chiqimlar" : "💼 Прочий расход" }
+          { key: "Postavshikka to'lov", label: isUz ? "Postavshikka to'lov (Qarz yopish)" : "Оплата поставщику (Погашение долга)" },
+          { key: "Boshqa chiqim", label: isUz ? "Boshqa chiqimlar" : "Прочий расход" }
         ]
       }
     ];
@@ -453,7 +457,7 @@ const KassaModule = {
       <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 580px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid #e2e8f0;">
         <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; background: #f8fafc;">
           <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-            <span>📁</span> <span>${isUz ? 'Kategoriya tanlash' : 'Выбор категории'}</span>
+<span>${isUz ? 'Kategoriya tanlash' : 'Выбор категории'}</span>
           </h3>
           <button type="button" onclick="document.getElementById('kassa-cat-picker-overlay').remove()" style="background: transparent; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1;">✕</button>
         </div>
@@ -463,14 +467,14 @@ const KassaModule = {
             <input 
               type="text" 
               id="kassa-cat-search" 
-              placeholder="${isUz ? '🔍 Qidirish (masalan: svet, gaz, ijara, oylik)...' : '🔍 Поиск (например: свет, газ, аренда, зарплата)...'}" 
+              placeholder="${isUz ? 'Qidirish (masalan: svet, gaz, ijara, oylik)...' : 'Поиск (например: свет, газ, аренда, зарплата)...'}" 
               oninput="KassaModule.filterCategoryCards(this.value)"
-              style="width: 100%; box-sizing: border-box; padding: 10px 14px 10px 36px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s;"
+              style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s;"
               onfocus="this.style.borderColor='#2563eb'"
               onblur="this.style.borderColor='#cbd5e1'"
               autofocus
             />
-            <span style="position: absolute; left: 12px; top: 10px; font-size: 14px; color: #94a3b8;">🔍</span>
+
           </div>
         </div>
 

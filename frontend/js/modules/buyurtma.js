@@ -117,7 +117,7 @@ const OrdersModule = {
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               ${this.isAdmin() ? `
               <button class="btn btn-secondary btn-sm" onclick="OrdersModule.loadDemo()"
-                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">🧪 ${isUz ? "Demo yuklash" : "Загрузить демо"}</button>` : ""}
+                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">${isUz ? "Demo yuklash" : "Загрузить демо"}</button>` : ""}
               <button class="btn btn-secondary btn-sm" onclick="OrdersModule.openLegacy()"
                 style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">
                 ${isUz ? "Eski sotuv hujjatlari" : "Старые документы продаж"}
@@ -198,7 +198,7 @@ const OrdersModule = {
     const pieces = urgent.reduce((s, o) => s + o.shortfall_pieces, 0);
     el.innerHTML = `
       <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13.5px;">
-        <span style="font-size:18px;line-height:1;">⏰</span>
+
         <span>
           <b>${isUz ? "Eslatma:" : "Напоминание:"}</b>
           ${isUz
@@ -285,7 +285,7 @@ const OrdersModule = {
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})"
               style="background:#2563eb;color:#fff;border:none;padding:7px 12px;border-radius:8px;font-weight:600;cursor:pointer;">
-              🚚 ${isUz ? "Yetkazish" : "Доставить"}</button>
+              ${isUz ? "Yetkazish" : "Доставить"}</button>
             <button class="btn btn-sm btn-secondary" onclick="OrdersModule.openPay(${o.id})"
               style="padding:7px 12px;border-radius:8px;font-weight:600;">${isUz ? "Avans" : "Аванс"}</button>
             <button class="btn btn-sm btn-secondary" onclick="OrdersModule.cancel(${o.id})"
@@ -332,7 +332,7 @@ const OrdersModule = {
     return `
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div class="card" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;">
-          <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a;">🏭 ${isUz ? "Ishlab chiqarish rejasi" : "План производства"}</h3>
+          <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a;">${isUz ? "Ishlab chiqarish rejasi" : "План производства"}</h3>
           <p style="margin:0 0 12px;color:#64748b;font-size:12.5px;">
             ${isUz ? "Ombordagi mahsulot buyurtmalarga muddat tartibida taqsimlanadi; yetmagani shu yerda."
                    : "Склад распределяется по заказам в порядке сроков; недостающее — здесь."}
@@ -397,7 +397,7 @@ const OrdersModule = {
           ${isUz ? "Bugun" : "Сегодня"}</button>
         ${overdue ? `<button class="btn btn-sm" onclick="OrdersModule.pickDay('overdue')"
             style="padding:6px 12px;border-radius:8px;font-weight:700;border:1px solid #fecaca;background:${this.calSelected === "overdue" ? "#dc2626" : "#fef2f2"};color:${this.calSelected === "overdue" ? "#fff" : "#b91c1c"};cursor:pointer;">
-            ⚠ ${isUz ? "Muddati o'tgan" : "Просроченные"}: ${overdue}</button>` : ""}
+            ${isUz ? "Muddati o'tgan" : "Просроченные"}: ${overdue}</button>` : ""}
       </div>`;
   },
 
@@ -428,9 +428,11 @@ const OrdersModule = {
         <div style="display:flex;gap:6px;flex-wrap:wrap;">${this.itemChips(o)}</div>
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
           <span style="font-weight:700;color:#0f172a;">${this.money(o.total_amount)} · ${escapeHtml(o.sklad_label)}</span>
-          <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})" ${o.shortfall_pieces > 0 ? "disabled title='" + (isUz ? "Omborda yetarli emas" : "Не хватает на складе") + "'" : ""}
-            style="background:${o.shortfall_pieces > 0 ? "#94a3b8" : "#059669"};color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:${o.shortfall_pieces > 0 ? "not-allowed" : "pointer"};">
-            ${o.shortfall_pieces > 0 ? (isUz ? `${o.shortfall_pieces} ta yetmaydi` : `Не хватает ${o.shortfall_pieces}`) : "🚚 " + (isUz ? "Yetkazildi deb belgilash" : "Отметить доставку")}
+          <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})"
+            style="background:${o.shortfall_pieces > 0 ? "#d97706" : "#059669"};color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">
+            ${o.shortfall_pieces > 0
+              ? (isUz ? `${o.shortfall_pieces} ta yetmaydi — boshqa ombor` : `Не хватает ${o.shortfall_pieces} — другой склад`)
+              : (isUz ? "Yetkazildi deb belgilash" : "Отметить доставку")}
           </button>
         </div>
       </div>`;
@@ -439,7 +441,7 @@ const OrdersModule = {
       <div style="border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;background:#f0fdf4;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div>
           <div style="font-weight:700;color:#0f172a;">✓ ${escapeHtml(o.client_name)} <span style="color:#64748b;font-weight:500;font-size:12.5px;">· ${o.order_number}</span></div>
-          <div style="font-size:12.5px;color:#475569;">🚚 <b>${escapeHtml(o.car_number || "-")}</b>
+          <div style="font-size:12.5px;color:#475569;"><b>${escapeHtml(o.car_number || "-")}</b>
             · ${escapeHtml(o.driver_name || "")} <a href="tel:${escapeHtml(o.driver_phone || "")}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.driver_phone || "")}</a></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">${this.payBadge(o)}</div>
@@ -528,10 +530,10 @@ const OrdersModule = {
             <tbody>
               ${rows.length ? rows.map(o => `
                 <tr>
-                  <td style="padding:10px;"><b>${o.order_number}</b><div style="font-size:11.5px;color:#64748b;">${o.status === "Yetkazildi" ? "🚚 " + (o.delivered_at || "").slice(0, 10) : (isUz ? "Yetkazilmagan" : "Не доставлен")}</div></td>
+                  <td style="padding:10px;"><b>${o.order_number}</b><div style="font-size:11.5px;color:#64748b;">${o.status === "Yetkazildi" ? "" + (o.delivered_at || "").slice(0, 10) : (isUz ? "Yetkazilmagan" : "Не доставлен")}</div></td>
                   <td style="padding:10px;">${escapeHtml(o.client_name)}<div style="font-size:11.5px;"><a href="tel:${escapeHtml(o.client_phone)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.client_phone)}</a></div></td>
                   <td style="padding:10px;">${this.payBadge(o)}
-                    ${o.payments.length ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">${o.payments.map(p => `${p.method === "karta" ? "💳" : "💵"} ${formatNumber(p.amount, 0, 0)}`).join(" · ")}</div>` : ""}</td>
+                    ${o.payments.length ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">${o.payments.map(p => `${p.method === "karta" ? (isUz ? "Karta" : "Карта") : (isUz ? "Naqd" : "Наличные")}: ${formatNumber(p.amount, 0, 0)}`).join(" · ")}</div>` : ""}</td>
                   <td style="padding:10px;text-align:right;">${formatNumber(o.total_amount, 0, 0)}</td>
                   <td style="padding:10px;text-align:right;color:#15803d;">${formatNumber(o.paid_amount, 0, 0)}</td>
                   <td style="padding:10px;text-align:right;font-weight:800;color:${o.balance > 0 ? "#b91c1c" : "#15803d"};">${formatNumber(o.balance, 0, 0)}</td>
@@ -727,7 +729,7 @@ const OrdersModule = {
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;">
         <span style="font-size:12.5px;font-weight:700;color:${short ? "#b91c1c" : "#15803d"};">
-          ${short ? `⏰ ${isUz ? `Muddatgacha ${short} ta ishlab chiqarish kerak` : `К сроку нужно произвести ${short} шт`}`
+          ${short ? `${isUz ? `Muddatgacha ${short} ta ishlab chiqarish kerak` : `К сроку нужно произвести ${short} шт`}`
                   : `✓ ${isUz ? "Omborda yetarli" : "На складе достаточно"}`}</span>
         <span style="font-size:18px;font-weight:800;color:#0f172a;">${formatNumber(total, 0, 0)} so'm</span>
       </div>`;
@@ -770,22 +772,52 @@ const OrdersModule = {
 
   find(id) { return this.orders.find(o => o.id === id); },
 
-  openDeliver(id) {
+  async openDeliver(id) {
     const isUz = this.isUz();
     const o = this.find(id);
     if (!o) return;
+    let options = [];
+    try {
+      options = (await API.getDeliveryOptions(id)).options || [];
+    } catch (e) {
+      showToast(e.message, "error");
+      return;
+    }
+    // Default to the order's own warehouse if it can ship, else the first that can.
+    const pick = options.find(op => op.is_order_sklad && op.can_ship) || options.find(op => op.can_ship)
+      || options.find(op => op.is_order_sklad) || options[0];
     const f = "width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13.5px;box-sizing:border-box;";
     const l = "display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;";
-    const warn = o.shortfall_pieces > 0
-      ? `<div style="padding:10px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;font-weight:600;">
-           ${isUz ? `Omborda ${o.shortfall_pieces} ta yetmaydi — avval ishlab chiqaring.` : `Не хватает ${o.shortfall_pieces} шт — сначала произведите.`}</div>` : "";
-    showModal(`🚚 ${isUz ? "Yetkazib berish" : "Доставка"} — ${o.order_number}`, `
+    const card = op => {
+      const short = op.lines.filter(x => x.shortfall > 0)
+        .map(x => `${x.code}: ${isUz ? "yetmaydi" : "не хватает"} ${x.shortfall}`).join(", ");
+      return `
+        <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;cursor:pointer;
+                      border:2px solid ${op.can_ship ? "#bbf7d0" : "#fecaca"};background:${op.can_ship ? "#f0fdf4" : "#fef2f2"};">
+          <input type="radio" name="dlv-sklad" value="${op.sklad_id}" ${pick && op.sklad_id === pick.sklad_id ? "checked" : ""}
+            style="width:18px;height:18px;margin-top:2px;" onchange="OrdersModule.onDeliverySkladChange()">
+          <span style="flex:1;">
+            <b style="font-size:14px;">${escapeHtml(op.name)}</b>
+            <span style="color:#64748b;font-size:12px;">(${isUz ? "eni" : "ширина"} ${op.eni})</span>
+            ${op.is_order_sklad ? `<span style="font-size:11px;font-weight:700;color:#2563eb;margin-left:4px;">${isUz ? "buyurtma ombori" : "склад заказа"}</span>` : ""}
+            <span style="display:block;font-size:12px;font-weight:600;color:${op.can_ship ? "#15803d" : "#b91c1c"};">
+              ${op.can_ship ? (isUz ? "Hammasi bor" : "Всё в наличии") : escapeHtml(short)}
+            </span>
+          </span>
+        </label>`;
+    };
+    showModal(`${isUz ? "Yetkazib berish" : "Доставка"} — ${o.order_number}`, `
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px;">
           <b>${escapeHtml(o.client_name)}</b> · ${escapeHtml(o.client_phone)}${o.client_address ? " · " + escapeHtml(o.client_address) : ""}<br>
           ${o.items.map(it => `${it.code} × ${it.quantity}`).join(", ")} · <b>${this.money(o.total_amount)}</b>
         </div>
-        ${warn}
+        <div>
+          <label style="${l}">${isUz ? "Qaysi ombordan yuboriladi?" : "С какого склада отправить?"}</label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">
+            ${options.map(card).join("")}
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
           <div><label style="${l}">${isUz ? "Mashina raqami" : "Номер машины"} *</label>
             <input id="dlv-car" style="${f}text-transform:uppercase;" placeholder="01 A 123 BC"></div>
@@ -795,18 +827,37 @@ const OrdersModule = {
             <input id="dlv-phone" type="tel" style="${f}" placeholder="+998 90 123 45 67"></div>
         </div>
         <div><label style="${l}">${isUz ? "Izoh" : "Примечание"}</label><input id="dlv-note" style="${f}"></div>
-        <p style="margin:0;font-size:12px;color:#64748b;">${isUz ? "Saqlanganda mahsulot Ombordan chiqim qilinadi." : "При сохранении товар списывается со склада."}</p>
+        <p style="margin:0;font-size:12px;color:#64748b;">${isUz ? "Saqlanganda mahsulot tanlangan ombordan chiqim qilinadi." : "При сохранении товар списывается с выбранного склада."}</p>
       </div>`, async () => {
         const v = id => (document.getElementById(id)?.value || "").trim();
+        const chosen = parseInt(document.querySelector("input[name='dlv-sklad']:checked")?.value || "0", 10);
+        const opt = options.find(op => op.sklad_id === chosen);
+        if (!opt) {
+          showToast(isUz ? "Omborni tanlang" : "Выберите склад", "error");
+          return false;
+        }
+        if (!opt.can_ship) {
+          showToast(isUz ? `${opt.name} omborida yetarli mahsulot yo'q` : `На складе ${opt.name} недостаточно товара`, "error");
+          return false;
+        }
         if (!v("dlv-car") || !v("dlv-phone")) {
           showToast(isUz ? "Mashina raqami va haydovchi telefonini kiriting" : "Укажите номер машины и телефон водителя", "error");
           return false;
         }
-        await API.deliverOrder(id, { car_number: v("dlv-car"), driver_name: v("dlv-driver") || null, driver_phone: v("dlv-phone"), note: v("dlv-note") || null });
-        showToast(isUz ? "Yetkazildi. Endi to'lovni qabul qiling." : "Доставлено. Теперь примите оплату.", "success");
+        await API.deliverOrder(id, {
+          car_number: v("dlv-car"), driver_name: v("dlv-driver") || null, driver_phone: v("dlv-phone"),
+          note: v("dlv-note") || null, sklad_id: chosen,
+        });
+        showToast(isUz ? `Yetkazildi (${opt.name}). Endi to'lovni qabul qiling.` : `Доставлено (${opt.name}). Теперь примите оплату.`, "success");
         await this.reload();
         return true;
       });
+  },
+
+  onDeliverySkladChange() {
+    document.querySelectorAll("input[name='dlv-sklad']").forEach(r => {
+      r.closest("label").style.outline = r.checked ? "2px solid #2563eb" : "none";
+    });
   },
 
   openPay(id) {
@@ -819,7 +870,7 @@ const OrdersModule = {
     const opt = (val, icon, title, sub, checked) => `
       <label style="flex:1 1 160px;display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;border:2px solid #e2e8f0;cursor:pointer;">
         <input type="radio" name="pay-method" value="${val}" ${checked ? "checked" : ""} style="width:18px;height:18px;">
-        <span><b style="display:block;">${icon} ${title}</b><span style="font-size:11.5px;color:#64748b;">${sub}</span></span>
+        <span><b style="display:block;">${title}</b><span style="font-size:11.5px;color:#64748b;">${sub}</span></span>
       </label>`;
     showModal(`${isUz ? "To'lov" : "Оплата"} — ${o.order_number}`, `
       <div style="display:flex;flex-direction:column;gap:12px;">
@@ -829,8 +880,8 @@ const OrdersModule = {
             ${isUz ? "Qoldiq" : "Остаток"}: <b style="color:#b91c1c;">${formatNumber(o.balance, 0, 0)}</b></span>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          ${opt("naqd", "💵", isUz ? "Naqd pul" : "Наличные", isUz ? "Kassa UZS ga kirim" : "Приход в Кассу UZS", true)}
-          ${opt("karta", "💳", isUz ? "Plastik karta" : "Карта", isUz ? "Karta UZS ga kirim" : "Приход на Карта UZS", false)}
+          ${opt("naqd", "", isUz ? "Naqd pul" : "Наличные", isUz ? "Kassa UZS ga kirim" : "Приход в Кассу UZS", true)}
+          ${opt("karta", "", isUz ? "Plastik karta" : "Карта", isUz ? "Karta UZS ga kirim" : "Приход на Карта UZS", false)}
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
           <div><label style="${l}">${isUz ? "Summa (so'm)" : "Сумма (сум)"} *</label>

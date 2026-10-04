@@ -15,6 +15,7 @@ from backend.schemas import (
 )
 from backend.api.auth import get_current_user_role, check_permission
 from backend.services import sklad_service as sklad_svc
+from backend.services.numbering import next_number
 from backend.services.inventory_service import (
     get_or_create_stock_item, deduct_stock, add_stock_with_avg_valuation
 )
@@ -171,6 +172,8 @@ def create_production_order(
     # backwards compatibility, to the legacy product stock.
     out_length = out_width = None
     if payload.out_sklad_id:
+        if payload.quantity != int(payload.quantity):
+            raise HTTPException(status_code=400, detail="Omborga chiqarilganda miqdor butun dona bo'lishi kerak.")
         if not sklad_svc.get_config(payload.out_sklad_id):
             raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
         try:
@@ -190,8 +193,7 @@ def create_production_order(
             raise HTTPException(status_code=404, detail="Chiqarilayotgan tayyor mahsulot topilmadi.")
 
     # Generate order number
-    count = db.query(func.count(ProductionOrder.id)).scalar() or 0
-    order_num = f"PRD-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    order_num = next_number(db, ProductionOrder.order_number, f"PRD-{payload.date.strftime('%Y%m%d')}-")
 
     # Deduct consumed raw materials from warehouses at AVG cost
     direct_cost_usd = 0.0
@@ -381,8 +383,7 @@ def create_line_expense(
     if not payload.items or len(payload.items) == 0:
         raise HTTPException(status_code=400, detail="Kamida bitta sarf materialini kiritishingiz shart.")
 
-    count = db.query(func.count(LineExpense.id)).scalar() or 0
-    exp_num = f"LINE-EXP-{payload.date.strftime('%Y%m%d')}-{count + 1:04d}"
+    exp_num = next_number(db, LineExpense.expense_number, f"LINE-EXP-{payload.date.strftime('%Y%m%d')}-")
     line_ids_str = ",".join(str(lid) for lid in payload.line_ids)
 
     total_cost_usd = 0.0
@@ -496,8 +497,23 @@ def storno_production_order(
         
     assert_month_open(db, order.date)
 
-    # 1. Deduct output finished goods from Warehouse 1
-    deduct_stock(db, 1, order.output_material_id, order.quantity)
+    # 1. Take the finished goods back out of stock
+    if order.out_sklad_id and order.out_length is not None:
+        try:
+            sklad_svc.reverse_receipt(
+                db,
+                sklad_id=order.out_sklad_id,
+                length=order.out_length,
+                width=order.out_width,
+                quantity=int(order.quantity),
+                client_name=f"Storno {order.order_number}",
+                created_by=role,
+            )
+        except sklad_svc.SkladError as e:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        deduct_stock(db, 1, order.output_material_id, order.quantity)
 
     # 2. Return consumed raw materials back to warehouses
     for c in order.consumed_materials:
@@ -524,7 +540,10 @@ def storno_production_order(
         total_cost_usd=-order.total_cost_usd,
         unit_cost_usd=order.unit_cost_usd,
         storno_ref_id=order.id,
-        notes=f"Stornolangan buyurtma: {order.order_number}"
+        notes=f"Stornolangan buyurtma: {order.order_number}",
+        out_sklad_id=order.out_sklad_id,
+        out_length=order.out_length,
+        out_width=order.out_width,
     )
     db.add(mirror_order)
 
@@ -546,6 +565,12 @@ def delete_production_order(
     order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Buyurtma topilmadi.")
+    # Deleting does not touch stock, so only a document already reversed by
+    # storno may go; otherwise its goods and materials would stay counted.
+    if order.storno_ref_id:
+        raise HTTPException(status_code=400, detail="Bu storno yozuvi - asl hujjatni o'chiring.")
+    if order.status != "Storno":
+        raise HTTPException(status_code=400, detail="Avval hujjatni STORNO qiling, keyin o'chirish mumkin (aks holda ombor qoldig'i noto'g'ri qoladi).")
     
     # Delete consumed materials first
     db.query(ProductionConsumedMaterial).filter(ProductionConsumedMaterial.production_order_id == order_id).delete()
