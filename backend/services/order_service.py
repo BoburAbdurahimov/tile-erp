@@ -12,7 +12,7 @@ out of step.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -31,11 +31,20 @@ ORDER_CURRENCY = "UZS"
 CASH_REGISTER_NAME = "Kassa UZS"
 CARD_REGISTER_NAME = "Karta UZS"
 
+# Deadlines are Tashkent wall-clock time, but the server (Vercel) runs on UTC.
+# Uzbekistan keeps UTC+5 all year, so a fixed offset is exact.
+TASHKENT = timezone(timedelta(hours=5))
+
+
+def local_now() -> datetime:
+    """Tashkent wall-clock time, naive, to compare with stored deadlines."""
+    return datetime.now(TASHKENT).replace(tzinfo=None)
+
 
 # ---------------------------------------------------------------- helpers
 
 def _next_number(db: Session) -> str:
-    prefix = f"BUY-{date.today():%Y%m%d}-"
+    prefix = f"BUY-{local_now():%Y%m%d}-"
     last = (
         db.query(SkladOrder.order_number)
         .filter(SkladOrder.order_number.like(f"{prefix}%"))
@@ -409,7 +418,7 @@ def deliver_order(db: Session, order_id: int, car_number: str, driver_name: Opti
               "unit_price": round(it.unit_price * factor, 4)} for it in o.items]
 
     o.status = ORDER_DELIVERED
-    o.delivered_at = datetime.now()
+    o.delivered_at = local_now()
     o.car_number = car_number.strip().upper()
     o.driver_name = (driver_name or "").strip() or None
     o.driver_phone = driver_phone.strip()
@@ -449,7 +458,7 @@ def pay_order(db: Session, order_id: int, amount: float, method: str,
     if amount > remaining + 0.005:
         raise SkladError(f"Ortiqcha to'lov: qolgan qarz {remaining:,.0f} {o.currency}.")
 
-    paid_date = paid_date or date.today()
+    paid_date = paid_date or local_now().date()
     if is_month_closed(db, paid_date):
         raise SkladError(f"{paid_date:%Y-%m} oyi yopilgan - to'lov kiritib bo'lmaydi.")
 

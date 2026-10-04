@@ -10,6 +10,7 @@ from backend.database import get_db
 from backend.api.auth import get_current_user_role, check_permission
 from backend.models import SELL_TYPE_METR, PAY_CASH
 from backend.services import order_service as svc
+from backend.services import demo_service
 from backend.services.sklad_service import SkladError
 
 router = APIRouter(prefix="/orders", tags=["MODUL 6B: SOTUV BUYURTMALARI (Order -> Delivery -> Payment)"])
@@ -103,6 +104,20 @@ def ombor_products(db: Session = Depends(get_db), role: str = Depends(get_curren
     """Finished goods (tayyor mahsulot) as held in the Ombor."""
     _check_any(role, "sotish", "mdm", "ombor")
     return {"products": svc.ombor_products(db)}
+
+
+@router.post("/demo")
+def load_demo(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    """Admin only: replace the demo set (tagged DEMO) with a fresh one."""
+    check_permission("admin_tools", role)
+    return _guard(lambda: demo_service.load_demo(db))
+
+
+@router.delete("/demo")
+def clear_demo(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    """Admin only: remove demo orders, receipts and stock; real data is untouched."""
+    check_permission("admin_tools", role)
+    return demo_service.clear_demo(db)
 
 
 @router.get("/{order_id}")

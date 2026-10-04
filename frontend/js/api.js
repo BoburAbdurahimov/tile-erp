@@ -285,5 +285,7 @@ const API = {
   createOrder: (data) => apiRequest("/orders", "POST", data),
   deliverOrder: (id, data) => apiRequest(`/orders/${id}/deliver`, "POST", data),
   payOrder: (id, data) => apiRequest(`/orders/${id}/pay`, "POST", data),
-  cancelOrder: (id) => apiRequest(`/orders/${id}/cancel`, "POST")
+  cancelOrder: (id) => apiRequest(`/orders/${id}/cancel`, "POST"),
+  loadOrderDemo: () => apiRequest("/orders/demo", "POST"),
+  clearOrderDemo: () => apiRequest("/orders/demo", "DELETE")
 };

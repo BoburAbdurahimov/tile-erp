@@ -115,6 +115,11 @@ const OrdersModule = {
               </p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              ${this.isAdmin() ? `
+              <button class="btn btn-secondary btn-sm" onclick="OrdersModule.loadDemo()"
+                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">🧪 ${isUz ? "Demo yuklash" : "Загрузить демо"}</button>
+              <button class="btn btn-secondary btn-sm" onclick="OrdersModule.clearDemo()"
+                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;color:#b91c1c;">${isUz ? "Demo tozalash" : "Очистить демо"}</button>` : ""}
               <button class="btn btn-secondary btn-sm" onclick="OrdersModule.openLegacy()"
                 style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">
                 ${isUz ? "Eski sotuv hujjatlari" : "Старые документы продаж"}
@@ -863,6 +868,42 @@ const OrdersModule = {
       async () => {
         await API.cancelOrder(id);
         showToast(isUz ? "Bekor qilindi" : "Отменён", "success");
+        await this.reload();
+        return true;
+      });
+  },
+
+  isAdmin() {
+    return typeof getUserRoles === "function" && getUserRoles().includes("Admin");
+  },
+
+  // Demo rows are tagged on the server, so clearing never touches real data.
+  loadDemo() {
+    const isUz = this.isUz();
+    showModal(isUz ? "Demo ma'lumot yuklash" : "Загрузить демо",
+      `<p style="margin:0 0 8px;">${isUz
+        ? "Omborga demo mahsulot va har bosqichdagi 9 ta demo buyurtma qo'shiladi (muddati o'tgan, bugungi, yetkazilgan, qisman va to'liq to'langan)."
+        : "На склад добавятся демо-товары и 9 демо-заказов на всех этапах (просроченные, сегодняшние, доставленные, частично и полностью оплаченные)."}</p>
+       <p style="margin:0;color:#64748b;font-size:13px;">${isUz
+        ? "Avvalgi demo bo'lsa, u yangisi bilan almashtiriladi. Haqiqiy ma'lumotlarga tegilmaydi."
+        : "Предыдущее демо будет заменено. Реальные данные не затрагиваются."}</p>`,
+      async () => {
+        const r = await API.loadOrderDemo();
+        showToast(`${isUz ? "Demo yuklandi" : "Демо загружено"}: ${r.orders} ${isUz ? "ta buyurtma" : "заказов"}`, "success");
+        await this.reload();
+        return true;
+      });
+  },
+
+  clearDemo() {
+    const isUz = this.isUz();
+    showModal(isUz ? "Demo tozalash" : "Очистить демо",
+      `<p style="margin:0;">${isUz
+        ? "Demo buyurtmalar, ularning Kassadagi to'lovlari va Ombordagi demo mahsulot o'chiriladi. Haqiqiy ma'lumotlar qoladi."
+        : "Будут удалены демо-заказы, их оплаты в Кассе и демо-товары на складе. Реальные данные останутся."}</p>`,
+      async () => {
+        const r = await API.clearOrderDemo();
+        showToast(`${isUz ? "Tozalandi" : "Очищено"}: ${r.orders} ${isUz ? "ta buyurtma" : "заказов"}`, "success");
         await this.reload();
         return true;
       });
