@@ -14,7 +14,7 @@ from backend.database import get_db
 from backend.api.auth import get_current_user_role, check_permission
 from backend.models import (
     SkladMovement, SkladOrder, Purchase, Sale, ProductionOrder, LineExpense,
-    StockTransfer, CashTransaction, AuditLog,
+    StockTransfer, CashTransaction, AuditLog, OtherExpense,
     SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_STORNO, ORDER_DELIVERED, ORDER_CANCELLED,
     SKLAD_CONFIG,
 )
@@ -30,7 +30,7 @@ KINDS = [
     "ombor_kirim", "ombor_sotuv", "ombor_storno",
     "buyurtma", "yetkazish", "buyurtma_bekor",
     "xarid", "sotuv_eski", "ishlab_chiqarish", "sarf",
-    "kochirish", "kassa_kirim", "kassa_chiqim", "amal",
+    "kochirish", "kassa_kirim", "kassa_chiqim", "xarajat", "amal",
 ]
 
 # Ombor movements written by other modules are shown by those modules'
@@ -166,7 +166,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
                          for c in o.consumed_materials)
         events.append(_event(
             "ishlab_chiqarish", _at(o.date, o.created_at), ref=o.order_number,
-            place=o.line.name if o.line else None,
+            place=sklad.sklad_label(o.out_sklad_id) if o.out_sklad_id else (o.line.name if o.line else None),
             details=out + (f" — sarf: {used}" if used else ""),
             quantity=f"{o.quantity:g} {unit}".strip(),
             amount=o.total_cost_usd, currency="USD", status=o.status, sklad_id=prod_sklad,
@@ -178,7 +178,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
         events.append(_event(
             "sarf", _at(e.date, e.created_at), ref=e.expense_number,
             place=e.warehouse.name if e.warehouse else None,
-            party=f"Liniya: {e.line_ids_str}",
+            party=f"Liniya: {e.line_ids_str}" if e.line_ids_str else None,
             details=", ".join(f"{i.material.name if i.material else ''} × {i.quantity:g}" for i in e.items),
             amount=e.total_cost_usd, currency="USD", status=e.status,
         ))
@@ -194,10 +194,23 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             amount=t.total_cost_usd, currency="USD", user=t.created_by,
         ))
 
+    # --- Other expenses (bozorlik, taksi, abed...)
+    for x in (db.query(OtherExpense).filter(OtherExpense.date >= d0, OtherExpense.date <= d1)
+              .order_by(OtherExpense.date.desc()).limit(limit).all()):
+        events.append(_event(
+            "xarajat", _at(x.date, x.created_at), ref=x.expense_number,
+            place=x.register.name if x.register else None,
+            party=x.counterparty.name if x.counterparty else None,
+            details=" — ".join(v for v in [x.category, x.description] if v),
+            amount=x.amount, currency=x.currency, status=x.status, user=x.created_by,
+        ))
+
     # --- Kassa
     for c in (db.query(CashTransaction)
               .filter(CashTransaction.date >= d0, CashTransaction.date <= d1)
               .order_by(CashTransaction.date.desc()).limit(limit).all()):
+        if (c.description or "").startswith("Xarajat XR-"):
+            continue  # shown as the expense itself
         events.append(_event(
             "kassa_kirim" if c.type == "kirim" else "kassa_chiqim", _at(c.date, c.created_at),
             ref=f"#{c.id}", place=c.register.name if c.register else None,
