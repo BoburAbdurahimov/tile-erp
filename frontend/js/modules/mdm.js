@@ -202,42 +202,35 @@ const MdmModule = {
           </div>
         `;
       } else if (this.currentTab === "warehouses") {
-        const warehouses = await API.getWarehouses();
+        // The 4 owner warehouses of the Ombor. Raw-material stores are in "Xomashyo ombori".
+        const isUz = CURRENT_LANG === 'uz';
+        const res = await API.getSkladWarehouses();
+        const whs = res.warehouses || [];
+        const pcs = isUz ? 'dona' : 'шт';
         tableDiv.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;">
+            ${renderSkladOwnerCards(whs)}
+          </div>
           <div class="table-container" style="overflow-x: auto;">
             <table class="data-table" id="mdm-warehouses-table" style="width: 100%; border-collapse: collapse; text-align: left;">
               <thead>
-                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 12px; text-transform: uppercase;">
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, true)" style="padding: 12px 14px;">ID <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)" style="padding: 12px 14px;">${t('th_code')} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)" style="padding: 12px 14px;">${t('th_name')} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)" style="padding: 12px 14px;">${t('th_type')} <span class="sort-icon">↕</span></th>
-                  <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)" style="padding: 12px 14px;">${t('th_description')} <span class="sort-icon">↕</span></th>
-                  <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
-                </tr>
-                <tr class="filter-row">
-                  <th></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Kod...' : 'Код...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Tur...' : 'Тип...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Tavsif...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-                  <th></th>
+                <tr>
+                  <th>${isUz ? 'Ombor' : 'Склад'}</th>
+                  <th>${isUz ? 'Eni' : 'Ширина'}</th>
+                  <th style="text-align:right;">${isUz ? 'Miqdor' : 'Кол-во'}</th>
+                  <th style="text-align:right;">${isUz ? 'Umumiy uzunlik' : 'Общая длина'}</th>
+                  <th style="text-align:right;">${t('th_actions')}</th>
                 </tr>
               </thead>
               <tbody>
-                ${warehouses.map(w => `
-                  <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td data-sort-value="${w.id}" style="padding: 12px 14px;">${w.id}</td>
-                    <td data-sort-value="${w.code}" style="padding: 12px 14px;"><code>${w.code}</code></td>
-                    <td data-sort-value="${w.name}" style="padding: 12px 14px;"><strong>${tr(w.name)}</strong></td>
-                    <td data-sort-value="${w.is_system_default ? 'Standart Tizim Skladi' : 'Qo‘shimcha'}" style="padding: 12px 14px;"><span class="badge" style="background: #f0fdf4; color: #15803d; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;">${tr(w.is_system_default ? 'Standart Tizim Skladi' : "Qo'shimcha")}</span></td>
-                    <td data-sort-value="${w.description || ''}" style="padding: 12px 14px;">${tr(w.description) || '-'}</td>
-                    <td style="padding: 12px 14px; text-align: right;">
-                      <button class="btn btn-secondary btn-sm" onclick="MdmModule.editWarehouse(${w.id})" title="${t('btn_edit')}">${CURRENT_LANG === 'uz' ? "Tahrirlash" : "Изменить"}</button>
-                      ${!w.is_system_default ? `<button class="btn btn-secondary btn-sm" onclick="MdmModule.deleteWarehouse(${w.id})" title="${t('btn_delete')}" style="color: #dc2626;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
-                    </td>
-                  </tr>
-                `).join("")}
+                ${whs.map(w => `
+                  <tr>
+                    <td><strong>${escapeHtml(w.name)}</strong></td>
+                    <td>${w.eni}</td>
+                    <td style="text-align:right;">${formatNumber(w.total_qty, 0, 0)} ${pcs}</td>
+                    <td style="text-align:right;">${formatNumber(w.total_metres, 0, 1)} ${isUz ? 'metr' : 'м'}</td>
+                    <td style="text-align:right;"><button class="btn btn-secondary btn-sm" onclick="openSkladOwner(${w.sklad_id})">${isUz ? "Ochish" : "Открыть"}</button></td>
+                  </tr>`).join("")}
               </tbody>
             </table>
           </div>
@@ -250,7 +243,8 @@ const MdmModule = {
   },
 
   openCreateModal() {
-    if (this.currentTab === "tayyor") {
+    // Ombor stock (finished tiles, by owner) is added by Kirim in the Ombor.
+    if (this.currentTab === "tayyor" || this.currentTab === "warehouses") {
       // Finished goods are whatever the Ombor holds; they are added by Kirim there.
       navigateTo("ombor");
       return;

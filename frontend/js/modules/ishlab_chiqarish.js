@@ -68,31 +68,14 @@ const ProductionModule = {
     }
   },
 
+  // The cards at the top: the 4 Ombor owners with stock and total length.
   async loadLinesStats() {
     const grid = document.getElementById("production-lines-grid");
     if (!grid) return;
-
     try {
-      const [lines, stats] = await Promise.all([
-        API.getProductionLines(),
-        API.get7DayStats()
-      ]);
-
-      grid.innerHTML = lines.map(l => {
-        const lineVol = stats.line_totals[`Line ${l.line_number}`] || 0;
-        const lineTitle = CURRENT_LANG === 'uz' ? `Liniya ${l.line_number}` : `Линия ${l.line_number}`;
-        return `
-          <div class="kpi-card" style="border-top: 4px solid #3b82f6; border-radius: 12px; padding: 22px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-height: 115px;">
-            <div style="font-size: 19px; font-weight: 700; color: #1e293b; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px; width: 100%; display: flex; align-items: center; justify-content: center;">
-              ${lineTitle}
-            </div>
-            <div style="font-size: 26px; font-weight: 800; color: #0f172a; text-align: center; width: 100%; display: flex; align-items: baseline; justify-content: center; gap: 6px;">
-              <span>${lineVol.toLocaleString()}</span>
-              <span style="font-size: 16px; font-weight: 600; color: #64748b;">${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
-            </div>
-          </div>
-        `;
-      }).join("");
+      const res = await API.getSkladWarehouses();
+      grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(200px, 1fr))";
+      grid.innerHTML = renderSkladOwnerCards(res.warehouses || []);
     } catch (e) {
       showToast(e.message, "error");
     }
