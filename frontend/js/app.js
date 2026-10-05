@@ -845,6 +845,41 @@ document.addEventListener("input", (e) => {
   }
 });
 
+// ---------------------------------------------------------------- Ombor owners
+// The 4 owner warehouses (Toxir, Kodir, Istam, Aziz), each with a 120 and a
+// 100 sheet width. Cards show pieces in stock and their total length.
+function groupSkladOwners(warehouses) {
+  const owners = [];
+  (warehouses || []).forEach(w => {
+    let o = owners.find(x => x.name === w.name);
+    if (!o) { o = { name: w.name, qty: 0, metres: 0, parts: [] }; owners.push(o); }
+    o.qty += w.total_qty || 0;
+    o.metres += w.total_metres || 0;
+    o.parts.push(w);
+  });
+  return owners;
+}
+
+function openSkladOwner(skladId) {
+  if (typeof SkladModule !== "undefined") SkladModule.currentSkladId = skladId;
+  navigateTo("ombor");
+}
+
+function renderSkladOwnerCards(warehouses) {
+  const isUz = CURRENT_LANG === "uz";
+  const pcs = isUz ? "dona" : "шт";
+  return groupSkladOwners(warehouses).map(o => `
+    <div class="kpi-card" onclick="openSkladOwner(${o.parts[0].sklad_id})" title="${isUz ? "Omborni ochish" : "Открыть склад"}"
+      style="cursor:pointer;border-top:4px solid #0284c7;border-radius:12px;padding:18px 14px;text-align:center;background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.06);min-height:115px;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="font-size:19px;font-weight:700;color:#1e293b;">${escapeHtml(o.name)}</div>
+      <div style="font-size:26px;font-weight:800;color:#0f172a;display:flex;align-items:baseline;gap:6px;">
+        <span>${formatNumber(o.qty, 0, 0)}</span><span style="font-size:15px;font-weight:600;color:#64748b;">${pcs}</span>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:#0284c7;">${formatNumber(o.metres, 0, 1)} ${isUz ? "metr" : "м"}</div>
+      <div style="font-size:11.5px;color:#64748b;">${o.parts.map(p => `${p.eni}: ${formatNumber(p.total_qty, 0, 0)} ${pcs}`).join(" · ")}</div>
+    </div>`).join("");
+}
+
 // Universal PDF Exporter Utility
 // Extracts visible rows (expanding multi-item document rows) into plain arrays.
 function collectTableExportData(tableRef) {
