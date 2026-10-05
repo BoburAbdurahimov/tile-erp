@@ -87,6 +87,7 @@ def run_column_migrations():
 _DROPPED_NOT_NULL = [
     ("purchase_items", "material_id"),
     ("production_orders", "output_material_id"),
+    ("production_orders", "line_id"),
 ]
 
 

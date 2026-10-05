@@ -26,6 +26,7 @@ const HistoryModule = {
     sarf:             { uz: "Liniya sarfi",        ru: "Расход на линию",     color: "#0891b2", bg: "#ecfeff", section: "ishlab" },
     kassa_kirim:      { uz: "Kassa kirim",         ru: "Касса приход",        color: "#15803d", bg: "#f0fdf4", section: "kassa" },
     kassa_chiqim:     { uz: "Kassa chiqim",        ru: "Касса расход",        color: "#b91c1c", bg: "#fef2f2", section: "kassa" },
+    xarajat:          { uz: "Boshqa xarajat",      ru: "Прочий расход",       color: "#92400e", bg: "#fef3c7", section: "kassa" },
     amal:             { uz: "Foydalanuvchi amali", ru: "Действие пользователя", color: "#334155", bg: "#f1f5f9", section: "amal" },
   },
 

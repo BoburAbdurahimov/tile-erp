@@ -14,7 +14,7 @@ const DashboardModule = {
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">${CURRENT_LANG === 'uz' ? "So'nggi 7 kunlik ishlab chiqarish (5 Liniya)" : "Производство за 7 дней (5 Линий)"}</div>
+            <div class="card-title">${CURRENT_LANG === 'uz' ? "So'nggi 7 kunlik ishlab chiqarish (4 ombor)" : "Производство за 7 дней (4 склада)"}</div>
           </div>
           <div style="position: relative; height: 260px;">
             <canvas id="productionChart"></canvas>
@@ -73,7 +73,7 @@ const DashboardModule = {
         kpiGrid.innerHTML = `
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "7 kunlik hajm" : "Объем за 7 дней"}</span>
-            <span class="kpi-value">${formatNumber(stats7d.total_7d_volume_m2, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
+            <span class="kpi-value">${formatNumber(stats7d.total_7d_pieces, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
             <span class="kpi-sub">${CURRENT_LANG === 'uz' ? "5 ta liniya bo'yicha" : "По 5 линиям"}</span>
           </div>
           <div class="kpi-card">
@@ -124,7 +124,7 @@ const DashboardModule = {
               <tr>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${t('th_date')} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">№ <span class="sort-icon">↕</span></th>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Liniya' : 'Линия'} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Ombor' : 'Склад'} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)">${t('th_name')} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${t('th_quantity')} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? "Tannarx ($)" : "Себестоимость ($)"} <span class="sort-icon">↕</span></th>
@@ -133,7 +133,7 @@ const DashboardModule = {
               <tr class="filter-row">
                 <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
                 <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? '№...' : '№...'}" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" /></th>
                 <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" /></th>
                 <th></th>
                 <th></th>
@@ -145,7 +145,7 @@ const DashboardModule = {
                 <tr class="${o.status === 'Storno' ? 'storno-row' : ''}">
                   <td data-sort-value="${o.date}">${formatDate(o.date)}</td>
                   <td data-sort-value="${o.order_number}"><strong>${o.order_number}</strong></td>
-                  <td data-sort-value="${o.line_name}"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${tr(o.line_name)}</span></td>
+                  <td data-sort-value="${o.ombor_label || o.line_name}"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${escapeHtml(o.ombor_label || tr(o.line_name) || '-')}</span></td>
                   <td data-sort-value="${o.output_material_name}">${o.output_material_name}</td>
                   <td data-sort-value="${o.quantity}" style="text-align: right;"><strong>${o.quantity.toLocaleString()} ${tr(o.unit)}</strong></td>
                   <td data-sort-value="${o.direct_cost_usd}" style="text-align: right;">$${o.direct_cost_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ($${o.unit_cost_usd.toFixed(2)}/${tr(o.unit)})</td>

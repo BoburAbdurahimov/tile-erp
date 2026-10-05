@@ -260,6 +260,7 @@ function hasModuleAccess(moduleName) {
   if (moduleName === "finance") return roles.includes("Moliya & PnL") || roles.includes("Moliya") || roles.includes("Moliyachi") || roles.includes("Direktor") || roles.includes("Buxgalter");
   if (moduleName === "salary") return roles.includes("Ish haqi") || roles.includes("Ish haqi & Xodimlar") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "users") return roles.includes("Admin");
+  if (moduleName === "expenses") return roles.includes("Kassa") || roles.includes("Kassir") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "history") return isDirector || roles.includes("Buxgalter");
   return false;
 }
@@ -478,6 +479,10 @@ async function navigateTo(moduleName) {
       if (pageTitle) pageTitle.textContent = t("nav_salary");
       container.innerHTML = `<div id="salary-module"></div>`;
       await IshHaqiModule.render();
+      break;
+    case "expenses":
+      if (pageTitle) pageTitle.textContent = t("nav_expenses");
+      await ExpensesModule.render(container);
       break;
     case "history":
       if (pageTitle) pageTitle.textContent = t("nav_history");
