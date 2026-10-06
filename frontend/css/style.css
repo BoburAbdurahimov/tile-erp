@@ -533,47 +533,11 @@ body {
   background: #fee2e2;
 }
 
-/* Desktop and tablet: every module stays visible. When the tabs do not fit
-   on one line they wrap onto a second row instead of scrolling out of sight. */
-@media (min-width: 769px) {
-  .top-header {
-    height: auto;
-    min-height: 54px;
-  }
-
-  .header-left {
-    overflow: visible;
-    align-self: stretch;
-  }
-
-  .odoo-parallel-nav {
-    flex-wrap: wrap;
-    overflow: visible;
-    height: auto;
-    align-self: stretch;
-    align-content: center;
-  }
-
-  .odoo-nav-tab {
-    height: auto;
-    min-height: 40px;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-}
-
-/* Medium screens: tighter tabs so more modules fit on a row */
+/* Medium screens: tighter tabs so more modules fit; the rest scroll horizontally */
 @media (max-width: 1600px) {
   .odoo-nav-tab {
-    padding: 0 8px;
+    padding: 0 9px;
     font-size: 12.5px;
-  }
-}
-
-/* Below 1500px the brand text gives its room to the module tabs. */
-@media (min-width: 769px) and (max-width: 1500px) {
-  .odoo-brand-title {
-    display: none;
   }
 }
 
@@ -696,8 +660,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
   margin-bottom: 18px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border-subtle);
@@ -888,40 +850,6 @@ body {
   border: 1px solid var(--border-color);
   background-color: #ffffff;
   box-shadow: var(--shadow-xs);
-}
-
-/* Grid columns may shrink below their content's width; otherwise one wide
-   table makes its whole column (and the page) wider than the screen. */
-.grid-2 > *, .grid-3 > *, .grid-4 > *, .grid-5 > * {
-  min-width: 0;
-}
-
-/* Rows of controls in a card header (dates, buttons) wrap on narrow screens. */
-.card-header > div {
-  flex-wrap: wrap;
-}
-
-/* Wide tables scroll inside their own box on every screen size, instead of
-   spilling over the card and the page. */
-.table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Buttons inside tables keep their label on one line; a narrow column must
-   not squeeze "O'chirish" into a letter per line. */
-table .btn,
-table button {
-  white-space: nowrap;
-}
-
-/* Cells holding several badges (e.g. a user's roles) wrap them onto more
-   lines rather than running into the next column. */
-.data-table td .badge-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  white-space: normal;
 }
 
 .data-table {
@@ -1519,27 +1447,6 @@ table button {
     width: 95% !important;
     max-width: 95% !important;
     margin: 10px auto;
-  }
-
-  /* Item tables inside forms (purchase lines, materials used...): scroll
-     sideways with readable columns instead of squeezing every field. */
-  .modal-body table:not(.data-table) {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .modal-body table:not(.data-table) th {
-    white-space: nowrap;
-  }
-
-  .modal-body table:not(.data-table) td input,
-  .modal-body table:not(.data-table) td select {
-    min-width: 80px;
-  }
-
-  .modal-body table:not(.data-table) td:first-child input {
-    min-width: 160px;
   }
 }
 

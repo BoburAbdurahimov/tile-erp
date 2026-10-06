@@ -55,12 +55,17 @@ def seed_database():
         db.add_all(lines)
         db.commit()
 
-    # 4. Cash Registers (2 Registers)
-    if not db.query(CashRegister).first():
-        cr1 = CashRegister(id=1, name="Kassa USD", currency="USD", balance=0.0, description="AQSH Dollari hisob-kitob kassasi")
-        cr2 = CashRegister(id=2, name="Kassa UZS", currency="UZS", balance=0.0, description="O'zbekiston So'mi milliy valyuta kassasi")
-        db.add_all([cr1, cr2])
-        db.commit()
+    # 4. Cash Registers (3 Registers)
+    cr1 = db.query(CashRegister).filter(CashRegister.id == 1).first()
+    if not cr1:
+        db.add(CashRegister(id=1, name="Kassa USD", currency="USD", balance=0.0, description="AQSH Dollari hisob-kitob kassasi"))
+    cr2 = db.query(CashRegister).filter(CashRegister.id == 2).first()
+    if not cr2:
+        db.add(CashRegister(id=2, name="Kassa UZS", currency="UZS", balance=0.0, description="O'zbekiston So'mi milliy valyuta kassasi"))
+    cr3 = db.query(CashRegister).filter(CashRegister.id == 3).first()
+    if not cr3:
+        db.add(CashRegister(id=3, name="Karta UZS", currency="UZS", balance=0.0, description="Plastik karta orqali tushumlar"))
+    db.commit()
 
     # 5. Default Users (Adminshox & Boburjon)
     from backend.auth_utils import hash_password

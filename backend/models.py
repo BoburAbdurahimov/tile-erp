@@ -156,7 +156,7 @@ class ProductionOrder(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     order_number = Column(String(50), unique=True, nullable=False)
-    line_id = Column(Integer, ForeignKey("production_lines.id"), nullable=True)  # lines are no longer used
+    line_id = Column(Integer, ForeignKey("production_lines.id"), nullable=False)
     output_material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=True)
     # Output may instead land in the dimensional warehouse, as a sheet size.
     # When out_sklad_id is set, out_length/out_width say which cell it fills.
@@ -327,28 +327,6 @@ class TelegramUser(Base):
     is_approved = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class OtherExpense(Base):
-    """Expenses outside production (bozorlik, taksi, abed...). Each one is paid
-    from a Kassa: it posts a 'chiqim' there and keeps the link to undo it."""
-    __tablename__ = "other_expenses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    expense_number = Column(String(50), unique=True, nullable=False)  # XR-20261005-0001
-    date = Column(Date, nullable=False, default=date.today, index=True)
-    category = Column(String(80), nullable=False, index=True)
-    amount = Column(Float, nullable=False)
-    currency = Column(String(10), nullable=False, default="UZS")
-    register_id = Column(Integer, ForeignKey("cash_registers.id"), nullable=False)
-    counterparty_id = Column(Integer, ForeignKey("mdm_counterparties.id"), nullable=True, index=True)
-    description = Column(Text, nullable=True)
-    status = Column(String(20), nullable=False, default="Tasdiqlandi")  # Tasdiqlandi | Bekor
-    cash_transaction_id = Column(Integer, nullable=True)
-    created_by = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    register = relationship("CashRegister")
-    counterparty = relationship("MDMCounterparty")
 
 class LoginChallenge(Base):
     """A pending two-step login: password accepted, Telegram code not yet."""

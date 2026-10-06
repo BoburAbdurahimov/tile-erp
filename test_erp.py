@@ -223,7 +223,7 @@ class TestTileERP(unittest.TestCase):
         self.assertIn("revenue_usd", pnl)
         self.assertIn("total_cogs_usd", pnl)
         self.assertIn("line_breakdown", pnl)
-        self.assertGreaterEqual(len(pnl["line_breakdown"]), 5) # 5 lines (+ a "no line" bucket once used)
+        self.assertEqual(len(pnl["line_breakdown"]), 5) # 5 Lines
 
     def test_08_month_end_closing_and_admin_reopen(self):
         ym = "2026-07" # Test previous month

@@ -1,6 +1,6 @@
 const I18N = {
   uz: {
-    app_title: "Kafel Zavodi ERP",
+    app_title: "Jomboy plitka zavodi",
     app_subtitle: "Ishlab chiqarish & Boshqaruv",
     
     // Nav
@@ -10,14 +10,12 @@ const I18N = {
     nav_kassa: "Kassa",
     nav_production: "Ishlab chiqarish",
     nav_balances: "Kontragentlar balansi",
-    nav_balances_short: "Kontragentlar",
     nav_purchases: "Sotib olish",
     nav_sales: "Sotish",
     nav_finance: "Moliya",
     nav_salary: "Ish haqi",
     nav_users: "Foydalanuvchilar",
     nav_history: "Tarix",
-    nav_expenses: "Xarajatlar",
     nav_xomashyo: "Xomashyo ombori",
     apps_all_sections: "Barcha bo'limlar",
     users_title: "Foydalanuvchilar va Rollar",
@@ -124,7 +122,7 @@ const I18N = {
     msg_loading: "Yuklanmoqda..."
   },
   ru: {
-    app_title: "ERP Завода Плитки",
+    app_title: "Жомбой плитка заводи",
     app_subtitle: "Производство и Учет",
     
     // Nav
@@ -134,14 +132,12 @@ const I18N = {
     nav_kassa: "Касса",
     nav_production: "Производство",
     nav_balances: "Балансы контрагентов",
-    nav_balances_short: "Контрагенты",
     nav_purchases: "Закупки",
     nav_sales: "Продажи",
     nav_finance: "Финансы",
     nav_salary: "Зарплата",
     nav_users: "Пользователи",
     nav_history: "История",
-    nav_expenses: "Расходы",
     nav_xomashyo: "Склад сырья",
     apps_all_sections: "Все разделы",
     users_title: "Пользователи и Роли",
@@ -311,8 +307,11 @@ const ENTITY_TRANSLATIONS = {
   // Cash registers
   "Kassa USD": "Касса USD",
   "Kassa UZS": "Касса UZS",
-  "AQSH Dollari hisob-kitob kassasi": "Касса расчетов в долларах США (USD)",
-  "O'zbekiston So'mi milliy valyuta kassasi": "Касса расчетов в национальной валюте (UZS)",
+  "Karta UZS": "Карта UZS",
+  "Plastik UZS": "Карта UZS",
+  "AQSH Dollari hisob-kitob kassasi": "Касса расчетов в долларах США",
+  "O'zbekiston So'mi milliy valyuta kassasi": "Касса в национальной валюте (сум)",
+  "Plastik karta orqali tushumlar": "Поступления на пластиковую карту",
   
   // Units
   "kg": "кг",

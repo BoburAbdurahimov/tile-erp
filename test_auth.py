@@ -8,7 +8,7 @@ from backend.main import app
 from backend.database import SessionLocal
 from backend.models import User, TelegramUser, AuditLog
 from backend.auth_utils import hash_password
-from backend.api.auth import get_current_user_role, get_current_username
+from backend.api.auth import get_current_user_role
 from backend.services import telegram_otp
 
 client = TestClient(app)
@@ -53,13 +53,11 @@ class TestAuth(unittest.TestCase):
 
     def setUp(self):
         # Feature tests stand in a role from a header; here the real login runs.
-        self.saved = {dep: app.dependency_overrides.pop(dep, None)
-                      for dep in (get_current_user_role, get_current_username)}
+        self.saved = app.dependency_overrides.pop(get_current_user_role, None)
 
     def tearDown(self):
-        for dep, fn in self.saved.items():
-            if fn:
-                app.dependency_overrides[dep] = fn
+        if self.saved:
+            app.dependency_overrides[get_current_user_role] = self.saved
 
     def login(self, username):
         return client.post("/api/auth/login", json={"username": username, "password": PASSWORD})

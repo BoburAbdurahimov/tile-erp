@@ -44,27 +44,8 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
     total_factory_volume_m2 = 0.0
     total_direct_materials_cost_usd = 0.0
 
-    # Production no longer chooses a line: such orders (and materials issued
-    # without lines) are costed in one "no line" bucket so the PnL keeps them.
-    NO_LINE = 0
-
-    def no_line_bucket():
-        if NO_LINE not in line_data:
-            line_data[NO_LINE] = {
-                "line_id": NO_LINE,
-                "line_number": 0,
-                "line_name": "Liniyasiz (omborlarga)",
-                "spec_tile_size": "-",
-                "volume_m2": 0.0,
-                "direct_materials_cost_usd": 0.0,
-                "line_equipment_expenses_usd": 0.0
-            }
-        return line_data[NO_LINE]
-
     for order in orders:
-        lid = order.line_id if order.line_id in line_data else NO_LINE
-        if lid == NO_LINE:
-            no_line_bucket()
+        lid = order.line_id
         if lid in line_data:
             line_data[lid]["volume_m2"] += order.quantity
             line_data[lid]["direct_materials_cost_usd"] += order.direct_cost_usd
@@ -85,8 +66,7 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         target_lids = [int(x.strip()) for x in raw_ids if x.strip().isdigit() and int(x.strip()) in line_data]
 
         if not target_lids:
-            # Issued without lines: spread over everything produced this month.
-            target_lids = [lid for lid, d in line_data.items() if d["volume_m2"] > 0] or [no_line_bucket()["line_id"]]
+            continue
 
         target_volume = sum(line_data[lid]["volume_m2"] for lid in target_lids)
         if target_volume > 0:

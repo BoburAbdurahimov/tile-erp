@@ -134,12 +134,11 @@ def get_matrix(db: Session, sklad_id: int) -> dict:
 
 
 def get_all_totals(db: Session) -> list:
-    """Pieces and total length (linear metres) on hand in each warehouse."""
-    qty: dict[int, int] = {}
-    metres: dict[int, float] = {}
-    for r in db.query(SkladInventory).filter(SkladInventory.quantity > 0).all():
-        qty[r.sklad_id] = qty.get(r.sklad_id, 0) + r.quantity
-        metres[r.sklad_id] = metres.get(r.sklad_id, 0.0) + r.quantity * (r.length + r.width) / 100.0
+    sums = dict(
+        db.query(SkladInventory.sklad_id, func.sum(SkladInventory.quantity))
+        .group_by(SkladInventory.sklad_id)
+        .all()
+    )
     out = []
     for s in SKLAD_CONFIG:
         out.append({
@@ -147,8 +146,7 @@ def get_all_totals(db: Session) -> list:
             "name": s["name"],
             "eni": s["eni"],
             "corner_number": s["corner_number"],
-            "total_qty": int(qty.get(s["id"]) or 0),
-            "total_metres": round(metres.get(s["id"], 0.0), 2),
+            "total_qty": int(sums.get(s["id"]) or 0),
         })
     return out
 

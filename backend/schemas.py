@@ -205,7 +205,7 @@ class LineExpenseItemInput(BaseModel):
 
 class LineExpenseCreate(BaseModel):
     date: dt_date = Field(default_factory=dt_date.today)
-    line_ids: List[int] = []        # optional: materials are no longer issued per line
+    line_ids: List[int]
     items: List[LineExpenseItemInput]
     notes: Optional[str] = None
 
@@ -234,7 +234,7 @@ class LineExpenseResponse(BaseModel):
     created_at: dt_datetime
 
 class ProductionOrderCreate(BaseModel):
-    line_id: Optional[int] = None   # production lines are no longer used
+    line_id: int
     # Output goes to the dimensional warehouse when out_sklad_id and a size are
     # given; otherwise it lands on the legacy product stock as before.
     output_material_id: Optional[int] = None
@@ -261,16 +261,15 @@ class ConsumedMaterialResponse(BaseModel):
 class ProductionOrderResponse(BaseModel):
     id: int
     order_number: str
-    line_id: Optional[int] = None
-    line_name: str = ""
-    line_number: Optional[int] = None
+    line_id: int
+    line_name: str
+    line_number: int
     # Null when the output went to the dimensional warehouse; the size fields
     # describe it instead.
     output_material_id: Optional[int] = None
     output_material_code: str
     output_material_name: str
     out_sklad_id: Optional[int] = None
-    ombor_label: str = ""           # e.g. "Istam 120" - the Ombor the output went to
     out_size_code: Optional[int] = None
     quantity: float
     unit: str

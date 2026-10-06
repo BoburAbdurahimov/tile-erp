@@ -109,14 +109,6 @@ class TestOrdersAndHistory(unittest.TestCase):
         c = ok(client.post("/api/savdo/purchases", json=body, headers=ADMIN))
         self.assertNotEqual(c["purchase_number"], b["purchase_number"])
 
-    def test_06_owner_totals_have_length(self):
-        before = {w["sklad_id"]: w for w in ok(client.get("/api/sklad/warehouses", headers=ADMIN))["warehouses"]}
-        ok(client.post("/api/sklad/kirim", json={"sklad_id": 8, "items": [{"code": 680, "quantity": 2}, {"code": 335, "quantity": 4}]}, headers=ADMIN))
-        after = {w["sklad_id"]: w for w in ok(client.get("/api/sklad/warehouses", headers=ADMIN))["warehouses"]}
-        self.assertEqual(after[8]["total_qty"] - before[8]["total_qty"], 6)
-        # 2 x 6.8 m + 4 x 3.35 m = 27.0 linear metres
-        self.assertAlmostEqual(after[8]["total_metres"] - before[8]["total_metres"], 27.0, places=2)
-
     def test_05_history(self):
         h = ok(client.get("/api/history", headers=ADMIN))
         kinds = {e["kind"] for e in h["events"]}

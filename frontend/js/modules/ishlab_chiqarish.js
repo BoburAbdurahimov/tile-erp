@@ -21,7 +21,7 @@ const ProductionModule = {
           </div>
         </div>
 
-        <!-- 4 Ombor owners: stock and total length -->
+        <!-- 5 Lines KPI Breakdown -->
         <div class="grid-5" id="production-lines-grid" style="margin-bottom: 24px;">
           <!-- Rendered dynamically -->
         </div>
@@ -32,7 +32,7 @@ const ProductionModule = {
             ${CURRENT_LANG === 'uz' ? 'Buyurtmalar va Chiqarilgan Tayyor Mahsulotlar' : 'История выпуска готовой продукции'}
           </button>
           <button id="prod-tab-expenses" class="btn" onclick="ProductionModule.switchTab('expenses')" style="font-weight: 700; font-size: 14px; padding: 8px 18px; border-radius: 6px; background: #f1f5f9; color: #475569; cursor: pointer;">
-            ${CURRENT_LANG === 'uz' ? 'Sarf materiallari (zapchastlar)' : 'Расход материалов'}
+            ${CURRENT_LANG === 'uz' ? 'Liniyalar Sarf Materiallari (Zapchastlar)' : 'Расход материалов на линии'}
           </button>
         </div>
 
@@ -68,14 +68,31 @@ const ProductionModule = {
     }
   },
 
-  // The cards at the top: the 4 Ombor owners with stock and total length.
   async loadLinesStats() {
     const grid = document.getElementById("production-lines-grid");
     if (!grid) return;
+
     try {
-      const res = await API.getSkladWarehouses();
-      grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(200px, 1fr))";
-      grid.innerHTML = renderSkladOwnerCards(res.warehouses || []);
+      const [lines, stats] = await Promise.all([
+        API.getProductionLines(),
+        API.get7DayStats()
+      ]);
+
+      grid.innerHTML = lines.map(l => {
+        const lineVol = stats.line_totals[`Line ${l.line_number}`] || 0;
+        const lineTitle = CURRENT_LANG === 'uz' ? `Liniya ${l.line_number}` : `Линия ${l.line_number}`;
+        return `
+          <div class="kpi-card" style="border-top: 4px solid #3b82f6; border-radius: 12px; padding: 22px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-height: 115px;">
+            <div style="font-size: 19px; font-weight: 700; color: #1e293b; margin-bottom: 10px; text-align: center; letter-spacing: 0.5px; width: 100%; display: flex; align-items: center; justify-content: center;">
+              ${lineTitle}
+            </div>
+            <div style="font-size: 26px; font-weight: 800; color: #0f172a; text-align: center; width: 100%; display: flex; align-items: baseline; justify-content: center; gap: 6px;">
+              <span>${lineVol.toLocaleString()}</span>
+              <span style="font-size: 16px; font-weight: 600; color: #64748b;">${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
     } catch (e) {
       showToast(e.message, "error");
     }
@@ -93,18 +110,20 @@ const ProductionModule = {
             <tr>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${t('th_date')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">${t('th_doc_num')} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Sarflangan Zapchastlar / Materiallar' : 'Списанные материалы / Запчасти'} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? 'Jami Qiymat ($)' : 'Сумма ($)'} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)">${t('th_description')} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, false)">${t('th_status')} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Tegishli Liniyalar' : 'Целевые Линии'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)">${CURRENT_LANG === 'uz' ? 'Sarflangan Zapchastlar / Materiallar' : 'Списанные материалы / Запчасти'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? 'Jami Qiymat ($)' : 'Сумма ($)'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, false)">${t('th_description')} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 6, false)">${t('th_status')} <span class="sort-icon">↕</span></th>
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
               <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Zapchast...' : 'Деталь...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniyalar...' : 'Линии...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Zapchast...' : 'Деталь...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="4" placeholder="${CURRENT_LANG === 'uz' ? 'Izoh...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="${CURRENT_LANG === 'uz' ? 'Izoh...' : 'Описание...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th></th>
             </tr>
@@ -112,14 +131,19 @@ const ProductionModule = {
           <tbody>
             ${expenses.length === 0 ? `
               <tr>
-                <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">
-                  ${CURRENT_LANG === 'uz' ? 'Hozircha sarf materiali yozilmagan' : 'Записей расходов пока нет'}
+                <td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">
+                  ${CURRENT_LANG === 'uz' ? 'Hozircha birorta ham liniya sarf materiali yozilmagan' : 'Записей расходов пока нет'}
                 </td>
               </tr>
             ` : expenses.map(e => `
               <tr class="${e.status === 'Storno' ? 'storno-row' : ''}">
                 <td data-sort-value="${e.date}">${formatDate(e.date)}</td>
                 <td data-sort-value="${e.expense_number}"><code>${e.expense_number}</code></td>
+                <td data-sort-value="${e.line_names.join(', ')}">
+                  <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    ${e.line_names.map(ln => `<span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 6px; font-weight: 600;">${ln}</span>`).join("")}
+                  </div>
+                </td>
                 <td data-sort-value="${e.items.map(i => i.material_name).join(', ')}">
                   ${e.items.map(i => `<div style="font-size: 13px;"><b>${i.material_code} - ${i.material_name}</b>: ${formatNumber(i.quantity, 0, 2)} ${tr(i.unit)} ($${formatNumber(i.total_cost_usd, 2, 2)})</div>`).join("")}
                 </td>
@@ -159,7 +183,7 @@ const ProductionModule = {
             <tr>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${t('th_date')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">${t('th_doc_num')} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Ombor' : 'Склад'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Liniya' : 'Линия'} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)">${CURRENT_LANG === 'uz' ? 'Tayyor mahsulot' : 'Готовая продукция'} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${t('th_quantity')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, false)">${t('th_status')} <span class="sort-icon">↕</span></th>
@@ -168,7 +192,7 @@ const ProductionModule = {
             <tr class="filter-row">
               <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? 'Hujjat №...' : 'Документ №...'}" oninput="TableFilterSort.filterTable(this)" /></th>
-              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" oninput="TableFilterSort.filterTable(this)" /></th>
+              <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Mahsulot...' : 'Товар...'}" oninput="TableFilterSort.filterTable(this)" /></th>
               <th></th>
               <th><input type="text" class="table-col-filter" data-col-idx="5" placeholder="${CURRENT_LANG === 'uz' ? 'Holat...' : 'Статус...'}" oninput="TableFilterSort.filterTable(this)" /></th>
@@ -180,7 +204,7 @@ const ProductionModule = {
               <tr class="${o.status === 'Storno' ? 'storno-row' : ''}">
                 <td data-sort-value="${o.date}">${formatDate(o.date)}</td>
                 <td data-sort-value="${o.order_number}"><code>${o.order_number}</code></td>
-                <td data-sort-value="${o.ombor_label}"><span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${escapeHtml(o.ombor_label || '-')}</span></td>
+                <td data-sort-value="${o.line_name}"><span class="badge" style="background: #f1f5f9; color: #1e293b; padding: 4px 8px; border-radius: 6px; font-weight: 500;">${tr(o.line_name)}</span></td>
                 <td data-sort-value="${o.output_material_name}">${o.output_material_name} <span style="color: #64748b; font-size: 11px;">(${o.output_material_code})</span></td>
                 <td data-sort-value="${o.quantity}" style="text-align: right;">${o.quantity.toLocaleString()} ${tr(o.unit)}</td>
                 <td data-sort-value="${o.status}">
@@ -213,8 +237,9 @@ const ProductionModule = {
   async openNewOrderModal() {
     const todayStr = new Date().toISOString().split("T")[0];
     
-    // Ombor config and raw-material stock from Warehouse 2 (Ishlab chiqarish uchun materiallar)
-    const [skladConfig, rawStockItems] = await Promise.all([
+    // Fetch materials, lines, and stock balances from Warehouse 2 (Ishlab chiqarish uchun materiallar)
+    const [lines, skladConfig, rawStockItems] = await Promise.all([
+      API.getProductionLines(),
       API.getSkladConfig(),
       API.getStockBalances(2)
     ]);
@@ -234,6 +259,12 @@ const ProductionModule = {
 
         <form id="new-prod-order-form">
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Ishlab chiqarish liniyasi *' : 'Производственная линия *'}</label>
+              <select id="po-line" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+                ${lines.map(l => `<option value="${l.id}">${CURRENT_LANG === 'uz' ? `Liniya ${l.line_number}` : `Линия ${l.line_number}`}</option>`).join("")}
+              </select>
+            </div>
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 13px;">${t('th_date')} *</label>
               <input type="date" id="po-date" class="form-control" value="${todayStr}" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
@@ -295,6 +326,7 @@ const ProductionModule = {
         </form>
       `,
       async () => {
+        const lineId = parseInt(document.getElementById("po-line").value);
         const d = document.getElementById("po-date").value;
         const qty = parseFloat(document.getElementById("po-quantity").value);
         const notes = document.getElementById("po-notes").value.trim();
@@ -309,7 +341,7 @@ const ProductionModule = {
           showToast(CURRENT_LANG === 'uz' ? "O'lcham kodini to'g'ri kiriting (masalan 680)!" : "Введите корректный код размера (например 680)!", "warning");
           return false;
         }
-        if (isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) {
+        if (!lineId || isNaN(qty) || qty <= 0 || !Number.isInteger(qty)) {
           showToast(CURRENT_LANG === 'uz' ? "Chiqarilgan hajmni to'g'ri kiriting!" : "Укажите корректный объем!", "warning");
           return false;
         }
@@ -327,6 +359,7 @@ const ProductionModule = {
 
         try {
           await API.createProductionOrder({
+            line_id: lineId,
             out_sklad_id: outSklad.id,
             out_code: size.length + size.width,
             quantity: qty,
@@ -379,12 +412,15 @@ const ProductionModule = {
 
   async openLineExpenseModal() {
     const todayStr = new Date().toISOString().split("T")[0];
-    const stockItems = await API.getStockBalances(3); // Warehouse 3 (Aralash ombor)
+    const [lines, stockItems] = await Promise.all([
+      API.getProductionLines(),
+      API.getStockBalances(3) // Fetch from Warehouse 3 (Aralash ombor)
+    ]);
 
     const availableStock = (stockItems || []).filter(s => s.quantity > 0);
 
     showModal(
-      CURRENT_LANG === 'uz' ? "Sarf materiallari (Aralash ombor) kiritish" : "Списание материалов (Склад 3)",
+      CURRENT_LANG === 'uz' ? "Liniyalar uchun Sarf materiallari (Aralash ombor) kiritish" : "Списание материалов на линии (Склад 3)",
       `
         <datalist id="le-mat-datalist">
           ${availableStock.map(s => `<option value="${s.material_code} - ${s.material_name} (${tr(s.unit)})" data-id="${s.material_id}">${CURRENT_LANG === 'uz' ? 'Mavjud' : 'Доступно'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("")}
@@ -398,6 +434,17 @@ const ProductionModule = {
             </div>
           </div>
 
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-weight: 700; font-size: 13px; color: #0f172a;">${CURRENT_LANG === 'uz' ? 'Sarf qilingan Ishlab chiqarish liniyalari * (Bir nechta tanlash imkoni)' : 'Задействованные линии *'}</label>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px 14px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+              ${lines.map(l => `
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer; color: #1e293b;">
+                  <input type="checkbox" class="le-line-cb" value="${l.id}" style="width: 18px; height: 18px; cursor: pointer;" />
+                  <span>${CURRENT_LANG === 'uz' ? `Liniya ${l.line_number}` : `Линия ${l.line_number}`}</span>
+                </label>
+              `).join("")}
+            </div>
+          </div>
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
@@ -423,13 +470,20 @@ const ProductionModule = {
 
           <div class="form-group" style="margin-top: 14px;">
             <label class="form-label" style="font-weight: 600; font-size: 13px;">${t('th_description')}</label>
-            <textarea id="le-notes" class="form-control" rows="2" placeholder="${CURRENT_LANG === 'uz' ? 'Masalan: press uchun motor almashtirildi...' : 'Описание...'}" style="width: 100%; padding: 8px 12px; border-radius: 8px; font-size: 13px;"></textarea>
+            <textarea id="le-notes" class="form-control" rows="2" placeholder="${CURRENT_LANG === 'uz' ? 'Masalan: Liniya 1-4 stanoklari uchun motor almashtirildi...' : 'Описание...'}" style="width: 100%; padding: 8px 12px; border-radius: 8px; font-size: 13px;"></textarea>
           </div>
         </form>
       `,
       async () => {
         const d = document.getElementById("le-date").value;
         const notes = document.getElementById("le-notes").value.trim();
+        const lineCbs = document.querySelectorAll(".le-line-cb:checked");
+        const lineIds = Array.from(lineCbs).map(cb => parseInt(cb.value, 10));
+
+        if (lineIds.length === 0) {
+          showToast(CURRENT_LANG === 'uz' ? "Kamida bitta liniyani tanlang!" : "Выберите хотя бы одну линию!", "warning");
+          return false;
+        }
 
         const items = [];
         const rows = document.querySelectorAll("#le-items-body tr");
@@ -450,11 +504,11 @@ const ProductionModule = {
         try {
           await API.createLineExpense({
             date: d,
-            line_ids: [],
+            line_ids: lineIds,
             items: items,
             notes: notes
           });
-          showToast(CURRENT_LANG === 'uz' ? "Sarf materiali muvaffaqiyatli saqlandi!" : "Расход материалов успешно сохранен!", "success");
+          showToast(CURRENT_LANG === 'uz' ? "Liniyalar sarf materiali muvaffaqiyatli saqlandi!" : "Расход материалов успешно сохранен!", "success");
           if (ProductionModule.activeTab === 'expenses') {
             await ProductionModule.loadLineExpenses();
           } else {
@@ -576,7 +630,7 @@ const ProductionModule = {
 
   exportPdf() {
     const tableId = this.activeTab === 'orders' ? 'prod-orders-table' : 'line-expenses-table';
-    const filename = this.activeTab === 'orders' ? 'ishlab_chiqarish_buyurtmalari' : 'sarf_materiallari';
+    const filename = this.activeTab === 'orders' ? 'ishlab_chiqarish_buyurtmalari' : 'liniyalar_sarf_materiallari';
     exportTableToPdf(tableId, filename);
   }
 };

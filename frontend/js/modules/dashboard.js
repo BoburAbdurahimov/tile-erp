@@ -6,7 +6,7 @@ const DashboardModule = {
           <div class="card-title">${CURRENT_LANG === 'uz' ? 'Zavodning umumiy holati' : 'Общее состояние завода'}</div>
           <button class="btn btn-secondary btn-sm" onclick="DashboardModule.refresh()">${CURRENT_LANG === 'uz' ? 'Yangilash' : 'Обновить'}</button>
         </div>
-        <div class="grid-4" id="kpi-grid">
+        <div class="grid-5" id="kpi-grid">
           <div class="kpi-card"><div class="kpi-title">${CURRENT_LANG === 'uz' ? 'Yuklanmoqda...' : 'Загрузка...'}</div></div>
         </div>
       </div>
@@ -14,7 +14,7 @@ const DashboardModule = {
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">${CURRENT_LANG === 'uz' ? "So'nggi 7 kunlik ishlab chiqarish (4 ombor)" : "Производство за 7 дней (4 склада)"}</div>
+            <div class="card-title">${CURRENT_LANG === 'uz' ? "So'nggi 7 kunlik ishlab chiqarish (5 Liniya)" : "Производство за 7 дней (5 Линий)"}</div>
           </div>
           <div style="position: relative; height: 260px;">
             <canvas id="productionChart"></canvas>
@@ -61,19 +61,24 @@ const DashboardModule = {
       // Render KPIs
       const kpiGrid = document.getElementById("kpi-grid");
       if (kpiGrid) {
+        kpiGrid.className = "grid-5";
         const kassaUsdObj = registers.find(r => r.currency === "USD");
-        const kassaUzsObj = registers.find(r => r.currency === "UZS");
+        const kassaUzsObj = registers.find(r => r.currency === "UZS" && !r.name.toLowerCase().includes("karta") && !r.name.toLowerCase().includes("plastik"));
+        const kartaUzsObj = registers.find(r => r.name.toLowerCase().includes("karta") || r.name.toLowerCase().includes("plastik") || r.currency === "UZS_CARD");
+
         const kassaUsd = kassaUsdObj?.balance || 0;
         const kassaUzs = kassaUzsObj?.balance || 0;
+        const kartaUzs = kartaUzsObj?.balance || 0;
         const fxRate = kassaUsdObj?.current_rate || kassaUzsObj?.current_rate || 12850;
 
         const kassaUzsInUsd = kassaUzs / (fxRate || 12850);
         const kassaUsdInUzs = kassaUsd * (fxRate || 12850);
+        const kartaUzsInUsd = kartaUzs / (fxRate || 12850);
         
         kpiGrid.innerHTML = `
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "7 kunlik hajm" : "Объем за 7 дней"}</span>
-            <span class="kpi-value">${formatNumber(stats7d.total_7d_pieces, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
+            <span class="kpi-value">${formatNumber(stats7d.total_7d_volume_m2, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
             <span class="kpi-sub">${CURRENT_LANG === 'uz' ? "5 ta liniya bo'yicha" : "По 5 линиям"}</span>
           </div>
           <div class="kpi-card">
@@ -83,8 +88,13 @@ const DashboardModule = {
           </div>
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Kassa UZS" : "Касса UZS"}</span>
-            <span class="kpi-value" style="color: #2563eb;">${(kassaUzs / 1e6).toFixed(1)} mln</span>
+            <span class="kpi-value" style="color: #0284c7;">${(kassaUzs / 1e6).toFixed(1)} mln</span>
             <span class="kpi-sub">≈ $${kassaUzsInUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Karta UZS" : "Карта UZS"}</span>
+            <span class="kpi-value" style="color: #6366f1;">${(kartaUzs / 1e6).toFixed(1)} mln</span>
+            <span class="kpi-sub">≈ $${kartaUzsInUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Joriy oy Sof Foyda" : "Чистая прибыль (мес.)"}</span>
@@ -100,11 +110,11 @@ const DashboardModule = {
         cashList.innerHTML = registers.map(r => `
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-weight: 700; font-size: 15px;">${r.name}</div>
-              <div style="font-size: 12px; color: #64748b;">${r.description || ''}</div>
+              <div style="font-weight: 700; font-size: 15px;">${tr(r.name)}</div>
+              <div style="font-size: 12px; color: #64748b;">${tr(r.description || '')}</div>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 18px; font-weight: 800; color: ${r.currency === 'USD' ? '#10b981' : '#2563eb'};">
+              <div style="font-size: 18px; font-weight: 800; color: ${r.currency === 'USD' ? '#10b981' : (r.name.toLowerCase().includes('karta') ? '#6366f1' : '#0284c7')};">
                 ${r.currency === 'USD' ? '$' + r.balance.toLocaleString() : r.balance.toLocaleString() + ' UZS'}
               </div>
               <div style="font-size: 12px; color: #94a3b8;">
@@ -124,7 +134,7 @@ const DashboardModule = {
               <tr>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${t('th_date')} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">№ <span class="sort-icon">↕</span></th>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Ombor' : 'Склад'} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${CURRENT_LANG === 'uz' ? 'Liniya' : 'Линия'} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, false)">${t('th_name')} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${t('th_quantity')} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${CURRENT_LANG === 'uz' ? "Tannarx ($)" : "Себестоимость ($)"} <span class="sort-icon">↕</span></th>
@@ -133,7 +143,7 @@ const DashboardModule = {
               <tr class="filter-row">
                 <th><input type="text" class="table-col-filter" data-col-idx="0" placeholder="${CURRENT_LANG === 'uz' ? 'Sana...' : 'Дата...'}" /></th>
                 <th><input type="text" class="table-col-filter" data-col-idx="1" placeholder="${CURRENT_LANG === 'uz' ? '№...' : '№...'}" /></th>
-                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Ombor...' : 'Склад...'}" /></th>
+                <th><input type="text" class="table-col-filter" data-col-idx="2" placeholder="${CURRENT_LANG === 'uz' ? 'Liniya...' : 'Линия...'}" /></th>
                 <th><input type="text" class="table-col-filter" data-col-idx="3" placeholder="${CURRENT_LANG === 'uz' ? 'Nom...' : 'Имя...'}" /></th>
                 <th></th>
                 <th></th>
@@ -145,7 +155,7 @@ const DashboardModule = {
                 <tr class="${o.status === 'Storno' ? 'storno-row' : ''}">
                   <td data-sort-value="${o.date}">${formatDate(o.date)}</td>
                   <td data-sort-value="${o.order_number}"><strong>${o.order_number}</strong></td>
-                  <td data-sort-value="${o.ombor_label || o.line_name}"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${escapeHtml(o.ombor_label || tr(o.line_name) || '-')}</span></td>
+                  <td data-sort-value="${o.line_name}"><span class="badge" style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${tr(o.line_name)}</span></td>
                   <td data-sort-value="${o.output_material_name}">${o.output_material_name}</td>
                   <td data-sort-value="${o.quantity}" style="text-align: right;"><strong>${o.quantity.toLocaleString()} ${tr(o.unit)}</strong></td>
                   <td data-sort-value="${o.direct_cost_usd}" style="text-align: right;">$${o.direct_cost_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ($${o.unit_cost_usd.toFixed(2)}/${tr(o.unit)})</td>

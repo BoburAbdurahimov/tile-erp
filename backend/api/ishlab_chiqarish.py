@@ -47,33 +47,36 @@ def get_7_day_production_stats(
         ProductionOrder.status == "Tasdiqlandi"
     ).all()
     
-    # Aggregate by date and by Ombor owner (Toxir, Kodir, Istam, Aziz)
-    owners = []
-    for cfg in sklad_svc.SKLAD_CONFIG:
-        if cfg["name"] not in owners:
-            owners.append(cfg["name"])
+    # Aggregate by date and by line
     days_map = {}
     for i in range(7):
         d_str = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        days_map[d_str] = {o: 0.0 for o in owners}
+        days_map[d_str] = {f"Line {l}": 0.0 for l in range(1, 6)}
         days_map[d_str]["total"] = 0.0
 
+    lines = {l.id: l.line_number for l in db.query(ProductionLine).all()}
+    
     for order in orders:
         d_str = order.date.strftime("%Y-%m-%d")
-        cfg = sklad_svc.get_config(order.out_sklad_id) if order.out_sklad_id else None
-        if d_str not in days_map or not cfg:
-            continue
-        days_map[d_str][cfg["name"]] = round(days_map[d_str][cfg["name"]] + order.quantity, 2)
-        days_map[d_str]["total"] = round(days_map[d_str]["total"] + order.quantity, 2)
-
-    owner_totals = {o: round(sum(d[o] for d in days_map.values()), 2) for o in owners}
+        line_num = lines.get(order.line_id, 1)
+        line_key = f"Line {line_num}"
+        if d_str in days_map:
+            days_map[d_str][line_key] = round(days_map[d_str].get(line_key, 0.0) + order.quantity, 2)
+            days_map[d_str]["total"] = round(days_map[d_str]["total"] + order.quantity, 2)
+            
+    # Also calculate total 7-day volume per line
+    line_totals = {f"Line {l}": 0.0 for l in range(1, 6)}
+    total_7d = 0.0
+    for day, data in days_map.items():
+        for l in range(1, 6):
+            line_totals[f"Line {l}"] += data[f"Line {l}"]
+            total_7d += data[f"Line {l}"]
 
     return {
         "start_date": start_date,
         "end_date": today,
-        "owners": owners,
-        "total_7d_pieces": round(sum(owner_totals.values()), 2),
-        "owner_totals": owner_totals,
+        "total_7d_volume_m2": round(total_7d, 2),
+        "line_totals": {k: round(v, 2) for k, v in line_totals.items()},
         "daily_breakdown": days_map
     }
 
@@ -87,9 +90,9 @@ def get_production_orders(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("ishlab_chiqarish", role)
-    # Outer joins: an order may have no line (lines are no longer used) and no
-    # output_material (output went to the Ombor); inner joins would hide it.
-    query = db.query(ProductionOrder).outerjoin(ProductionLine).outerjoin(MDMMaterial)
+    # Outer join: an order whose output went to the dimensional warehouse
+    # has no output_material, and an inner join would hide it.
+    query = db.query(ProductionOrder).join(ProductionLine).outerjoin(MDMMaterial)
     
     if line_id:
         query = query.filter(ProductionOrder.line_id == line_id)
@@ -123,7 +126,7 @@ def get_production_orders(
             order_number=o.order_number,
             line_id=o.line_id,
             line_name=o.line.name if o.line else "",
-            line_number=o.line.line_number if o.line else None,
+            line_number=o.line.line_number if o.line else 1,
             output_material_id=o.output_material_id,
             output_material_code=(str(o.out_length + o.out_width)
                                   if o.out_sklad_id and o.out_length is not None
@@ -132,7 +135,6 @@ def get_production_orders(
                                   if o.out_sklad_id and o.out_length is not None
                                   else (o.output_material.name if o.output_material else "")),
             out_sklad_id=o.out_sklad_id,
-            ombor_label=sklad_svc.sklad_label(o.out_sklad_id) if o.out_sklad_id else "",
             out_size_code=((o.out_length + o.out_width)
                            if o.out_length is not None and o.out_width is not None else None),
             quantity=round(o.quantity, 2),
@@ -162,8 +164,8 @@ def create_production_order(
     if payload.quantity <= 0:
         raise HTTPException(status_code=400, detail="Ishlab chiqarish hajmi musbat bo'lishi shart.")
         
-    # Production lines are no longer chosen; an old client may still send one.
-    if payload.line_id is not None and not db.query(ProductionLine).filter(ProductionLine.id == payload.line_id).first():
+    line = db.query(ProductionLine).filter(ProductionLine.id == payload.line_id).first()
+    if not line:
         raise HTTPException(status_code=404, detail="Liniya topilmadi.")
         
     # Output goes either to the dimensional warehouse (a sheet size) or, for
@@ -261,12 +263,11 @@ def create_production_order(
     db.refresh(order)
 
     # Auto-sync piecework salary for present workers on this line based on production output quantity
-    if order.line_id:
-        try:
-            from backend.services.salary_service import sync_piecework_from_production
-            sync_piecework_from_production(db, order.line_id, order.date)
-        except Exception as e:
-            pass
+    try:
+        from backend.services.salary_service import sync_piecework_from_production
+        sync_piecework_from_production(db, order.line_id, order.date)
+    except Exception as e:
+        pass
 
     # Return full response
     consumed_list = [
@@ -288,7 +289,7 @@ def create_production_order(
         order_number=order.order_number,
         line_id=order.line_id,
         line_name=order.line.name if order.line else "",
-        line_number=order.line.line_number if order.line else None,
+        line_number=order.line.line_number if order.line else 1,
         output_material_id=order.output_material_id,
         output_material_code=(str(order.out_length + order.out_width)
                               if order.out_sklad_id and order.out_length is not None
@@ -297,7 +298,6 @@ def create_production_order(
                               if order.out_sklad_id and order.out_length is not None
                               else (order.output_material.name if order.output_material else "")),
         out_sklad_id=order.out_sklad_id,
-        ombor_label=sklad_svc.sklad_label(order.out_sklad_id) if order.out_sklad_id else "",
         out_size_code=((order.out_length + order.out_width)
                        if order.out_length is not None and order.out_width is not None else None),
         quantity=round(order.quantity, 2),
@@ -376,6 +376,9 @@ def create_line_expense(
 ):
     check_permission("ishlab_chiqarish", role)
     assert_month_open(db, payload.date)
+
+    if not payload.line_ids or len(payload.line_ids) == 0:
+        raise HTTPException(status_code=400, detail="Kamida bitta liniyani tanlang.")
 
     if not payload.items or len(payload.items) == 0:
         raise HTTPException(status_code=400, detail="Kamida bitta sarf materialini kiritishingiz shart.")

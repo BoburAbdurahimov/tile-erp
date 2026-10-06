@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Kafel Zavodi ERP | Ceramic Tile Factory ERP</title>
+  <title>Jomboy plitka zavodi | Ceramic Tile Factory ERP</title>
   
   <!-- Google Fonts: Outfit, Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,7 +13,7 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <link rel="stylesheet" href="/static/css/style.css?v=50.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=48.0" />
 </head>
 <body>
   <!-- Login Screen Overlay -->
@@ -21,7 +21,7 @@
     <div style="background: #ffffff; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden; animation: fadeIn 0.3s ease;">
       <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 32px 24px; text-align: center; color: #ffffff;">
 
-        <h2 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Kafel Zavodi ERP</h2>
+        <h2 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;" data-i18n="app_title">Jomboy plitka zavodi</h2>
         <p style="margin: 6px 0 0 0; opacity: 0.85; font-size: 13px;">Boshqaruv va ishlab chiqarish tizimi</p>
       </div>
 
@@ -75,7 +75,7 @@
           </button>
 
           <div class="odoo-brand-title">
-            <span data-i18n="app_title">Kafel Zavodi ERP</span>
+            <span data-i18n="app_title">Jomboy plitka zavodi</span>
           </div>
 
           <!-- Odoo Parallel Horizontal Module Navigation Tabs -->
@@ -99,7 +99,7 @@
               <span data-i18n="nav_production">Ishlab chiqarish</span>
             </a>
             <a class="odoo-nav-tab" data-nav="balances" onclick="navigateTo('balances')">
-              <span data-i18n="nav_balances_short">Kontragentlar</span>
+              <span data-i18n="nav_balances">Balanslar</span>
             </a>
             <a class="odoo-nav-tab" data-nav="purchases" onclick="navigateTo('purchases')">
               <span data-i18n="nav_purchases">Sotib olish</span>
@@ -112,9 +112,6 @@
             </a>
             <a class="odoo-nav-tab" data-nav="salary" onclick="navigateTo('salary')">
               <span data-i18n="nav_salary">Ish haqi</span>
-            </a>
-            <a class="odoo-nav-tab" data-nav="expenses" onclick="navigateTo('expenses')">
-              <span data-i18n="nav_expenses">Xarajatlar</span>
             </a>
             <a class="odoo-nav-tab" data-nav="history" onclick="navigateTo('history')">
               <span data-i18n="nav_history">Tarix</span>
@@ -171,7 +168,7 @@
       <!-- Odoo Sub-Control Panel with Breadcrumb & Title -->
       <div class="odoo-sub-header">
         <div class="odoo-breadcrumb">
-          <span>Kafel Zavodi ERP</span>
+          <span data-i18n="app_title">Jomboy plitka zavodi</span>
           <span style="color: var(--text-light);">/</span>
           <span id="page-title" style="color: var(--text-main); font-weight: 800;">Bosh panel</span>
         </div>
@@ -239,7 +236,7 @@
         <div style="display: flex; align-items: center; gap: 10px;">
 
           <div>
-            <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--odoo-purple);" data-i18n="app_title">Kafel Zavodi ERP</h3>
+            <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--odoo-purple);" data-i18n="app_title">Jomboy plitka zavodi</h3>
             <div style="font-size: 12px; color: var(--text-muted);" data-i18n="apps_all_sections">Barcha bo'limlar</div>
           </div>
         </div>
@@ -290,9 +287,6 @@
 
           <div class="odoo-app-label" data-i18n="nav_salary">Ish haqi</div>
         </div>
-        <div class="odoo-app-card" onclick="selectOdooApp('expenses')">
-          <div class="odoo-app-label" data-i18n="nav_expenses">Xarajatlar</div>
-        </div>
         <div class="odoo-app-card" onclick="selectOdooApp('history')">
           <div class="odoo-app-label" data-i18n="nav_history">Tarix</div>
         </div>
@@ -308,23 +302,22 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- JavaScript Scripts with Cache Busting -->
-  <script src="/static/js/i18n.js?v=61.0"></script>
-  <script src="/static/js/api.js?v=61.0"></script>
-  <script src="/static/js/modules/dashboard.js?v=61.0"></script>
-  <script src="/static/js/modules/mdm.js?v=61.0"></script>
-  <script src="/static/js/modules/ombor.js?v=61.0"></script>
-  <script src="/static/js/modules/sklad.js?v=61.0"></script>
-  <script src="/static/js/modules/buyurtma.js?v=61.0"></script>
-  <script src="/static/js/modules/kassa.js?v=61.0"></script>
-  <script src="/static/js/modules/ishlab_chiqarish.js?v=61.0"></script>
-  <script src="/static/js/modules/kontragentlar.js?v=61.0"></script>
-  <script src="/static/js/modules/zakup.js?v=61.0"></script>
-  <script src="/static/js/modules/sotish.js?v=61.0"></script>
-  <script src="/static/js/modules/moliya.js?v=61.0"></script>
-  <script src="/static/js/modules/ish_haqi.js?v=61.0"></script>
-  <script src="/static/js/modules/users.js?v=61.0"></script>
-  <script src="/static/js/modules/xarajatlar.js?v=61.0"></script>
-  <script src="/static/js/modules/tarix.js?v=61.0"></script>
-  <script src="/static/js/app.js?v=61.0"></script>
+  <script src="/static/js/i18n.js?v=58.0"></script>
+  <script src="/static/js/api.js?v=58.0"></script>
+  <script src="/static/js/modules/dashboard.js?v=58.0"></script>
+  <script src="/static/js/modules/mdm.js?v=58.0"></script>
+  <script src="/static/js/modules/ombor.js?v=58.0"></script>
+  <script src="/static/js/modules/sklad.js?v=58.0"></script>
+  <script src="/static/js/modules/buyurtma.js?v=58.0"></script>
+  <script src="/static/js/modules/kassa.js?v=58.0"></script>
+  <script src="/static/js/modules/ishlab_chiqarish.js?v=58.0"></script>
+  <script src="/static/js/modules/kontragentlar.js?v=58.0"></script>
+  <script src="/static/js/modules/zakup.js?v=58.0"></script>
+  <script src="/static/js/modules/sotish.js?v=58.0"></script>
+  <script src="/static/js/modules/moliya.js?v=58.0"></script>
+  <script src="/static/js/modules/ish_haqi.js?v=58.0"></script>
+  <script src="/static/js/modules/users.js?v=58.0"></script>
+  <script src="/static/js/modules/tarix.js?v=58.0"></script>
+  <script src="/static/js/app.js?v=58.0"></script>
 </body>
 </html>
