@@ -390,10 +390,12 @@ def delivery_share(movement: SkladMovement) -> dict:
 # ---------------------------------------------------------------- reporting
 
 def get_movements(db: Session, limit: int = 50, sklad_id: Optional[int] = None,
-                  operation: Optional[str] = None) -> list:
+                  operation: Optional[str] = None, sklad_ids: Optional[list] = None) -> list:
     q = db.query(SkladMovement)
     if sklad_id is not None:
         q = q.filter(SkladMovement.sklad_id == sklad_id)
+    if sklad_ids is not None:
+        q = q.filter(SkladMovement.sklad_id.in_(sklad_ids))
     if operation:
         q = q.filter(SkladMovement.operation == operation)
     movements = q.order_by(SkladMovement.occurred_at.desc()).limit(max(1, min(limit, 500))).all()
@@ -429,8 +431,10 @@ def get_movements(db: Session, limit: int = 50, sklad_id: Optional[int] = None,
 
 
 def get_statistics(db: Session, start: Optional[datetime] = None,
-                   end: Optional[datetime] = None) -> dict:
+                   end: Optional[datetime] = None, sklad_ids: Optional[list] = None) -> dict:
     q = db.query(SkladMovement)
+    if sklad_ids is not None:
+        q = q.filter(SkladMovement.sklad_id.in_(sklad_ids))
     if start:
         q = q.filter(SkladMovement.occurred_at >= start)
     if end:

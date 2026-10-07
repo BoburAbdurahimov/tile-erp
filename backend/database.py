@@ -58,6 +58,8 @@ _ADDED_COLUMNS = [
     ("purchase_items", "sklad_id", "INTEGER"),
     ("purchase_items", "length", "INTEGER"),
     ("purchase_items", "width", "INTEGER"),
+    ("users", "ombor_sklads", "VARCHAR(50)"),
+    ("auto_sarf_rules", "sklad_id", "INTEGER"),
 ]
 
 

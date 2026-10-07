@@ -68,12 +68,13 @@ const SkladModule = {
   async loadAll() {
     try {
       if (!this.config) this.config = await API.getSkladConfig();
-      const [whs, matrix] = await Promise.all([
-        API.getSkladWarehouses(),
-        API.getSkladMatrix(this.currentSkladId)
-      ]);
+      const whs = await API.getSkladWarehouses();
       this.warehouses = whs.warehouses || [];
-      this.matrix = matrix;
+      // A user limited to some warehouses starts on the first of them.
+      if (this.warehouses.length && !this.warehouses.some(w => w.sklad_id === this.currentSkladId)) {
+        this.currentSkladId = this.warehouses[0].sklad_id;
+      }
+      this.matrix = await API.getSkladMatrix(this.currentSkladId);
     } catch (e) {
       showToast(e.message, "error");
     }

@@ -246,13 +246,13 @@ const ProductionModule = {
           <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 6px;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Qaysi omborga *' : 'На какой склад *'}</label>
-              <select id="po-owner" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+              <select id="po-owner" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" onchange="ProductionModule.refreshAutoSarf()" required>
                 ${owners.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}
               </select>
             </div>
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Eni *' : 'Ширина листа *'}</label>
-              <select id="po-eni" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required>
+              <select id="po-eni" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" onchange="ProductionModule.refreshAutoSarf()" required>
                 ${enis.map(e => `<option value="${e}">${e}</option>`).join("")}
               </select>
             </div>
@@ -408,7 +408,7 @@ const ProductionModule = {
     const reqId = (this._autoReq = (this._autoReq || 0) + 1);
     let res;
     try {
-      res = await API.calcAutoSarf(qty);
+      res = await API.calcAutoSarf(qty, (this.selectedSklad() || {}).id);
     } catch (e) {
       showHint(escapeHtml(e.message), "#b91c1c");
       return;
@@ -451,13 +451,14 @@ const ProductionModule = {
 
   async openAutoSarfSettings() {
     const isUz = CURRENT_LANG === 'uz';
-    let materials = [];
+    let materials = [], config = {};
     try {
-      materials = await API.getMaterials();
+      [materials, config] = await Promise.all([API.getMaterials(), API.getSkladConfig()]);
     } catch (e) {
       showToast(e.message, "error");
       return;
     }
+    this.autoSarfSklads = config.warehouses || [];
     // Norms are for raw materials and consumables, not finished tiles.
     this.autoSarfMaterials = (materials || []).filter(m => m.category !== "Tayyor mahsulot" && !m.is_archived);
     const f = "width:100%;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;";
@@ -466,10 +467,15 @@ const ProductionModule = {
     showModal(isUz ? "Avto sarf sozlamalari" : "Настройки авто расхода", `
       <div style="display:flex;flex-direction:column;gap:14px;">
         <p style="margin:0;font-size:13px;color:#64748b;">
-          ${isUz ? "1 dona mahsulot uchun qancha material sarflanishini kiriting. Ishlab chiqarishda «Avto sarf» belgilansa, sarf shu normalar bo'yicha avtomatik hisoblanadi."
-                 : "Укажите расход материала на 1 штуку. При отмеченном «Авто расход» расход считается по этим нормам."}
+          ${isUz ? "1 dona mahsulot uchun qancha material sarflanishini kiriting. Ishlab chiqarishda «Avto sarf» belgilansa, sarf shu normalar bo'yicha avtomatik hisoblanadi. Ombor uchun alohida norma (masalan Kodir 100) umumiy normadan ustun turadi."
+                 : "Укажите расход материала на 1 штуку. При отмеченном «Авто расход» расход считается по этим нормам. Норма для склада (например Кодир 100) важнее общей."}
         </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">
+          <div><label style="${l}">${isUz ? "Ombor" : "Склад"}</label>
+            <select id="as-sklad" style="${f}">
+              <option value="">${isUz ? "Barcha omborlar" : "Все склады"}</option>
+              ${this.autoSarfSklads.map(w => `<option value="${w.id}">${escapeHtml(w.name)} ${w.eni}</option>`).join("")}
+            </select></div>
           <div style="grid-column: span 2;"><label style="${l}">${isUz ? "Material" : "Материал"}</label>
             <select id="as-material" style="${f}">
               ${this.autoSarfMaterials.map(m => `<option value="${m.id}">${escapeHtml(m.code)} - ${escapeHtml(m.name)} (${tr(m.unit)})</option>`).join("")}
@@ -502,12 +508,14 @@ const ProductionModule = {
       <div class="table-responsive">
         <table class="data-table">
           <thead><tr>
+            <th>${isUz ? "Ombor" : "Склад"}</th>
             <th>${isUz ? "Material" : "Материал"}</th>
             <th style="text-align:right;">${isUz ? "1 dona uchun" : "На 1 шт"}</th>
             <th></th>
           </tr></thead>
           <tbody>
             ${rules.map(r => `<tr>
+              <td>${r.sklad_id ? escapeHtml(r.sklad_label || "") : `<b>${isUz ? "Barcha omborlar" : "Все склады"}</b>`}</td>
               <td>${escapeHtml(r.material_code)} - ${escapeHtml(r.material_name)}</td>
               <td style="text-align:right;">${formatNumber(r.qty_per_unit, 0, 4)} ${tr(r.unit)}</td>
               <td style="text-align:right;"><button type="button" class="btn btn-sm" onclick="ProductionModule.deleteAutoSarfRule(${r.id})"
@@ -522,10 +530,11 @@ const ProductionModule = {
     const isUz = CURRENT_LANG === 'uz';
     const qty = parseFloat(document.getElementById("as-qty")?.value || "0");
     const materialId = parseInt(document.getElementById("as-material")?.value || "0", 10);
+    const skladId = parseInt(document.getElementById("as-sklad")?.value || "0", 10) || null;
     if (!materialId) { showToast(isUz ? "Materialni tanlang" : "Выберите материал", "error"); return; }
     if (!qty || qty <= 0) { showToast(isUz ? "1 dona uchun miqdorni kiriting" : "Укажите расход на 1 шт", "error"); return; }
     try {
-      await API.addAutoSarfRule({ material_id: materialId, qty_per_unit: qty });
+      await API.addAutoSarfRule({ sklad_id: skladId, material_id: materialId, qty_per_unit: qty });
       document.getElementById("as-qty").value = "";
       showToast(isUz ? "Norma saqlandi" : "Норма сохранена", "success");
       await this.loadAutoSarfRules();
