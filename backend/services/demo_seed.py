@@ -20,7 +20,7 @@ from typing import Callable, List
 from fastapi.testclient import TestClient
 
 from backend.database import SessionLocal
-from backend.models import CashRegister, MDMMaterial, Purchase
+from backend.models import CashRegister, MDMCounterparty, MDMMaterial, Purchase, StockItem
 
 MARK = "[DEMO]"
 
@@ -42,13 +42,79 @@ def make_caller(client: TestClient, headers: dict = None) -> Callable:
     return call
 
 
+# Raw materials production uses, with their Avto sarf norms per piece: for every
+# Ombor, and lighter ones for the 100-wide Ombors (Toxir/Kodir/Istam/Aziz 100).
+#  code, name, unit, USD price, supplier, norm, norm for 100
+RAW_MATERIALS = [
+    ("RM-CLAY-01", "Bentonit oq gil (Angren koni)", "kg", 0.045, "Angren Kaolin Gil MCHJ", 2.4, 2.0),
+    ("RM-FELD-02", "Dala shpati (Feldspar ultra)", "kg", 0.080, "Nurota Dala Shpati AJ", 1.1, 0.9),
+    ("RM-SAND-03", "Kvars qumi boyitilgan", "kg", 0.035, "Qizilqum Kvars Qumi MCHJ", 0.9, 0.75),
+    ("RM-GLAZE-04", "Kafel glazur siri (Ispaniya)", "kg", 1.80, "Esmalglass Glazur (Ispaniya)", 0.12, 0.10),
+    ("RM-PIGM-05", "Keramik pigment boyoq (Italiya)", "kg", 6.50, "Esmalglass Glazur (Ispaniya)", 0.02, 0.016),
+]
+SKLADS_100 = (2, 4, 6, 8)        # Toxir 100, Kodir 100, Istam 100, Aziz 100
+STOCK_FOR_PIECES = 3000          # keep enough raw material in Warehouse 2 for this many pieces
+
+
+def ensure_raw_materials(call: Callable, db) -> dict:
+    """The raw materials exist in MDM (created if missing). Returns code -> id."""
+    have = {m.code for m in db.query(MDMMaterial).all()}
+    for code, name, unit, price, *_ in RAW_MATERIALS:
+        if code not in have:
+            call("POST", "/mdm/materials", json={
+                "code": code, "name": name, "category": "Xomashyo", "unit": unit, "min_stock": 0,
+                "description": f"Avto sarf uchun demo xomashyo {MARK}"})
+    db.expire_all()
+    return {m.code: m.id for m in db.query(MDMMaterial).all()}
+
+
+def ensure_auto_sarf(call: Callable, db, mats: dict, on_day: date, log: List[str]):
+    """Avto sarf norms for every Ombor and the 100 Ombors, and enough raw material
+    in Warehouse 2 to produce with them. Safe to run again: norms are updated, and
+    stock is only topped up when it runs low."""
+    db.expire_all()   # see stock written by the API calls made so far
+    log.append("Avto sarf normalari (barcha omborlar va 100 lik omborlar)")
+    for code, _, _, _, _, norm, norm_100 in RAW_MATERIALS:
+        if code not in mats:
+            continue
+        call("POST", "/ishlab-chiqarish/auto-sarf", json={"material_id": mats[code], "qty_per_unit": norm})
+        for sklad_id in SKLADS_100:
+            call("POST", "/ishlab-chiqarish/auto-sarf",
+                 json={"sklad_id": sklad_id, "material_id": mats[code], "qty_per_unit": norm_100})
+
+    stock = {s.material_id: s.quantity or 0.0
+             for s in db.query(StockItem).filter(StockItem.warehouse_id == 2).all()}
+    by_supplier: dict = {}
+    for code, _, _, price, supplier, norm, _ in RAW_MATERIALS:
+        if code not in mats:
+            continue
+        target = norm * STOCK_FOR_PIECES
+        have = stock.get(mats[code], 0.0)
+        if have < target / 2:
+            by_supplier.setdefault(supplier, []).append(
+                {"material_id": mats[code], "quantity": round(target - have), "unit_price": price})
+    if not by_supplier:
+        return
+    log.append("Avto sarf uchun xomashyo kirimi (2-ombor)")
+    for supplier, rows in by_supplier.items():
+        cp = db.query(MDMCounterparty).filter(MDMCounterparty.name == supplier).first()
+        cp_id = cp.id if cp else call("POST", "/mdm/counterparties", json={
+            "name": supplier, "type": "supplier", "region": "Toshkent shahri", "phone": "+998710000000"})["id"]
+        call("POST", "/savdo/purchases", json={
+            "supplier_id": cp_id, "warehouse_id": 2, "date": str(on_day), "currency": "USD",
+            "items": rows, "description": f"Avto sarf uchun xomashyo {MARK}"})
+
+
 def run(call: Callable, force: bool = False) -> List[str]:
-    """Adds one batch of demo data. Returns the steps done (or why nothing was done)."""
+    """Adds one batch of demo data. Returns the steps done. When demo data is
+    already there (and not forced), only the Avto sarf part is brought up to date."""
     log: List[str] = []
     db = SessionLocal()
     try:
         if not force and has_demo(db):
-            return ["Demo ma'lumotlar allaqachon bor."]
+            log.append("Demo ma'lumotlar allaqachon bor - yangilandi")
+            ensure_auto_sarf(call, db, ensure_raw_materials(call, db), date.today(), log)
+            return log
 
         today = date.today()
         # Documents are dated inside the current month (closed months are locked).
@@ -103,7 +169,7 @@ def run(call: Callable, force: bool = False) -> List[str]:
 
         # ------------------------------------------------------------ purchases
         log.append("Xaridlar: xomashyo (2-ombor), yordamchi materiallar va zapchastlar (3-ombor)")
-        mats = {m.code: m.id for m in db.query(MDMMaterial).all()}
+        mats = ensure_raw_materials(call, db)
         purchases = [
             (0, 2, [("RM-CLAY-01", 80_000, 0.045)]),
             (1, 2, [("RM-FELD-02", 40_000, 0.080)]),
@@ -139,17 +205,7 @@ def run(call: Callable, force: bool = False) -> List[str]:
                                                "supplier": f"Boshlang'ich qoldiq {MARK}"})
 
         # ------------------------------------------------------------ Avto sarf
-        log.append("Avto sarf normalari")
-        for code, q in [("RM-CLAY-01", 2.4), ("RM-FELD-02", 1.1), ("RM-SAND-03", 0.9),
-                        ("RM-GLAZE-04", 0.12), ("RM-PIGM-05", 0.02)]:
-            if code in mats:
-                call("POST", "/ishlab-chiqarish/auto-sarf", json={"material_id": mats[code], "qty_per_unit": q})
-        # 100-wide sheets (Toxir 100, Kodir 100, Istam 100, Aziz 100) use less clay and glaze.
-        for sklad_id in (2, 4, 6, 8):
-            for code, q in [("RM-CLAY-01", 2.0), ("RM-GLAZE-04", 0.10)]:
-                if code in mats:
-                    call("POST", "/ishlab-chiqarish/auto-sarf",
-                         json={"sklad_id": sklad_id, "material_id": mats[code], "qty_per_unit": q})
+        ensure_auto_sarf(call, db, mats, day(7), log)
 
         # ------------------------------------------------------------ production
         log.append("Ishlab chiqarish (avto sarf bilan)")

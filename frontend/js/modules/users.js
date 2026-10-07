@@ -748,12 +748,11 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
       : "Добавить демо-данные для теста? (деньги в кассу, поставщики, закупки, остатки, производство, заказы). Они запишутся как настоящие документы.")) return;
     showToast(isUz ? "Demo ma'lumotlar qo'shilmoqda, kuting..." : "Добавляем демо-данные, подождите...", "info");
     try {
-      let res = await API.seedDemoData(false);
-      if (res.steps.length === 1 && !confirm(isUz
-        ? "Demo ma'lumotlar allaqachon bor. Yana bir to'plam qo'shilsinmi?"
-        : "Демо-данные уже есть. Добавить ещё один набор?")) return;
-      if (res.steps.length === 1) res = await API.seedDemoData(true);
-      showToast(isUz ? "Demo ma'lumotlar qo'shildi" : "Демо-данные добавлены", "success");
+      const res = await API.seedDemoData(false);
+      showToast(res.updated
+        ? (isUz ? "Demo ma'lumotlar yangilandi: avto sarf me'yorlari (100 lik omborlar ham) va xomashyo qo'shildi"
+                : "Демо-данные обновлены: нормы авто расхода (и для складов 100) и сырьё добавлены")
+        : (isUz ? "Demo ma'lumotlar qo'shildi" : "Демо-данные добавлены"), "success");
     } catch (e) {
       showToast(e.message, "error");
     }
