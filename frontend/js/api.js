@@ -292,6 +292,17 @@ const API = {
   createOrder: (data) => apiRequest("/orders", "POST", data),
   deliverOrder: (id, data) => apiRequest(`/orders/${id}/deliver`, "POST", data),
   getDeliveryOptions: (id) => apiRequest(`/orders/${id}/delivery-options`),
+  getExpenses: (params = {}) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, v); });
+    const qs = q.toString();
+    return apiRequest("/expenses" + (qs ? `?${qs}` : ""));
+  },
+  getExpenseCategories: () => apiRequest("/expenses/categories"),
+  createExpense: (data) => apiRequest("/expenses", "POST", data),
+  cancelExpense: (id) => apiRequest(`/expenses/${id}/cancel`, "POST"),
+  getExpensePayees: () => apiRequest("/expenses/counterparties"),
+  createExpensePayee: (data) => apiRequest("/expenses/counterparties", "POST", data),
   getHistory: (params = {}) => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => { if (v) q.append(k, v); });
