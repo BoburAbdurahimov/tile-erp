@@ -583,7 +583,7 @@ const SalesModule = {
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
 
-                  <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0284c7;">${t('app_title').toUpperCase()}</h2>
+                  <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0284c7;">KAFEL ZAVODI ERP</h2>
                 </div>
                 <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Toshkent v., Zangiota t., Sanoat zonasi #4</div>
                 <div style="font-size: 12px; color: #64748b;">Tel: +998 (71) 200-00-00 | Web: tile-erp.uz</div>
