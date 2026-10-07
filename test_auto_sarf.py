@@ -78,6 +78,22 @@ class TestAutoSarf(unittest.TestCase):
         self.assertFalse(items[m_a]["enough"])          # nothing of it in the warehouse
         self.assertEqual(items[m_a]["available"], 0)
 
+    def test_03b_ombor_norm_wins(self):
+        m_c, m_d = material("AS-TEST-C"), material("AS-TEST-D")
+        ok(client.post(URL, json={"material_id": m_c, "qty_per_unit": 3}, headers=ADMIN))
+        ok(client.post(URL, json={"material_id": m_d, "qty_per_unit": 1}, headers=ADMIN))
+        rule = ok(client.post(URL, json={"sklad_id": 4, "material_id": m_c, "qty_per_unit": 2}, headers=ADMIN))
+        self.assertEqual(rule["sklad_label"], "Kodir 100")
+
+        kodir100 = {i["material_id"]: i for i in ok(client.get(f"{URL}/calc?quantity=10&sklad_id=4", headers=ADMIN))["items"]}
+        self.assertAlmostEqual(kodir100[m_c]["quantity"], 20)   # Kodir 100's own norm
+        self.assertTrue(kodir100[m_c]["from_sklad"])
+        self.assertAlmostEqual(kodir100[m_d]["quantity"], 10)   # general norm still applies
+        kodir120 = {i["material_id"]: i for i in ok(client.get(f"{URL}/calc?quantity=10&sklad_id=3", headers=ADMIN))["items"]}
+        self.assertAlmostEqual(kodir120[m_c]["quantity"], 30)   # general norm
+        self.assertEqual(client.post(URL, json={"sklad_id": 99, "material_id": m_c, "qty_per_unit": 1},
+                                     headers=ADMIN).status_code, 404)
+
     def test_04_permission(self):
         self.assertEqual(client.get(URL, headers={"x-user-role": "Kassir"}).status_code, 403)
 

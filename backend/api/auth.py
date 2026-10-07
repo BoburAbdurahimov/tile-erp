@@ -9,7 +9,7 @@ from backend.models import (
     User, TelegramUser, LoginChallenge, MDMMaterial, MDMCounterparty, StockItem,
     ProductionConsumedMaterial, ProductionOrder, SaleItem, Sale,
     PurchaseItem, Purchase, CashTransaction, CashRegister,
-    AttendanceEntry, WorkEntry, MonthlySalaryCalculation
+    AttendanceEntry, WorkEntry, MonthlySalaryCalculation, SKLAD_CONFIG
 )
 from backend.auth_utils import (
     hash_password, verify_password, create_token, decode_token,
@@ -87,6 +87,28 @@ def get_current_user_role(user: User = Depends(get_current_user)) -> str:
 def get_current_username(user: User = Depends(get_current_user)) -> str:
     return user.username
 
+SKLAD_IDS = [c["id"] for c in SKLAD_CONFIG]   # 1..8: Toxir 120, Toxir 100, Kodir 120, ...
+
+def parse_sklads(value: Optional[str]) -> Optional[List[int]]:
+    """'3,4' -> [3, 4]; empty -> None (every sklad)."""
+    ids = [int(x) for x in str(value or "").split(",") if x.strip().isdigit()]
+    return ids or None
+
+def get_ombor_scope(user: User = Depends(get_current_user)) -> Optional[List[int]]:
+    """The Ombor sklads this user is limited to, or None for all of them.
+    Admins always see every sklad."""
+    if is_admin(user.role or ""):
+        return None
+    return parse_sklads(user.ombor_sklads)
+
+def _clean_sklads(ids: Optional[List[int]]) -> Optional[str]:
+    """[] clears the limit; otherwise every id must be a known sklad."""
+    ids = sorted(set(ids or []))
+    bad = [i for i in ids if i not in SKLAD_IDS]
+    if bad:
+        raise HTTPException(status_code=400, detail=f"Bunday ombor yo'q: {bad}.")
+    return ",".join(str(i) for i in ids) or None
+
 def check_permission(module: str, role_str: str):
     roles = parse_roles(role_str)
     if "Admin" in roles:
@@ -109,12 +131,14 @@ class UserCreateRequest(BaseModel):
     phone_number: Optional[str] = None
     role: str = "Ish boshqaruvchi"
     password: str
+    ombor_sklads: Optional[List[int]] = None   # e.g. [3, 4] = Kodir 120 and 100; empty = all
 
 class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = None
     phone_number: Optional[str] = None
     role: Optional[str] = None
     password: Optional[str] = None
+    ombor_sklads: Optional[List[int]] = None   # [] clears the limit
     is_active: Optional[bool] = None
     is_archived: Optional[bool] = None
 
@@ -134,6 +158,7 @@ def _session(user: User) -> dict:
             "full_name": user.full_name,
             "phone_number": user.phone_number,
             "role": user.role,
+            "ombor_sklads": parse_sklads(user.ombor_sklads),
             "is_active": user.is_active,
             "permissions": get_combined_permissions(user.role)
         }
@@ -232,6 +257,7 @@ def get_current_status(user: User = Depends(get_current_user)):
     return {
         "username": user.username,
         "role": user.role,
+        "ombor_sklads": parse_sklads(user.ombor_sklads),
         "permissions": get_combined_permissions(user.role)
     }
 
@@ -252,6 +278,7 @@ def get_users(include_archived: bool = True, db: Session = Depends(get_db), role
             "full_name": u.full_name,
             "phone_number": u.phone_number or "-",
             "role": u.role,
+            "ombor_sklads": parse_sklads(u.ombor_sklads),
             "is_active": u.is_active,
             "is_archived": u.is_archived,
             "created_at": u.created_at.strftime("%Y-%m-%d %H:%M") if u.created_at else "-"
@@ -272,6 +299,7 @@ def create_user(payload: UserCreateRequest, db: Session = Depends(get_db), role:
         full_name=payload.full_name.strip(),
         phone_number=payload.phone_number.strip() if payload.phone_number else None,
         role=payload.role,
+        ombor_sklads=_clean_sklads(payload.ombor_sklads),
         password_hash=hash_password(payload.password),
         is_active=True,
         is_archived=False
@@ -287,7 +315,8 @@ def create_user(payload: UserCreateRequest, db: Session = Depends(get_db), role:
             "username": new_user.username,
             "full_name": new_user.full_name,
             "phone_number": new_user.phone_number,
-            "role": new_user.role
+            "role": new_user.role,
+            "ombor_sklads": parse_sklads(new_user.ombor_sklads)
         }
     }
 
@@ -304,6 +333,8 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
         user.phone_number = payload.phone_number.strip()
     if payload.role is not None:
         user.role = payload.role
+    if payload.ombor_sklads is not None:
+        user.ombor_sklads = _clean_sklads(payload.ombor_sklads)
     if payload.password:
         user.password_hash = hash_password(payload.password)
     if payload.is_active is not None:
@@ -326,6 +357,7 @@ def update_user(user_id: int, payload: UserUpdateRequest, db: Session = Depends(
             "full_name": user.full_name,
             "phone_number": user.phone_number,
             "role": user.role,
+            "ombor_sklads": parse_sklads(user.ombor_sklads),
             "is_active": user.is_active,
             "is_archived": user.is_archived
         }

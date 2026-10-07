@@ -15,6 +15,9 @@ class User(Base):
     phone_number = Column(String(50), nullable=True)
     role = Column(String(500), nullable=False, default="Ish boshqaruvchi")
     password_hash = Column(String(255), nullable=True)
+    # Ombor sklads (e.g. "3,4" = Kodir 120 and Kodir 100) this user works in:
+    # they see and move only that stock. NULL = every sklad.
+    ombor_sklads = Column(String(50), nullable=True)
     is_active = Column(Boolean, default=True)
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -194,10 +197,12 @@ class ProductionConsumedMaterial(Base):
     warehouse = relationship("Warehouse")
 
 class AutoSarfRule(Base):
-    """Avto sarf norm: how much of a raw material one piece of production uses."""
+    """Avto sarf norm: how much of a raw material one piece of production uses.
+    sklad_id NULL = every Ombor; set = only production into that Ombor (e.g. Kodir 100)."""
     __tablename__ = "auto_sarf_rules"
 
     id = Column(Integer, primary_key=True, index=True)
+    sklad_id = Column(Integer, nullable=True, index=True)
     material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
     qty_per_unit = Column(Float, nullable=False)          # per 1 piece (dona) produced
     is_active = Column(Boolean, default=True)

@@ -144,13 +144,19 @@ def run(call: Callable, force: bool = False) -> List[str]:
                         ("RM-GLAZE-04", 0.12), ("RM-PIGM-05", 0.02)]:
             if code in mats:
                 call("POST", "/ishlab-chiqarish/auto-sarf", json={"material_id": mats[code], "qty_per_unit": q})
+        # 100-wide sheets (Toxir 100, Kodir 100, Istam 100, Aziz 100) use less clay and glaze.
+        for sklad_id in (2, 4, 6, 8):
+            for code, q in [("RM-CLAY-01", 2.0), ("RM-GLAZE-04", 0.10)]:
+                if code in mats:
+                    call("POST", "/ishlab-chiqarish/auto-sarf",
+                         json={"sklad_id": sklad_id, "material_id": mats[code], "qty_per_unit": q})
 
         # ------------------------------------------------------------ production
         log.append("Ishlab chiqarish (avto sarf bilan)")
         plan = [(1, 680, 120), (3, 740, 90), (5, 835, 60), (7, 540, 150),
                 (2, 620, 80), (4, 760, 70), (6, 590, 100), (8, 680, 50)]
         for i, (sklad_id, code, qty) in enumerate(plan):
-            calc = call("GET", f"/ishlab-chiqarish/auto-sarf/calc?quantity={qty}")
+            calc = call("GET", f"/ishlab-chiqarish/auto-sarf/calc?quantity={qty}&sklad_id={sklad_id}")
             consumed = [{"material_id": it["material_id"], "warehouse_id": 2, "quantity": it["quantity"]}
                         for it in calc["items"] if it["enough"]]
             call("POST", "/ishlab-chiqarish/orders", json={

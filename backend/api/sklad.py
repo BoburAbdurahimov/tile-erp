@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, get_ombor_scope
 from backend.models import (
     SKLAD_CONFIG, SKLAD_LENGTHS, SKLAD_WIDTHS,
     SKLAD_OP_IN, SKLAD_OP_OUT,
@@ -55,6 +55,19 @@ def _items_as_dicts(items: List[SkladItemInput]) -> list:
     return [i.model_dump() for i in items]
 
 
+def _allowed(scope: Optional[List[int]]) -> Optional[List[int]]:
+    """Sklad ids a limited user may use (from get_ombor_scope); None = all."""
+    return scope or None
+
+
+def _check_sklad(sklad_id: int, scope: Optional[List[int]]):
+    if not svc.get_config(sklad_id):
+        raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+    if scope and sklad_id not in scope:
+        names = ", ".join(svc.sklad_label(i) for i in scope)
+        raise HTTPException(status_code=403, detail=f"Sizga faqat shu omborlar biriktirilgan: {names}.")
+
+
 def _guard(fn):
     """Turn a SkladError into a 400 with its message."""
     try:
@@ -66,10 +79,13 @@ def _guard(fn):
 # ==================== READS ====================
 
 @router.get("/config")
-def get_sklad_config(role: str = Depends(get_current_user_role)):
+def get_sklad_config(role: str = Depends(get_current_user_role),
+                     scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("ombor", role)
+    allowed = _allowed(scope)
     return {
-        "warehouses": SKLAD_CONFIG,
+        "warehouses": [c for c in SKLAD_CONFIG if allowed is None or c["id"] in allowed],
+        "ombor_sklads": scope,
         "lengths": SKLAD_LENGTHS,
         "widths": SKLAD_WIDTHS,
         "sell_types": [
@@ -80,9 +96,11 @@ def get_sklad_config(role: str = Depends(get_current_user_role)):
 
 
 @router.get("/warehouses")
-def list_warehouses(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+def list_warehouses(db: Session = Depends(get_db), role: str = Depends(get_current_user_role),
+                    scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("ombor", role)
-    return {"warehouses": svc.get_all_totals(db)}
+    allowed = _allowed(scope)
+    return {"warehouses": [w for w in svc.get_all_totals(db) if allowed is None or w["sklad_id"] in allowed]}
 
 
 @router.get("/matrix")
@@ -90,10 +108,10 @@ def get_matrix(
     sklad_id: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
-    if not svc.get_config(sklad_id):
-        raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+    _check_sklad(sklad_id, scope)
     svc.ensure_rows(db, sklad_id)
     return svc.get_matrix(db, sklad_id)
 
@@ -105,9 +123,13 @@ def get_movements(
     operation: Optional[str] = Query(None, description="PRIXOD | RASXOD"),
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
-    return {"movements": svc.get_movements(db, limit=limit, sklad_id=sklad_id, operation=operation)}
+    if sklad_id is not None:
+        _check_sklad(sklad_id, scope)
+    return {"movements": svc.get_movements(db, limit=limit, sklad_id=sklad_id, operation=operation,
+                                           sklad_ids=_allowed(scope))}
 
 
 @router.get("/statistics")
@@ -116,12 +138,13 @@ def get_statistics(
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
     start = datetime.combine(start_date, datetime.min.time()) if start_date else None
     # end_date is inclusive, so run to the start of the following day.
     end = datetime.combine(end_date + timedelta(days=1), datetime.min.time()) if end_date else None
-    return svc.get_statistics(db, start=start, end=end)
+    return svc.get_statistics(db, start=start, end=end, sklad_ids=_allowed(scope))
 
 
 @router.get("/decode/{code}")
@@ -139,11 +162,11 @@ def receive(
     payload: ReceiveRequest,
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     """PRIXOD - goods in."""
     check_permission("ombor", role)
-    if not svc.get_config(payload.sklad_id):
-        raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+    _check_sklad(payload.sklad_id, scope)
 
     movement = _guard(lambda: svc.receive_stock(
         db,
@@ -161,11 +184,11 @@ def sell(
     payload: SellRequest,
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     """RASXOD - a sale, priced by metr or m.kv with delivery on top."""
     check_permission("sotish", role)
-    if not svc.get_config(payload.sklad_id):
-        raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+    _check_sklad(payload.sklad_id, scope)
 
     movement = _guard(lambda: svc.sell_stock(
         db,

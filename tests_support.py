@@ -7,11 +7,15 @@ test_auth.py removes this override to test the real login.
 from fastapi import Header
 
 from backend.main import app
-from backend.api.auth import get_current_user_role, get_current_username
+from backend.api.auth import get_current_user_role, get_current_username, get_ombor_scope
 
 
 def _role_from_header(x_user_role: str = Header(default="Admin")) -> str:
     return x_user_role
+
+
+def _no_ombor_limit():
+    return None
 
 
 def _username_from_header(x_user_role: str = Header(default="Admin")) -> str:
@@ -21,3 +25,4 @@ def _username_from_header(x_user_role: str = Header(default="Admin")) -> str:
 def use_header_roles():
     app.dependency_overrides[get_current_user_role] = _role_from_header
     app.dependency_overrides[get_current_username] = _username_from_header
+    app.dependency_overrides[get_ombor_scope] = _no_ombor_limit

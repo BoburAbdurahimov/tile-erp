@@ -45,6 +45,48 @@ const UsersModule = (() => {
     }).join("") + `</div>`;
   }
 
+  // The 8 Ombor warehouses (owner x eni), same ids as the backend SKLAD_CONFIG.
+  const OMBOR_SKLADS = [
+    { id: 1, name: "Toxir", eni: 120 }, { id: 2, name: "Toxir", eni: 100 },
+    { id: 3, name: "Kodir", eni: 120 }, { id: 4, name: "Kodir", eni: 100 },
+    { id: 5, name: "Istam", eni: 120 }, { id: 6, name: "Istam", eni: 100 },
+    { id: 7, name: "Aziz", eni: 120 }, { id: 8, name: "Aziz", eni: 100 },
+  ];
+
+  function omborLabel(ids) {
+    const isUz = CURRENT_LANG === "uz";
+    if (!ids || !ids.length) return isUz ? "Barcha omborlar" : "Все склады";
+    return OMBOR_SKLADS.filter(s => ids.includes(s.id)).map(s => `${s.name} ${s.eni}`).join(", ");
+  }
+
+  // Which Ombor warehouses the user works in. None ticked = all of them.
+  function renderSkladCheckboxes(inputName, selected = []) {
+    const isUz = CURRENT_LANG === "uz";
+    const owners = [...new Set(OMBOR_SKLADS.map(s => s.name))];
+    return `
+      <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; background: #f8fafc;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;">
+          ${owners.map(o => `
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">${o}</div>
+              ${OMBOR_SKLADS.filter(s => s.name === o).map(s => `
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #334155; cursor: pointer; margin-bottom: 2px;">
+                  <input type="checkbox" name="${inputName}" value="${s.id}" ${(selected || []).includes(s.id) ? "checked" : ""} style="width: 15px; height: 15px; cursor: pointer;" />
+                  ${s.name} ${s.eni}
+                </label>`).join("")}
+            </div>`).join("")}
+        </div>
+        <div style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
+          ${isUz ? "Ombor mudiri faqat belgilangan omborlarni ko'radi. Hech biri belgilanmasa - barcha omborlar. Admin har doim hammasini ko'radi."
+                 : "Заведующий видит только отмеченные склады. Ничего не отмечено - все склады. Админ всегда видит все."}
+        </div>
+      </div>`;
+  }
+
+  function checkedSklads(inputName) {
+    return Array.from(document.querySelectorAll(`input[name='${inputName}']:checked`)).map(el => parseInt(el.value, 10));
+  }
+
   function renderRoleCheckboxes(inputName, selectedRolesStr = "") {
     const isUz = CURRENT_LANG === 'uz';
     const selected = (selectedRolesStr || "").split(",").map(r => r.trim());
@@ -244,6 +286,9 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
           <td data-sort-value="${u.phone_number || ''}" style="padding: 14px 16px; color: #475569; font-size: 13px;">${u.phone_number || "-"}</td>
           <td data-sort-value="${u.role}" style="padding: 14px 16px; min-width: 200px; max-width: 360px; white-space: normal;">
             ${renderRoleBadges(u.role)}
+            <div style="margin-top: 6px; font-size: 12px; color: #475569;">
+              <b>${isUz ? "Ombor" : "Склад"}:</b> ${omborLabel(u.ombor_sklads)}
+            </div>
           </td>
           <td data-sort-value="${u.is_archived ? 'Arxiv' : 'Faol'}" style="padding: 14px 16px;">${statusBadge}</td>
           <td data-sort-value="${u.created_at}" style="padding: 14px 16px; color: #64748b; font-size: 13px;">${formatDate(u.created_at)}</td>
@@ -443,6 +488,11 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
               ${renderRoleCheckboxes("new_user_roles", "Ombor,Sotib olish (Zakup)")}
             </div>
 
+            <div style="margin-bottom: 24px;">
+              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">${isUz ? "Biriktirilgan ombor" : "Закреплённый склад"}</label>
+              ${renderSkladCheckboxes("new_user_sklads", [])}
+            </div>
+
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
               <button type="button" onclick="UsersModule.closeModal('create-user-modal')" class="btn btn-secondary" style="padding: 10px 18px;">${isUz ? "Bekor qilish" : "Отмена"}</button>
               <button type="submit" class="btn btn-primary" style="padding: 10px 22px;">${isUz ? "Saqlash" : "Сохранить"}</button>
@@ -474,7 +524,8 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
         username: username,
         phone_number: phone,
         password: password,
-        role: role
+        role: role,
+        ombor_sklads: checkedSklads("new_user_sklads")
       });
       showToast(isUz ? "Foydalanuvchi muvaffaqiyatli yaratildi!" : "Пользователь успешно создан!", "success");
       closeModal("create-user-modal");
@@ -516,6 +567,11 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
               ${renderRoleCheckboxes("edit_user_roles", user.role)}
             </div>
 
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">${isUz ? "Biriktirilgan ombor" : "Закреплённый склад"}</label>
+              ${renderSkladCheckboxes("edit_user_sklads", user.ombor_sklads || [])}
+            </div>
+
             <div style="margin-bottom: 24px;">
               <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">${isUz ? "Yangi Parol (agar o'zgartirilsa)" : "Новый Пароль (если нужно изменить)"}</label>
               <input type="password" id="edit-password" class="input-styled" placeholder="${isUz ? "Parolni o'zgartirmaslik uchun bo'sh qoldiring" : "Оставьте пустым, чтобы не менять пароль"}" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px;" />
@@ -548,7 +604,8 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     const payload = {
       full_name: fullName,
       phone_number: phone,
-      role: role
+      role: role,
+      ombor_sklads: checkedSklads("edit_user_sklads")
     };
     if (password) {
       payload.password = password;
