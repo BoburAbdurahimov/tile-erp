@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from backend import database
 from backend.database import create_tables, SessionLocal
 from backend.auth_utils import decode_token
-from backend.api import auth, mdm, ombor, kassa, ishlab_chiqarish, kontragentlar, savdo, moliya, ish_haqi, sklad, buyurtmalar, tarix
+from backend.api import auth, mdm, ombor, kassa, ishlab_chiqarish, kontragentlar, savdo, moliya, ish_haqi, sklad, buyurtmalar, tarix, auto_sarf
 from backend.services.currency_service import fetch_cbu_rate_today
 from backend.models import ExchangeRate, AuditLog
 from datetime import date
@@ -101,6 +101,7 @@ app.include_router(ish_haqi.router, prefix="/api")
 app.include_router(sklad.router, prefix="/api")
 app.include_router(buyurtmalar.router, prefix="/api")
 app.include_router(tarix.router, prefix="/api")
+app.include_router(auto_sarf.router, prefix="/api")
 
 # Static frontend files mounting
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
