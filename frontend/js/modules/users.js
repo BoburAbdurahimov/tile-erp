@@ -117,6 +117,9 @@ const UsersModule = (() => {
           <button class="btn btn-primary" id="btn-create-user" onclick="UsersModule.openCreateUserModal()" style="display: flex; align-items: center; gap: 8px;">
 <span>${isUz ? "Yangi foydalanuvchi yaratish" : "Создать пользователя"}</span>
           </button>
+          <button class="btn btn-secondary" onclick="UsersModule.seedDemo()" style="display: flex; align-items: center; gap: 6px; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
+<span>${isUz ? "Demo ma'lumot qo'shish" : "Добавить демо-данные"}</span>
+          </button>
           <button class="btn btn-secondary" onclick="UsersModule.loadData()" style="display: flex; align-items: center; gap: 6px;">
 <span>${isUz ? "Yangilash" : "Обновить"}</span>
           </button>
@@ -681,8 +684,27 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     if (modal) modal.remove();
   }
 
+  async function seedDemo() {
+    const isUz = CURRENT_LANG === "uz";
+    if (!confirm(isUz
+      ? "Test uchun demo ma'lumotlar qo'shilsinmi? (kassaga pul, yetkazib beruvchilar, xaridlar, ombor qoldiqlari, ishlab chiqarish, buyurtmalar). Bu haqiqiy hujjatlar sifatida yoziladi."
+      : "Добавить демо-данные для теста? (деньги в кассу, поставщики, закупки, остатки, производство, заказы). Они запишутся как настоящие документы.")) return;
+    showToast(isUz ? "Demo ma'lumotlar qo'shilmoqda, kuting..." : "Добавляем демо-данные, подождите...", "info");
+    try {
+      let res = await API.seedDemoData(false);
+      if (res.steps.length === 1 && !confirm(isUz
+        ? "Demo ma'lumotlar allaqachon bor. Yana bir to'plam qo'shilsinmi?"
+        : "Демо-данные уже есть. Добавить ещё один набор?")) return;
+      if (res.steps.length === 1) res = await API.seedDemoData(true);
+      showToast(isUz ? "Demo ma'lumotlar qo'shildi" : "Демо-данные добавлены", "success");
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  }
+
   return {
     render,
+    seedDemo,
     loadData,
     switchTab,
     openCreateUserModal,
