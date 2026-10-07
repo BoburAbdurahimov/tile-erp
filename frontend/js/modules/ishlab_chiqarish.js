@@ -9,6 +9,9 @@ const ProductionModule = {
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div class="card-title" style="font-size: 20px; font-weight: 700;">${t('mod_prod_title')}</div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="ProductionModule.openAutoSarfSettings()" style="font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px; cursor: pointer; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
+              ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
+            </button>
             <button class="btn btn-secondary" onclick="ProductionModule.exportPdf()" style="font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
 <span>${t('btn_export_pdf')}</span>
             </button>
@@ -259,7 +262,7 @@ const ProductionModule = {
             </div>
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Miqdor (dona) *' : 'Количество (шт) *'}</label>
-              <input type="number" step="1" min="1" id="po-quantity" class="form-control" placeholder="100" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
+              <input type="number" step="1" min="1" id="po-quantity" class="form-control" placeholder="100" style="width: 100%; padding: 8px 12px; border-radius: 8px;" oninput="ProductionModule.refreshAutoSarf()" required />
             </div>
           </div>
           <div id="po-size-hint" style="font-size: 12px; color: #64748b; margin-bottom: 14px;">
@@ -267,10 +270,16 @@ const ProductionModule = {
           </div>
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
-              ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo va materiallar (2: Ishlab chiqarish uchun materiallar ombori):' : 'Израсходованное сырье (Склад 2):'}
-            </label>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="ProductionModule.addConsumedRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+              <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
+                ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo va materiallar (2: Ishlab chiqarish uchun materiallar ombori):' : 'Израсходованное сырье (Склад 2):'}
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: #f5f3ff; border: 1.5px solid #c4b5fd; font-size: 13px; font-weight: 700; color: #6d28d9; cursor: pointer; margin: 0;">
+                <input type="checkbox" id="po-auto-sarf" onchange="ProductionModule.onAutoSarfToggle()" style="width: 16px; height: 16px; cursor: pointer;" />
+                ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
+              </label>
+            </div>
+            <button type="button" id="po-add-row-btn" class="btn btn-secondary btn-sm" onclick="ProductionModule.addConsumedRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
               ${CURRENT_LANG === 'uz' ? '+ Xomashyo qo\'shish' : '+ Добавить сырье'}
             </button>
           </div>
@@ -287,6 +296,7 @@ const ProductionModule = {
               <!-- Dynamic rows added here -->
             </tbody>
           </table>
+          <div id="po-auto-sarf-hint" style="display: none; font-size: 12px; margin: -6px 0 12px;"></div>
 
           <div class="form-group" style="margin-top: 14px;">
             <label class="form-label" style="font-weight: 600; font-size: 13px;">${t('th_description')}</label>
@@ -319,6 +329,11 @@ const ProductionModule = {
         rows.forEach(rowEl => {
           const matInput = rowEl.querySelector(".row-mat-input") ? rowEl.querySelector(".row-mat-input").value.trim() : "";
           const cQty = parseFloat(rowEl.querySelector(".row-qty").value);
+          const autoId = parseInt(rowEl.dataset.materialId || "0", 10);
+          if (autoId && cQty > 0) {
+            consumed.push({ material_id: autoId, warehouse_id: 2, quantity: cQty });
+            return;
+          }
           const matchedRaw = (ProductionModule.wh2StockItems || []).find(s => `${s.material_code} - ${s.material_name} (${tr(s.unit)})`.toLowerCase() === matInput.toLowerCase() || s.material_code.toLowerCase() === matInput.toLowerCase());
           if (matchedRaw && cQty > 0) {
             consumed.push({ material_id: matchedRaw.material_id, warehouse_id: 2, quantity: cQty });
@@ -346,8 +361,188 @@ const ProductionModule = {
       "modal-lg"
     );
 
-    // Add initial clean row
+    // Add initial clean row, then apply Avto sarf if it was on last time.
     this.addConsumedRow();
+    let autoOn = false;
+    try { autoOn = localStorage.getItem("prod_auto_sarf") === "1"; } catch (_) {}
+    const cb = document.getElementById("po-auto-sarf");
+    if (cb && autoOn) {
+      cb.checked = true;
+      this.onAutoSarfToggle();
+    }
+  },
+
+  // ------------------------------------------------------------ Avto sarf (form)
+
+  onAutoSarfToggle() {
+    const on = !!document.getElementById("po-auto-sarf")?.checked;
+    try { localStorage.setItem("prod_auto_sarf", on ? "1" : "0"); } catch (_) {}
+    const addBtn = document.getElementById("po-add-row-btn");
+    if (addBtn) addBtn.style.display = on ? "none" : "";
+    if (on) {
+      this.refreshAutoSarf();
+    } else {
+      // Manual entry: start again from one empty row.
+      const tbody = document.getElementById("consumed-rows-body");
+      if (tbody) tbody.innerHTML = "";
+      const hint = document.getElementById("po-auto-sarf-hint");
+      if (hint) hint.style.display = "none";
+      this.addConsumedRow();
+    }
+  },
+
+  async refreshAutoSarf() {
+    if (!document.getElementById("po-auto-sarf")?.checked) return;
+    const isUz = CURRENT_LANG === 'uz';
+    const tbody = document.getElementById("consumed-rows-body");
+    const hint = document.getElementById("po-auto-sarf-hint");
+    if (!tbody) return;
+    const qty = parseFloat(document.getElementById("po-quantity")?.value || "0");
+    const showHint = (html, color) => { if (hint) { hint.style.display = "block"; hint.style.color = color; hint.innerHTML = html; } };
+
+    if (!qty || qty <= 0) {
+      tbody.innerHTML = "";
+      showHint(isUz ? "Miqdorni kiriting - sarf avtomatik hisoblanadi." : "Введите количество - расход посчитается автоматически.", "#64748b");
+      return;
+    }
+    const reqId = (this._autoReq = (this._autoReq || 0) + 1);
+    let res;
+    try {
+      res = await API.calcAutoSarf(qty);
+    } catch (e) {
+      showHint(escapeHtml(e.message), "#b91c1c");
+      return;
+    }
+    if (reqId !== this._autoReq) return;   // a newer quantity was typed meanwhile
+    tbody.innerHTML = "";
+    if (!res.configured) {
+      showHint(isUz
+        ? "Avto sarf hali sozlanmagan. Yuqoridagi «Avto sarf» tugmasi orqali normalarni kiriting yoki galochkani olib, qo'lda kiriting."
+        : "Авто расход ещё не настроен. Задайте нормы кнопкой «Авто расход» или снимите галочку и введите вручную.", "#b45309");
+      return;
+    }
+    res.items.forEach(it => {
+      const rowEl = document.createElement("tr");
+      rowEl.dataset.materialId = it.material_id;
+      rowEl.style.borderBottom = "1px solid #f1f5f9";
+      rowEl.innerHTML = `
+        <td style="padding: 6px 8px;">
+          <input type="text" class="form-control row-mat-input" value="${escapeHtml(`${it.material_code} - ${it.material_name}`)}" readonly
+            style="width: 100%; padding: 7px 10px; border: 1px solid #ddd6fe; border-radius: 6px; font-size: 13px; background: #faf5ff;" />
+        </td>
+        <td style="padding: 6px 8px;">
+          <input type="number" class="form-control row-qty" value="${it.quantity}" readonly
+            style="width: 100%; padding: 7px 10px; border: 1px solid #ddd6fe; border-radius: 6px; font-size: 13px; background: #faf5ff;" />
+        </td>
+        <td style="padding: 6px 8px; text-align: center; font-size: 11.5px; font-weight: 700; white-space: nowrap; color: ${it.enough ? "#15803d" : "#b91c1c"};">
+          ${it.enough ? (isUz ? "Yetarli" : "Хватает") : (isUz ? "Yetmaydi" : "Не хватает")}
+          <div style="font-weight: 500; color: #64748b;">${isUz ? "bor" : "есть"}: ${formatNumber(it.available, 0, 2)} ${tr(it.unit)}</div>
+        </td>`;
+      tbody.appendChild(rowEl);
+    });
+    const short = res.items.filter(it => !it.enough).length;
+    showHint(short
+      ? (isUz ? `${short} ta material omborda yetarli emas - saqlashda xato beriladi.` : `${short} материал(ов) не хватает на складе - сохранение не пройдёт.`)
+      : (isUz ? "Sarf normalar bo'yicha avtomatik hisoblandi." : "Расход рассчитан автоматически по нормам."),
+      short ? "#b91c1c" : "#6d28d9");
+  },
+
+  // ------------------------------------------------------------ Avto sarf (settings)
+
+  async openAutoSarfSettings() {
+    const isUz = CURRENT_LANG === 'uz';
+    let materials = [];
+    try {
+      materials = await API.getMaterials();
+    } catch (e) {
+      showToast(e.message, "error");
+      return;
+    }
+    // Norms are for raw materials and consumables, not finished tiles.
+    this.autoSarfMaterials = (materials || []).filter(m => m.category !== "Tayyor mahsulot" && !m.is_archived);
+    const f = "width:100%;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;box-sizing:border-box;";
+    const l = "display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;";
+
+    showModal(isUz ? "Avto sarf sozlamalari" : "Настройки авто расхода", `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <p style="margin:0;font-size:13px;color:#64748b;">
+          ${isUz ? "1 dona mahsulot uchun qancha material sarflanishini kiriting. Ishlab chiqarishda «Avto sarf» belgilansa, sarf shu normalar bo'yicha avtomatik hisoblanadi."
+                 : "Укажите расход материала на 1 штуку. При отмеченном «Авто расход» расход считается по этим нормам."}
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">
+          <div style="grid-column: span 2;"><label style="${l}">${isUz ? "Material" : "Материал"}</label>
+            <select id="as-material" style="${f}">
+              ${this.autoSarfMaterials.map(m => `<option value="${m.id}">${escapeHtml(m.code)} - ${escapeHtml(m.name)} (${tr(m.unit)})</option>`).join("")}
+            </select></div>
+          <div><label style="${l}">${isUz ? "1 dona uchun miqdor" : "Расход на 1 шт"}</label>
+            <input id="as-qty" type="number" min="0" step="any" placeholder="0.25" style="${f}"></div>
+          <div><button type="button" class="btn btn-primary btn-sm" onclick="ProductionModule.saveAutoSarfRule()" style="width:100%;padding:9px 12px;">${isUz ? "+ Qo'shish" : "+ Добавить"}</button></div>
+        </div>
+        <div id="as-rules"><div style="padding:16px;text-align:center;color:#94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div></div>
+      </div>`, null, "modal-lg");
+    await this.loadAutoSarfRules();
+  },
+
+  async loadAutoSarfRules() {
+    const isUz = CURRENT_LANG === 'uz';
+    const box = document.getElementById("as-rules");
+    if (!box) return;
+    let rules = [];
+    try {
+      rules = await API.getAutoSarfRules();
+    } catch (e) {
+      box.innerHTML = `<div style="color:#b91c1c;">${escapeHtml(e.message)}</div>`;
+      return;
+    }
+    if (!rules.length) {
+      box.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;border:1px dashed #cbd5e1;border-radius:10px;">${isUz ? "Hali norma kiritilmagan." : "Нормы ещё не заданы."}</div>`;
+      return;
+    }
+    box.innerHTML = `
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr>
+            <th>${isUz ? "Material" : "Материал"}</th>
+            <th style="text-align:right;">${isUz ? "1 dona uchun" : "На 1 шт"}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            ${rules.map(r => `<tr>
+              <td>${escapeHtml(r.material_code)} - ${escapeHtml(r.material_name)}</td>
+              <td style="text-align:right;">${formatNumber(r.qty_per_unit, 0, 4)} ${tr(r.unit)}</td>
+              <td style="text-align:right;"><button type="button" class="btn btn-sm" onclick="ProductionModule.deleteAutoSarfRule(${r.id})"
+                style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;padding:4px 10px;border-radius:6px;">${isUz ? "O'chirish" : "Удалить"}</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  },
+
+  async saveAutoSarfRule() {
+    const isUz = CURRENT_LANG === 'uz';
+    const qty = parseFloat(document.getElementById("as-qty")?.value || "0");
+    const materialId = parseInt(document.getElementById("as-material")?.value || "0", 10);
+    if (!materialId) { showToast(isUz ? "Materialni tanlang" : "Выберите материал", "error"); return; }
+    if (!qty || qty <= 0) { showToast(isUz ? "1 dona uchun miqdorni kiriting" : "Укажите расход на 1 шт", "error"); return; }
+    try {
+      await API.addAutoSarfRule({ material_id: materialId, qty_per_unit: qty });
+      document.getElementById("as-qty").value = "";
+      showToast(isUz ? "Norma saqlandi" : "Норма сохранена", "success");
+      await this.loadAutoSarfRules();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async deleteAutoSarfRule(id) {
+    const isUz = CURRENT_LANG === 'uz';
+    if (!confirm(isUz ? "Bu normani o'chirasizmi?" : "Удалить эту норму?")) return;
+    try {
+      await API.deleteAutoSarfRule(id);
+      await this.loadAutoSarfRules();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
   },
 
   addConsumedRow() {

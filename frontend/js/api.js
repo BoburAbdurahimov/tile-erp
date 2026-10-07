@@ -173,6 +173,11 @@ const API = {
     return apiRequest(url);
   },
   createProductionOrder: (data) => apiRequest("/ishlab-chiqarish/orders", "POST", data),
+  getAutoSarfRules: () => apiRequest("/ishlab-chiqarish/auto-sarf"),
+  addAutoSarfRule: (data) => apiRequest("/ishlab-chiqarish/auto-sarf", "POST", data),
+  deleteAutoSarfRule: (id) => apiRequest(`/ishlab-chiqarish/auto-sarf/${id}`, "DELETE"),
+  seedDemoData: (force) => apiRequest(`/demo/seed${force ? "?force=true" : ""}`, "POST"),
+  calcAutoSarf: (quantity) => apiRequest(`/ishlab-chiqarish/auto-sarf/calc?quantity=${encodeURIComponent(quantity)}`),
   stornoProductionOrder: (id) => apiRequest(`/ishlab-chiqarish/orders/${id}/storno`, "POST"),
   deleteProductionOrder: (id) => apiRequest(`/ishlab-chiqarish/orders/${id}`, "DELETE"),
   getLineExpenses: (startDate, endDate) => {

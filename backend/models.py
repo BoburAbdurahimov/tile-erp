@@ -193,6 +193,18 @@ class ProductionConsumedMaterial(Base):
     material = relationship("MDMMaterial")
     warehouse = relationship("Warehouse")
 
+class AutoSarfRule(Base):
+    """Avto sarf norm: how much of a raw material one piece of production uses."""
+    __tablename__ = "auto_sarf_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False)
+    qty_per_unit = Column(Float, nullable=False)          # per 1 piece (dona) produced
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    material = relationship("MDMMaterial")
+
 class LineExpense(Base):
     __tablename__ = "line_expenses"
     
