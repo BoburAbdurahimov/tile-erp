@@ -340,10 +340,18 @@ const PurchasesModule = {
   findMaterialByInput(inputVal) {
     if (!inputVal) return null;
     const lower = inputVal.toLowerCase().trim();
-    return this.rawMaterialsList.find(m => {
-      const full = `${m.code} - ${m.name} (${m.unit})`.toLowerCase();
-      return full === lower || m.code.toLowerCase() === lower || m.name.toLowerCase() === lower || full.includes(lower);
-    }) || null;
+    const list = this.rawMaterialsList || [];
+    // The list shows the unit translated ("шт" for "dona" in Russian), so accept
+    // it either way, and without the unit at all.
+    const labels = m => [
+      `${m.code} - ${m.name} (${tr(m.unit)})`,
+      `${m.code} - ${m.name} (${m.unit})`,
+      `${m.code} - ${m.name}`,
+    ].map(s => s.toLowerCase());
+    return list.find(m => labels(m).includes(lower))
+      || list.find(m => m.code.toLowerCase() === lower || m.name.toLowerCase() === lower)
+      || list.find(m => labels(m)[0].includes(lower))
+      || null;
   },
 
   addPurchaseItemRow() {
