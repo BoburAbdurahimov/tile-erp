@@ -484,6 +484,7 @@ const OrdersModule = {
     const today = live.flatMap(o => o.payments.filter(p => p.paid_date === todayKey));
     const todayCash = today.filter(p => p.method === "naqd").reduce((s, p) => s + p.amount, 0);
     const todayCard = today.filter(p => p.method === "karta").reduce((s, p) => s + p.amount, 0);
+    const todayUsd = today.filter(p => p.method === "dollar").reduce((s, p) => s + (p.pay_amount || 0), 0);
 
     let rows = live.filter(o => o.status === "Yetkazildi" || o.paid_amount > 0);
     if (this.payFilter === "open") rows = rows.filter(o => o.balance > 0);
@@ -506,6 +507,10 @@ const OrdersModule = {
           ${tile(isUz ? "Yetkazilgan, to'lanmagan qarz" : "Долг по доставленным", debt, "#b91c1c")}
           ${tile(isUz ? "Bugun naqd (Kassa UZS)" : "Сегодня наличные", todayCash, "#15803d")}
           ${tile(isUz ? "Bugun karta (Karta UZS)" : "Сегодня карта", todayCard, "#1d4ed8")}
+          <div style="flex:1 1 180px;padding:14px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;">
+            <div style="font-size:12px;color:#64748b;font-weight:600;">${isUz ? "Bugun dollar (Kassa USD)" : "Сегодня доллары"}</div>
+            <div style="font-size:19px;font-weight:800;color:#0f766e;margin-top:2px;">$${formatNumber(todayUsd, 2, 2)}</div>
+          </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${filterBtn("open", isUz ? "To'lov kutilmoqda" : "Ожидают оплаты")}
@@ -529,7 +534,7 @@ const OrdersModule = {
                   <td style="padding:10px;"><b>${o.order_number}</b><div style="font-size:11.5px;color:#64748b;">${o.status === "Yetkazildi" ? "" + (o.delivered_at || "").slice(0, 10) : (isUz ? "Yetkazilmagan" : "Не доставлен")}</div></td>
                   <td style="padding:10px;">${escapeHtml(o.client_name)}<div style="font-size:11.5px;"><a href="tel:${escapeHtml(o.client_phone)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.client_phone)}</a></div></td>
                   <td style="padding:10px;">${this.payBadge(o)}
-                    ${o.payments.length ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">${o.payments.map(p => `${p.method === "karta" ? (isUz ? "Karta" : "Карта") : (isUz ? "Naqd" : "Наличные")}: ${formatNumber(p.amount, 0, 0)}`).join(" · ")}</div>` : ""}</td>
+                    ${o.payments.length ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">${o.payments.map(p => this.payMethodLabel(p)).join(" · ")}</div>` : ""}</td>
                   <td style="padding:10px;text-align:right;">${formatNumber(o.total_amount, 0, 0)}</td>
                   <td style="padding:10px;text-align:right;color:#15803d;">${formatNumber(o.paid_amount, 0, 0)}</td>
                   <td style="padding:10px;text-align:right;font-weight:800;color:${o.balance > 0 ? "#b91c1c" : "#15803d"};">${formatNumber(o.balance, 0, 0)}</td>
@@ -963,16 +968,19 @@ const OrdersModule = {
     });
   },
 
-  openPay(id) {
+  async openPay(id) {
     const isUz = this.isUz();
     const o = this.find(id);
     if (!o) return;
+    let rate = 0;
+    try { rate = (await API.getOrderUsdRate()).rate || 0; } catch (_) {}
+    this._payBalance = o.balance;
     const f = "width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13.5px;box-sizing:border-box;";
     const l = "display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;";
     const today = this.dayKey(new Date());
     const opt = (val, icon, title, sub, checked) => `
       <label style="flex:1 1 160px;display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;border:2px solid #e2e8f0;cursor:pointer;">
-        <input type="radio" name="pay-method" value="${val}" ${checked ? "checked" : ""} style="width:18px;height:18px;">
+        <input type="radio" name="pay-method" value="${val}" ${checked ? "checked" : ""} style="width:18px;height:18px;" onchange="OrdersModule.onPayMethod()">
         <span><b style="display:block;">${title}</b><span style="font-size:11.5px;color:#64748b;">${sub}</span></span>
       </label>`;
     showModal(`${isUz ? "To'lov" : "Оплата"} — ${o.order_number}`, `
@@ -985,23 +993,44 @@ const OrdersModule = {
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           ${opt("naqd", "", isUz ? "Naqd pul" : "Наличные", isUz ? "Kassa UZS ga kirim" : "Приход в Кассу UZS", true)}
           ${opt("karta", "", isUz ? "Plastik karta" : "Карта", isUz ? "Karta UZS ga kirim" : "Приход на Карта UZS", false)}
+          ${opt("dollar", "", isUz ? "Dollar ($)" : "Доллары ($)", isUz ? "Kassa USD ga kirim" : "Приход в Кассу USD", false)}
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-          <div><label style="${l}">${isUz ? "Summa (so'm)" : "Сумма (сум)"} *</label>
+          <div id="pay-uzs-box"><label style="${l}">${isUz ? "Summa (so'm)" : "Сумма (сум)"} *</label>
             <input id="pay-amount" type="number" min="1" step="any" value="${o.balance}" style="${f}"></div>
+          <div id="pay-usd-box" style="display:none;"><label style="${l}">${isUz ? "Summa ($)" : "Сумма ($)"} *</label>
+            <input id="pay-usd" type="number" min="0.01" step="0.01" value="${rate ? (Math.ceil(o.balance / rate * 100) / 100).toFixed(2) : ""}" style="${f}" oninput="OrdersModule.updateUsdPreview()"></div>
+          <div id="pay-rate-box" style="display:none;"><label style="${l}">${isUz ? "Kurs (1 $ = so'm)" : "Курс (1 $ = сум)"} *</label>
+            <input id="pay-rate" type="number" min="1" step="any" value="${rate || ""}" style="${f}" oninput="OrdersModule.updateUsdPreview(true)"></div>
           <div><label style="${l}">${isUz ? "Sana" : "Дата"}</label>
             <input id="pay-date" type="date" value="${today}" style="${f}"></div>
         </div>
+        <div id="pay-usd-preview" style="display:none;padding:10px 12px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:13px;"></div>
         <div><label style="${l}">${isUz ? "Izoh" : "Примечание"}</label><input id="pay-note" style="${f}"></div>
       </div>`, async () => {
-        const amount = parseFloat(document.getElementById("pay-amount").value) || 0;
-        if (amount <= 0) { showToast(isUz ? "Summani kiriting" : "Введите сумму", "error"); return false; }
         const method = (document.querySelector("input[name=pay-method]:checked") || {}).value || "naqd";
-        const updated = await API.payOrder(id, {
-          amount, method,
+        const payload = {
+          method,
           paid_date: document.getElementById("pay-date").value || null,
           note: (document.getElementById("pay-note").value || "").trim() || null,
-        });
+        };
+        if (method === "dollar") {
+          payload.amount_usd = parseFloat(document.getElementById("pay-usd").value) || 0;
+          payload.rate = parseFloat(document.getElementById("pay-rate").value) || 0;
+          if (payload.amount_usd <= 0 || payload.rate <= 0) {
+            showToast(isUz ? "Dollar summasi va kursni kiriting" : "Введите сумму в $ и курс", "error"); return false;
+          }
+        } else {
+          payload.amount = parseFloat(document.getElementById("pay-amount").value) || 0;
+          if (payload.amount <= 0) { showToast(isUz ? "Summani kiriting" : "Введите сумму", "error"); return false; }
+        }
+        let updated;
+        try {
+          updated = await API.payOrder(id, payload);
+        } catch (e) {
+          showToast(e.message, "error");
+          return false;
+        }
         showToast(updated.balance > 0
           ? `${isUz ? "To'lov qabul qilindi. Qoldiq" : "Оплата принята. Остаток"}: ${formatNumber(updated.balance, 0, 0)} so'm`
           : (isUz ? "To'liq to'landi ✓" : "Полностью оплачено ✓"), "success");
@@ -1010,13 +1039,54 @@ const OrdersModule = {
       });
   },
 
+  onPayMethod() {
+    const dollar = (document.querySelector("input[name=pay-method]:checked") || {}).value === "dollar";
+    document.getElementById("pay-uzs-box").style.display = dollar ? "none" : "";
+    ["pay-usd-box", "pay-rate-box", "pay-usd-preview"].forEach(x => {
+      document.getElementById(x).style.display = dollar ? "" : "none";
+    });
+    document.querySelectorAll("input[name=pay-method]").forEach(r => {
+      r.closest("label").style.borderColor = r.checked ? "#2563eb" : "#e2e8f0";
+    });
+    if (dollar) this.updateUsdPreview();
+  },
+
+  // What the dollars cover in so'm. Changing the rate re-suggests the dollars
+  // that pay off the rest.
+  updateUsdPreview(rateChanged) {
+    const isUz = this.isUz();
+    const usdEl = document.getElementById("pay-usd"), rateEl = document.getElementById("pay-rate");
+    const box = document.getElementById("pay-usd-preview");
+    if (!usdEl || !rateEl || !box) return;
+    const rate = parseFloat(rateEl.value) || 0;
+    if (rateChanged && rate > 0) usdEl.value = (Math.ceil(this._payBalance / rate * 100) / 100).toFixed(2);
+    const usd = parseFloat(usdEl.value) || 0;
+    const covered = Math.min(usd * rate, this._payBalance + rate * 0.01);
+    const left = Math.max(this._payBalance - usd * rate, 0);
+    box.innerHTML = rate > 0 && usd > 0
+      ? `$${formatNumber(usd, 2, 2)} × ${formatNumber(rate, 0, 2)} = <b>${formatNumber(Math.min(covered, this._payBalance), 0, 0)} so'm</b>
+         ${isUz ? "qarzdan yopiladi" : "закрывается из долга"} ·
+         ${left > 0.5 ? `${isUz ? "qoldiq" : "остаток"}: <b style="color:#b91c1c;">${formatNumber(left, 0, 0)} so'm</b>`
+                      : `<b style="color:#15803d;">${isUz ? "to'liq yopiladi ✓" : "закрывается полностью ✓"}</b>`}
+         ${usd * rate > this._payBalance + rate * 0.01 ? `<div style="color:#b91c1c;font-weight:700;margin-top:4px;">${isUz ? "Qarzdan ko'p!" : "Больше долга!"}</div>` : ""}`
+      : (isUz ? "Dollar summasi va kursni kiriting" : "Введите сумму в $ и курс");
+  },
+
+  payMethodLabel(p) {
+    const isUz = this.isUz();
+    if (p.method === "dollar") return `${isUz ? "Dollar" : "Доллары"}: $${formatNumber(p.pay_amount, 2, 2)} × ${formatNumber(p.rate || 0, 0, 2)}`;
+    return `${p.method === "karta" ? (isUz ? "Karta" : "Карта") : (isUz ? "Naqd" : "Наличные")}: ${formatNumber(p.amount, 0, 0)}`;
+  },
+
   // Take a payment back: the money leaves the Kassa it went into and the order
   // owes it again, so "To'lov qabul qilish" shows once more.
   openCancelPayment(id) {
     const isUz = this.isUz();
     const o = this.find(id);
     if (!o || !o.payments.length) return;
-    const method = p => p.method === "karta" ? (isUz ? "Karta (Karta UZS)" : "Карта (Karta UZS)") : (isUz ? "Naqd (Kassa UZS)" : "Наличные (Kassa UZS)");
+    const method = p => p.method === "dollar"
+      ? `${isUz ? "Dollar (Kassa USD)" : "Доллары (Kassa USD)"}: $${formatNumber(p.pay_amount, 2, 2)} × ${formatNumber(p.rate || 0, 0, 2)}`
+      : p.method === "karta" ? (isUz ? "Karta (Karta UZS)" : "Карта (Karta UZS)") : (isUz ? "Naqd (Kassa UZS)" : "Наличные (Kassa UZS)");
     showModal(`${isUz ? "To'lovni bekor qilish" : "Отмена оплаты"} — ${o.order_number}`, `
       <div style="display:flex;flex-direction:column;gap:10px;">
         <p style="margin:0;font-size:13px;color:#475569;">

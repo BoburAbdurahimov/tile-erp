@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from backend.models import (
     SkladOrder, SkladOrderItem, SkladOrderPayment, SkladInventory,
     CashRegister, CashTransaction,
-    ORDER_NEW, ORDER_DELIVERED, ORDER_CANCELLED, PAY_CASH, PAY_CARD,
+    ORDER_NEW, ORDER_DELIVERED, ORDER_CANCELLED, PAY_CASH, PAY_CARD, PAY_USD,
     SELL_TYPE_METR, SELL_TYPE_MKV, SKLAD_CONFIG,
 )
 from backend.services import sklad_service as sklad
@@ -31,6 +31,7 @@ from backend.services.month_close_service import is_month_closed
 ORDER_CURRENCY = "UZS"
 CASH_REGISTER_NAME = "Kassa UZS"
 CARD_REGISTER_NAME = "Karta UZS"
+USD_REGISTER_NAME = "Kassa USD"
 
 # Deadlines are Tashkent wall-clock time, but the server (Vercel) runs on UTC.
 # Uzbekistan keeps UTC+5 all year, so a fixed offset is exact.
@@ -123,6 +124,13 @@ def _register(db: Session, method: str) -> CashRegister:
         if not reg:
             raise SkladError("UZS kassasi topilmadi.")
         return reg
+    if method == PAY_USD:
+        reg = db.query(CashRegister).filter(CashRegister.name == USD_REGISTER_NAME).first()
+        if not reg:
+            reg = db.query(CashRegister).filter(CashRegister.currency == "USD").first()
+        if not reg:
+            raise SkladError("USD kassasi topilmadi.")
+        return reg
     return ensure_card_register(db)
 
 
@@ -157,7 +165,8 @@ def _standing_payments(db: Session, order_ids: list[int]) -> list[tuple]:
         db.query(SkladOrderPayment.id, SkladOrderPayment.order_id, SkladOrderPayment.amount)
         .join(SkladOrder, SkladOrder.id == SkladOrderPayment.order_id)
         .join(CashTransaction, CashTransaction.id == SkladOrderPayment.cash_transaction_id)
-        .filter(CashTransaction.amount == SkladOrderPayment.amount)
+        # A dollar payment's receipt holds the dollars, not the so'm it covered.
+        .filter(CashTransaction.amount == func.coalesce(SkladOrderPayment.pay_amount, SkladOrderPayment.amount))
         .filter(CashTransaction.description.like("Buyurtma " + SkladOrder.order_number + " %"))
         .filter(SkladOrderPayment.order_id.in_(order_ids))
         .filter(CashTransaction.status != "Storno")
@@ -270,6 +279,9 @@ def serialize(o: SkladOrder, alloc: Optional[list[dict]], paid: float,
         "created_at": o.created_at.isoformat() if o.created_at else None,
         "payments": [
             {"id": p.id, "amount": p.amount, "method": p.method,
+             "pay_currency": p.pay_currency or ORDER_CURRENCY,
+             "pay_amount": p.pay_amount if p.pay_amount is not None else p.amount,
+             "rate": p.rate,
              "paid_date": p.paid_date.isoformat() if p.paid_date else None,
              "cash_transaction_id": p.cash_transaction_id, "note": p.note}
             for p in o.payments if standing is None or p.id in standing
@@ -521,21 +533,36 @@ def deliver_order(db: Session, order_id: int, car_number: str, driver_name: Opti
     return o
 
 
-def pay_order(db: Session, order_id: int, amount: float, method: str,
-              paid_date: Optional[date], note: Optional[str], created_by: Optional[str]) -> SkladOrder:
+def pay_order(db: Session, order_id: int, amount: Optional[float], method: str,
+              paid_date: Optional[date], note: Optional[str], created_by: Optional[str],
+              amount_usd: Optional[float] = None, rate: Optional[float] = None) -> SkladOrder:
+    """Take a payment. naqd / karta: `amount` so'm. dollar: `amount_usd` dollars
+    into Kassa USD at `rate`, covering amount_usd * rate so'm of the order."""
     o = db.query(SkladOrder).filter(SkladOrder.id == order_id).first()
     if not o:
         raise SkladError("Buyurtma topilmadi.")
     if o.status == ORDER_CANCELLED:
         raise SkladError("Bekor qilingan buyurtmaga to'lov qabul qilinmaydi.")
-    if method not in (PAY_CASH, PAY_CARD):
-        raise SkladError("To'lov turi 'naqd' yoki 'karta' bo'lishi kerak.")
-    amount = round(float(amount or 0.0), 2)
-    if amount <= 0:
-        raise SkladError("To'lov summasi musbat bo'lishi kerak.")
+    if method not in (PAY_CASH, PAY_CARD, PAY_USD):
+        raise SkladError("To'lov turi 'naqd', 'karta' yoki 'dollar' bo'lishi kerak.")
 
     paid = paid_amounts(db, [o.id]).get(o.id, 0.0)
     remaining = round((o.total_amount or 0.0) - paid, 2)
+
+    if method == PAY_USD:
+        amount_usd = round(float(amount_usd or 0.0), 2)
+        rate = float(rate or 0.0)
+        if amount_usd <= 0 or rate <= 0:
+            raise SkladError("Dollar summasi va kursni kiriting.")
+        amount = round(amount_usd * rate, 2)
+        # Dollars come in whole cents, so paying off the rest can overshoot by
+        # under a cent's worth; that closes the order rather than being refused.
+        if remaining < amount <= remaining + rate * 0.01 + 0.005:
+            amount = remaining
+    else:
+        amount = round(float(amount or 0.0), 2)
+    if amount <= 0:
+        raise SkladError("To'lov summasi musbat bo'lishi kerak.")
     if amount > remaining + 0.005:
         raise SkladError(f"Ortiqcha to'lov: qolgan qarz {remaining:,.0f} {o.currency}.")
 
@@ -544,15 +571,16 @@ def pay_order(db: Session, order_id: int, amount: float, method: str,
         raise SkladError(f"{paid_date:%Y-%m} oyi yopilgan - to'lov kiritib bo'lmaydi.")
 
     reg = _register(db, method)
-    reg.balance = (reg.balance or 0.0) + amount
-    label = "naqd" if method == PAY_CASH else "karta"
+    received = amount_usd if method == PAY_USD else amount       # in the register's currency
+    reg.balance = (reg.balance or 0.0) + received
+    label = {PAY_CASH: "naqd", PAY_CARD: "karta"}.get(method) or f"dollar ${amount_usd:,.2f} x {rate:,.2f}"
     tx = CashTransaction(
         register_id=reg.id,
         type="kirim",
         source_type="client",
         counterparty_id=None,
-        amount=amount,
-        currency=o.currency,
+        amount=received,
+        currency=reg.currency if method == PAY_USD else o.currency,
         category="mijoz_tolovi",
         date=paid_date,
         description=(f"Buyurtma {o.order_number} - {o.client_name} ({o.client_phone}), {label}"
@@ -563,6 +591,9 @@ def pay_order(db: Session, order_id: int, amount: float, method: str,
     db.add(SkladOrderPayment(
         order_id=o.id, amount=amount, method=method, register_id=reg.id,
         cash_transaction_id=tx.id, paid_date=paid_date,
+        pay_currency=reg.currency if method == PAY_USD else None,
+        pay_amount=amount_usd if method == PAY_USD else None,
+        rate=rate if method == PAY_USD else None,
         note=(note or "").strip() or None, created_by=created_by,
     ))
     db.commit()
@@ -586,7 +617,7 @@ def cancel_payment(db: Session, order_id: int, payment_id: int) -> SkladOrder:
     reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
     if reg and round(reg.balance or 0.0, 2) < round(tx.amount, 2):
         raise SkladError(
-            f"{reg.name} da {reg.balance:,.0f} so'm bor - {tx.amount:,.0f} so'mni qaytarib bo'lmaydi "
+            f"{reg.name} da {reg.balance:,.2f} {reg.currency} bor - {tx.amount:,.2f} {reg.currency} qaytarib bo'lmaydi "
             f"(pul allaqachon chiqim qilingan).")
     if reg:
         reg.balance = round((reg.balance or 0.0) - tx.amount, 4)

@@ -418,13 +418,31 @@ class PnLReportResponse(BaseModel):
 
 class CashFlowItem(BaseModel):
     category: str
-    inflow_usd: float
+    inflow_uzs: float = 0.0         # real so'm
+    outflow_uzs: float = 0.0
+    inflow_usd_cash: float = 0.0    # real dollars
+    outflow_usd_cash: float = 0.0
+    inflow_usd: float               # everything in dollars at each day's rate
     outflow_usd: float
     net_usd: float
+
+class ClientReceipt(BaseModel):
+    date: str
+    register_name: str
+    client: Optional[str] = None
+    description: Optional[str] = None
+    amount: float
+    currency: str
+    amount_usd: float
 
 class CashFlowReportResponse(BaseModel):
     year_month: str
     total_inflows_usd: float
     total_outflows_usd: float
     net_cash_flow_usd: float
+    total_inflows_uzs: float = 0.0
+    total_outflows_uzs: float = 0.0
+    total_inflows_usd_cash: float = 0.0
+    total_outflows_usd_cash: float = 0.0
     breakdown_by_category: List[CashFlowItem] = []
+    client_receipts: List[ClientReceipt] = []

@@ -72,48 +72,80 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "ombor_breakdown": alloc["ombors"]
     }
 
+# The same category is saved under a code by some screens and under its label
+# by others (order payments write "mijoz_tolovi", the Kassa form "Mijoz to'lovi");
+# report them as one.
+CATEGORY_ALIASES = {
+    "mijoz_tolovi": "Mijoz to'lovi",
+    "postavshik_tolovi": "Postavshikka to'lov",
+    "bilvosita_xarajatlar": "Bilvosita xarajatlar",
+    "admin_prochee": "Ma'muriy va boshqa xarajatlar",
+    "boshqa": "Boshqa",
+}
+CLIENT_CATEGORY = "Mijoz to'lovi"
+
+
 def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:
+    """Money in and out of the Kassa for a month, per category: the real so'm and
+    dollar amounts, and everything in dollars at each day's rate. Also lists what
+    clients paid in."""
     year, month = map(int, year_month.split("-"))
 
     txs = db.query(CashTransaction).filter(
         extract('year', CashTransaction.date) == year,
         extract('month', CashTransaction.date) == month
-    ).all()
+    ).order_by(CashTransaction.date, CashTransaction.id).all()
 
-    inflows_usd = 0.0
-    outflows_usd = 0.0
+    zero = lambda: {"in_usd": 0.0, "out_usd": 0.0, "in_uzs": 0.0, "out_uzs": 0.0, "in_usd_cash": 0.0, "out_usd_cash": 0.0}
+    totals = zero()
     categories: Dict[str, Dict[str, float]] = {}
+    client_receipts = []
 
     for tx in txs:
         usd_amt = convert_amount(tx.amount, tx.currency, "USD", tx.date, db)
-        cat = tx.category
-        if cat not in categories:
-            categories[cat] = {"inflow": 0.0, "outflow": 0.0}
+        cat = CATEGORY_ALIASES.get(tx.category, tx.category or "Boshqa")
+        c = categories.setdefault(cat, zero())
+        side = "in" if tx.type == "kirim" else "out"
+        native = "uzs" if tx.currency == "UZS" else "usd_cash"
+        for bucket in (c, totals):
+            bucket[f"{side}_usd"] += usd_amt
+            bucket[f"{side}_{native}"] += tx.amount
 
-        if tx.type == "kirim":
-            inflows_usd += usd_amt
-            categories[cat]["inflow"] += usd_amt
-        else: # chiqim
-            outflows_usd += usd_amt
-            categories[cat]["outflow"] += usd_amt
+        if tx.type == "kirim" and (cat == CLIENT_CATEGORY or tx.source_type == "client"):
+            client_receipts.append({
+                "date": tx.date.isoformat(),
+                "register_name": tx.register.name if tx.register else "",
+                "client": tx.counterparty.name if tx.counterparty else None,
+                "description": tx.description,
+                "amount": round(tx.amount, 2),
+                "currency": tx.currency,
+                "amount_usd": round(usd_amt, 2),
+            })
 
-    breakdown = []
-    for cat, val in categories.items():
-        breakdown.append({
-            "category": cat,
-            "inflow_usd": round(val["inflow"], 2),
-            "outflow_usd": round(val["outflow"], 2),
-            "net_usd": round(val["inflow"] - val["outflow"], 2)
-        })
-
-    net_cash_flow_usd = inflows_usd - outflows_usd
+    breakdown = [{
+        "category": cat,
+        "inflow_uzs": round(v["in_uzs"], 2),
+        "outflow_uzs": round(v["out_uzs"], 2),
+        "inflow_usd_cash": round(v["in_usd_cash"], 2),
+        "outflow_usd_cash": round(v["out_usd_cash"], 2),
+        "inflow_usd": round(v["in_usd"], 2),
+        "outflow_usd": round(v["out_usd"], 2),
+        "net_usd": round(v["in_usd"] - v["out_usd"], 2),
+    } for cat, v in categories.items()]
+    # Money in first, biggest first.
+    breakdown.sort(key=lambda b: (-b["inflow_usd"], b["outflow_usd"]))
 
     return {
         "year_month": year_month,
-        "total_inflows_usd": round(inflows_usd, 2),
-        "total_outflows_usd": round(outflows_usd, 2),
-        "net_cash_flow_usd": round(net_cash_flow_usd, 2),
-        "breakdown_by_category": breakdown
+        "total_inflows_usd": round(totals["in_usd"], 2),
+        "total_outflows_usd": round(totals["out_usd"], 2),
+        "net_cash_flow_usd": round(totals["in_usd"] - totals["out_usd"], 2),
+        "total_inflows_uzs": round(totals["in_uzs"], 2),
+        "total_outflows_uzs": round(totals["out_uzs"], 2),
+        "total_inflows_usd_cash": round(totals["in_usd_cash"], 2),
+        "total_outflows_usd_cash": round(totals["out_usd_cash"], 2),
+        "breakdown_by_category": breakdown,
+        "client_receipts": client_receipts,
     }
 
 def generate_stock_excel(db: Session, warehouse_id: int = None) -> io.BytesIO:

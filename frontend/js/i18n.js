@@ -272,6 +272,9 @@ const ENTITY_TRANSLATIONS = {
   // Kassa Categories & Descriptions
   "Postavshikdan qaytgan pul": "Возврат средств от поставщика",
   "Mijoz to'lovi": "Оплата от клиента",
+  "Bilvosita xarajatlar": "Косвенные расходы",
+  "Ma'muriy va boshqa xarajatlar": "Административные и прочие расходы",
+  "Boshqa": "Прочее",
   "Asoschidan investitsiya": "Инвестиции учредителя",
   "Boshqa kirim": "Прочие доходы / приход",
   "Elektr energiya (Svet)": "Электроэнергия (Свет)",

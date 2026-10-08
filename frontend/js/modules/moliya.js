@@ -178,42 +178,78 @@ const FinanceModule = {
         `;
       }
 
-      // Render Cash Flow Table
+      // Render Cash Flow: real so'm and dollars per category, everything in $ at
+      // each day's rate, then what clients paid in.
       if (cfTable) {
+        const som = v => v ? `${formatNumber(v, 0, 0)}` : '<span style="color:#cbd5e1;">-</span>';
+        const usd = v => v ? `$${formatNumber(v, 2, 2)}` : '<span style="color:#cbd5e1;">-</span>';
+        const net = v => `<span style="color:${v >= 0 ? '#10b981' : '#ef4444'};font-weight:700;">${v >= 0 ? '+' : ''}$${formatNumber(v, 2, 2)}</span>`;
+        const receipts = cf.client_receipts || [];
+        const recUzs = receipts.filter(r => r.currency === "UZS").reduce((s, r) => s + r.amount, 0);
+        const recUsd = receipts.filter(r => r.currency !== "UZS").reduce((s, r) => s + r.amount, 0);
         cfTable.innerHTML = `
-          <table class="data-table">
+          <table class="data-table" id="moliya-cashflow-table">
             <thead>
               <tr>
-                <th>${isUz ? "Kategoriya" : "Категория"}</th>
-                <th>${isUz ? "Kirim ($)" : "Приход ($)"}</th>
-                <th>${isUz ? "Chiqim ($)" : "Расход ($)"}</th>
-                <th>${isUz ? "Sof Pul Oqimi ($)" : "Чистый Денежный Поток ($)"}</th>
+                <th rowspan="2">${isUz ? "Kategoriya" : "Категория"}</th>
+                <th colspan="2" style="text-align:center;color:#15803d;">${isUz ? "Kirim" : "Приход"}</th>
+                <th colspan="2" style="text-align:center;color:#b91c1c;">${isUz ? "Chiqim" : "Расход"}</th>
+                <th rowspan="2" style="text-align:right;">${isUz ? "Sof oqim ($, kurs bo'yicha)" : "Чистый поток ($, по курсу)"}</th>
+              </tr>
+              <tr>
+                <th style="text-align:right;">so'm</th><th style="text-align:right;">$</th>
+                <th style="text-align:right;">so'm</th><th style="text-align:right;">$</th>
               </tr>
             </thead>
             <tbody>
               ${cf.breakdown_by_category.map(item => `
                 <tr>
-                  <td>${tr(item.category)}</td>
-                  <td style="color: #10b981;">+$${item.inflow_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td style="color: #ef4444;">-$${item.outflow_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td>
-                    <span style="color: ${item.net_usd >= 0 ? '#10b981' : '#ef4444'}; font-weight: 600;">
-                      ${item.net_usd >= 0 ? '+' : ''}$${item.net_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                    </span>
-                  </td>
+                  <td><strong>${tr(item.category)}</strong></td>
+                  <td style="text-align:right;color:#10b981;">${som(item.inflow_uzs)}</td>
+                  <td style="text-align:right;color:#10b981;">${usd(item.inflow_usd_cash)}</td>
+                  <td style="text-align:right;color:#ef4444;">${som(item.outflow_uzs)}</td>
+                  <td style="text-align:right;color:#ef4444;">${usd(item.outflow_usd_cash)}</td>
+                  <td style="text-align:right;">${net(item.net_usd)}</td>
                 </tr>
               `).join("")}
             </tbody>
             <tfoot>
               <tr style="background: #f1f5f9; font-weight: 700; font-size: 13px;">
                 <td>${isUz ? "JAMI PUL OQIMI:" : "ИТОГО ДЕНЕЖНЫЙ ПОТОК:"}</td>
-                <td style="color: #10b981;">+$${cf.total_inflows_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="color: #ef4444;">-$${cf.total_outflows_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="color: ${cf.net_cash_flow_usd >= 0 ? '#10b981' : '#ef4444'}; font-size: 14px;">
-                  ${cf.net_cash_flow_usd >= 0 ? '+' : ''}$${cf.net_cash_flow_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </td>
+                <td style="text-align:right;color:#10b981;">${som(cf.total_inflows_uzs)}</td>
+                <td style="text-align:right;color:#10b981;">${usd(cf.total_inflows_usd_cash)}</td>
+                <td style="text-align:right;color:#ef4444;">${som(cf.total_outflows_uzs)}</td>
+                <td style="text-align:right;color:#ef4444;">${usd(cf.total_outflows_usd_cash)}</td>
+                <td style="text-align:right;font-size:14px;">${net(cf.net_cash_flow_usd)}</td>
               </tr>
             </tfoot>
+          </table>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 10px;">
+            <div style="font-size:15px;font-weight:800;color:#0f172a;">${isUz ? "Mijozlardan olingan pullar" : "Деньги, полученные от клиентов"}</div>
+            <div style="font-size:13px;color:#475569;">${isUz ? "Jami" : "Итого"}:
+              <b style="color:#15803d;">${formatNumber(recUzs, 0, 0)} so'm</b>${recUsd ? ` + <b style="color:#15803d;">$${formatNumber(recUsd, 2, 2)}</b>` : ""}
+              · ${receipts.length} ${isUz ? "ta to'lov" : "платежей"}</div>
+          </div>
+          <table class="data-table" id="moliya-client-receipts">
+            <thead><tr>
+              <th>${isUz ? "Sana" : "Дата"}</th>
+              <th>${isUz ? "Kassa" : "Касса"}</th>
+              <th>${isUz ? "Mijoz / izoh" : "Клиент / описание"}</th>
+              <th style="text-align:right;">${isUz ? "Summa" : "Сумма"}</th>
+              <th style="text-align:right;">${isUz ? "$ kurs bo'yicha" : "$ по курсу"}</th>
+            </tr></thead>
+            <tbody>
+              ${receipts.length ? receipts.map(r => `
+                <tr>
+                  <td>${r.date}</td>
+                  <td>${escapeHtml(tr(r.register_name))}</td>
+                  <td>${r.client ? `<b>${escapeHtml(r.client)}</b><br>` : ""}<span style="font-size:12px;color:#64748b;">${escapeHtml(r.description || "")}</span></td>
+                  <td style="text-align:right;font-weight:700;color:#15803d;white-space:nowrap;">${r.currency === "UZS" ? `${formatNumber(r.amount, 0, 0)} so'm` : `$${formatNumber(r.amount, 2, 2)}`}</td>
+                  <td style="text-align:right;color:#64748b;">$${formatNumber(r.amount_usd, 2, 2)}</td>
+                </tr>`).join("")
+              : `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">${isUz ? "Bu oyda mijozlardan pul tushmagan" : "В этом месяце оплат от клиентов не было"}</td></tr>`}
+            </tbody>
           </table>
         `;
       }

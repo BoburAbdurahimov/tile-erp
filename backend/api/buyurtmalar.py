@@ -12,6 +12,7 @@ from backend.models import SELL_TYPE_METR, PAY_CASH
 from backend.services import order_service as svc
 from backend.services import demo_service
 from backend.services.sklad_service import SkladError
+from backend.services.currency_service import get_exchange_rate_for_date
 
 router = APIRouter(prefix="/orders", tags=["MODUL 6B: SOTUV BUYURTMALARI (Order -> Delivery -> Payment)"])
 
@@ -56,8 +57,10 @@ class DeliverRequest(BaseModel):
 
 
 class PayRequest(BaseModel):
-    amount: float = Field(gt=0)
-    method: str = PAY_CASH          # naqd | karta
+    amount: Optional[float] = None       # so'm (naqd / karta)
+    method: str = PAY_CASH               # naqd | karta | dollar
+    amount_usd: Optional[float] = None   # dollar: dollars received into Kassa USD
+    rate: Optional[float] = None         # dollar: so'm per dollar
     paid_date: Optional[date] = None
     note: Optional[str] = None
 
@@ -105,6 +108,14 @@ def ombor_products(db: Session = Depends(get_db), role: str = Depends(get_curren
     """Finished goods (tayyor mahsulot) as held in the Ombor."""
     _check_any(role, "sotish", "mdm", "ombor")
     return {"products": svc.ombor_products(db)}
+
+
+@router.get("/usd-rate")
+def usd_rate(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+    """Today's so'm per dollar, as the default for a dollar payment."""
+    check_permission("sotish", role)
+    today = svc.local_now().date()
+    return {"date": str(today), "rate": get_exchange_rate_for_date(db, today)}
 
 
 @router.post("/demo")
@@ -175,6 +186,7 @@ def pay(order_id: int, payload: PayRequest, db: Session = Depends(get_db),
     _guard(lambda: svc.pay_order(
         db, order_id, payload.amount, payload.method,
         payload.paid_date, payload.note, created_by=role,
+        amount_usd=payload.amount_usd, rate=payload.rate,
     ))
     return svc.get_order(db, order_id)
 
