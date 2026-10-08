@@ -78,7 +78,8 @@ class TestResetToZero(unittest.TestCase):
             reg = db.query(CashRegister).get(t.register_id)
             self.assertAlmostEqual(t.amount, abs(reg.balance), places=2)
         self.assertEqual(db.query(MDMCounterparty).count(), cps)
-        self.assertTrue(all((c.current_balance_usd or 0) == 0 for c in db.query(MDMCounterparty).all()))
+        self.assertTrue(all((c.current_balance_usd or 0) == (c.initial_balance_usd or 0)
+                            for c in db.query(MDMCounterparty).all()))
         self.assertEqual(db.query(MDMMaterial).count(), mats)
         clay = db.query(MDMMaterial).filter(MDMMaterial.code == "RM-CLAY-01").first().id
         sup = db.query(MDMCounterparty).filter(MDMCounterparty.type == "supplier").first().id
