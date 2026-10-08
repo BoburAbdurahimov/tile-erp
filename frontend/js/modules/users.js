@@ -775,7 +775,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
             ${li(isUz ? "Ishlab chiqarish, sarf materiallari, boshqa xarajatlar" : "Производство, расход материалов, прочие расходы")}
             ${li(isUz ? "Ombor va xomashyo omborlaridagi barcha qoldiqlar" : "Все остатки на складах")}
             ${li(isUz ? "Kassa operatsiyalari tarixi, ish haqi hisoblari, yopilgan oylar" : "История кассы, расчёты зарплаты, закрытые месяцы")}
-            ${li(isUz ? "Kontragentlar balansi (qarzlar) 0 ga tushadi" : "Балансы контрагентов (долги) обнуляются")}
+            ${li(isUz ? "Kontragentlar balansi (qarzlar) boshlang'ich qoldig'iga qaytadi (odatda 0)" : "Балансы контрагентов (долги) возвращаются к начальному остатку (обычно 0)")}
           </ul>
         </div>
         <div style="padding:10px 12px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;">

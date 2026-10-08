@@ -80,10 +80,18 @@ const FinanceModule = {
     const actionBtns = document.getElementById("month-action-buttons");
 
     try {
-      const [pnl, cf] = await Promise.all([
+      const [pnl, cf, status] = await Promise.all([
         API.getPnL(this.currentPeriod),
-        API.getCashFlow(this.currentPeriod)
+        API.getCashFlow(this.currentPeriod),
+        API.getMonthStatus(this.currentPeriod).catch(() => null)
       ]);
+      // When the month closes by itself (10th of the next month), or that it did.
+      const autoDate = status && status.auto_close_date ? status.auto_close_date.split("-").reverse().join(".") : "";
+      const autoHint = !status ? "" : status.is_closed
+        ? (status.closed_by && status.closed_by.startsWith("avto") ? `<span style="font-size:12px;color:#64748b;">${isUz ? "Avtomatik yopilgan" : "Закрыт автоматически"} (${autoDate})</span>` : "")
+        : status.reopened
+          ? `<span style="font-size:12px;color:#b45309;">${isUz ? "Admin qayta ochgan - avtomatik yopilmaydi" : "Переоткрыт админом - авто-закрытия не будет"}</span>`
+          : `<span style="font-size:12px;color:#64748b;">${isUz ? "Avtomatik yopiladi" : "Закроется автоматически"}: <b>${autoDate}</b></span>`;
 
       // Render Month Close / Reopen button
       if (actionBtns) {
@@ -100,6 +108,8 @@ const FinanceModule = {
             </button>
           `;
         }
+        actionBtns.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;gap:3px;";
+        actionBtns.insertAdjacentHTML("beforeend", autoHint);
       }
 
       // Render KPIs

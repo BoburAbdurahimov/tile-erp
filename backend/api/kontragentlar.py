@@ -95,10 +95,11 @@ def get_counterparty_ledger(
     ledger_entries = []
 
     # 1. Initial Balance Entry
-    init_bal = cp.initial_balance_usd if view_currency == "USD" else cp.initial_balance_uzs
+    init_bal = (cp.initial_balance_usd if view_currency == "USD" else cp.initial_balance_uzs) or 0.0
+    init_date = cp.created_at.date() if cp.created_at else date(2026, 1, 1)
     ledger_entries.append({
         "id": "INIT",
-        "date": cp.created_at.date() if cp.created_at else date(2026, 1, 1),
+        "date": init_date,
         "type": "Boshlang'ich qoldiq",
         "item_name": "Boshlang'ich balans",
         "quantity": 1,
@@ -106,7 +107,7 @@ def get_counterparty_ledger(
         "price": round(init_bal, 2),
         "doc_currency": "USD" if view_currency == "USD" else "UZS",
         "doc_amount": round(init_bal, 2),
-        "rate_on_date": 1.0,
+        "rate_on_date": get_exchange_rate_for_date(db, init_date),
         "amount_view_currency": round(init_bal, 2),
         "description": "Tizimga kiritilgan boshlang'ich qoldiq"
     })
@@ -167,12 +168,15 @@ def get_counterparty_ledger(
         hist_rate = get_exchange_rate_for_date(db, tx.date)
         conv_amount = convert_amount(tx.amount, tx.currency, view_currency, tx.date, db)
         
+        # Same rule as the Kassa applies to the balance: money in from them lowers
+        # their balance, money out to them raises it - for clients and suppliers
+        # alike (a supplier's purchases make it negative, so paying them brings it up).
         if tx.type == "kirim":
             tx_type_label = "To'lov qabul qilindi (Kassa Kirim)"
-            effect = -conv_amount if cp.type == "client" else conv_amount
+            effect = -conv_amount
         else:
             tx_type_label = "To'lov amalga oshirildi (Kassa Chiqim)"
-            effect = conv_amount if cp.type == "client" else -conv_amount
+            effect = conv_amount
             
         ledger_entries.append({
             "id": f"CASH-{tx.id}",

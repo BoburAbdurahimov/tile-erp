@@ -51,8 +51,8 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     net_profit_usd = gross_profit_usd - admin_expenses_usd
 
     # Check if month is closed
-    month_close = db.query(MonthClosing).filter(MonthClosing.year_month == year_month).first()
-    is_closed = month_close.is_closed if month_close else False
+    from backend.services.month_close_service import is_month_closed
+    is_closed = is_month_closed(db, date(year, month, 1))
 
     return {
         "year_month": year_month,

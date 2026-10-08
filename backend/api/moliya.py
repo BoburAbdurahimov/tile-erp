@@ -1,17 +1,20 @@
+import hmac
+import os
 from datetime import date
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import MonthClosing
 from backend.schemas import (
     PnLReportResponse, CashFlowReportResponse,
     MonthCloseRequest, MonthReopenRequest
 )
 from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services.reports_service import get_pnl_report, get_cash_flow_report
-from backend.services.month_close_service import close_month, reopen_month
+from backend.services.month_close_service import (
+    reopen_month, close_with_snapshot, auto_close_due_months, month_status,
+)
 
 router = APIRouter(prefix="/moliya", tags=["MODUL 8: MOLIYA VA OYNI YOPISH (Finance & Reports)"])
 
@@ -48,15 +51,7 @@ def get_month_status(
     check_permission("moliya", role)
     if not year_month:
         year_month = date.today().strftime("%Y-%m")
-        
-    record = db.query(MonthClosing).filter(MonthClosing.year_month == year_month).first()
-    return {
-        "year_month": year_month,
-        "is_closed": record.is_closed if record else False,
-        "closed_at": record.closed_at if record else None,
-        "closed_by": record.closed_by_username if record else None,
-        "notes": record.notes if record else None
-    }
+    return month_status(db, year_month)
 
 @router.post("/month-closing/close")
 def close_month_action(
@@ -70,30 +65,23 @@ def close_month_action(
             status_code=403,
             detail="Oyni yopish (Month-End Closing) faqat Admin roli uchun ruxsat etilgan!"
         )
-    
-    # Calculate snapshot PnL
-    pnl = get_pnl_report(db, payload.year_month)
-    
-    rec = close_month(
-        db=db,
-        year_month=payload.year_month,
-        username="admin",
-        notes=payload.notes
-    )
-    rec.pnl_revenue_usd = pnl["revenue_usd"]
-    rec.pnl_cogs_usd = pnl["cogs_direct_materials_usd"]
-    rec.pnl_indirect_usd = pnl["cogs_indirect_expenses_usd"]
-    rec.pnl_admin_usd = pnl["admin_expenses_usd"]
-    rec.pnl_net_profit_usd = pnl["net_profit_usd"]
-    rec.total_production_volume = pnl["total_factory_volume_m2"]
-    db.commit()
-
+    rec = close_with_snapshot(db, payload.year_month, username="admin", notes=payload.notes)
     return {
         "status": "success",
         "message": f"{payload.year_month} oyi muvaffaqiyatli yopildi va barcha operatsiyalar bloklandi.",
         "year_month": rec.year_month,
         "is_closed": True
     }
+
+@router.get("/auto-close")
+def auto_close(authorization: Optional[str] = Header(default=None), db: Session = Depends(get_db)):
+    """Daily Vercel Cron: close every month whose 10th-of-next-month has passed.
+    Vercel sends 'Authorization: Bearer <CRON_SECRET>' when CRON_SECRET is set;
+    without it this is still harmless - it only writes what the date already decides."""
+    secret = os.getenv("CRON_SECRET")
+    if secret and not hmac.compare_digest(authorization or "", f"Bearer {secret}"):
+        raise HTTPException(status_code=401, detail="Ruxsat yo'q.")
+    return {"closed": auto_close_due_months(db)}
 
 @router.post("/month-closing/reopen")
 def reopen_month_action(

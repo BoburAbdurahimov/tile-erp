@@ -4,8 +4,8 @@ in the Kassa and the counterparties.
 Kept: users, MDM catalogue (materials, counterparties, warehouses), employees
 and job types, exchange rates, the audit log, and - if asked - the Avto sarf
 norms. Each Kassa keeps its balance, written as one opening receipt so the
-history still adds up. Counterparty balances go back to 0, since the documents
-behind them are gone.
+history still adds up. Counterparty balances go back to the opening balance
+entered with them, since the documents behind them are gone.
 """
 from datetime import date
 
@@ -67,9 +67,11 @@ def reset_operational_data(db: Session, keep_norms: bool = False) -> dict:
     wipe(CashTransaction, "kassa_transactions")
     wipe(MonthClosing, "month_closings")
 
-    db.query(MDMCounterparty).update(
-        {MDMCounterparty.current_balance_usd: 0.0, MDMCounterparty.current_balance_uzs: 0.0},
-        synchronize_session=False)
+    # Back to the opening balance entered with the counterparty (usually 0), which
+    # is where the Akt-sverka starts.
+    for cp in db.query(MDMCounterparty).all():
+        cp.current_balance_usd = cp.initial_balance_usd or 0.0
+        cp.current_balance_uzs = cp.initial_balance_uzs or 0.0
 
     # The money stays: one opening receipt per register for what it holds.
     today = date.today()
