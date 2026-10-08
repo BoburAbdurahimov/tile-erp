@@ -74,7 +74,7 @@ const DashboardModule = {
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "7 kunlik hajm" : "Объем за 7 дней"}</span>
             <span class="kpi-value">${formatNumber(stats7d.total_7d_pieces, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
-            <span class="kpi-sub">${CURRENT_LANG === 'uz' ? "5 ta liniya bo'yicha" : "По 5 линиям"}</span>
+            <span class="kpi-sub">${CURRENT_LANG === 'uz' ? "Barcha omborlarga" : "На все склады"}</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Kassa USD" : "Касса USD"}</span>

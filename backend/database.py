@@ -60,6 +60,9 @@ _ADDED_COLUMNS = [
     ("purchase_items", "width", "INTEGER"),
     ("users", "ombor_sklads", "VARCHAR(50)"),
     ("auto_sarf_rules", "sklad_id", "INTEGER"),
+    ("sklad_order_payments", "pay_currency", "VARCHAR(10)"),
+    ("sklad_order_payments", "pay_amount", "FLOAT"),
+    ("sklad_order_payments", "rate", "FLOAT"),
 ]
 
 

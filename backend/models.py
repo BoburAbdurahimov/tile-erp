@@ -635,6 +635,7 @@ ORDER_CANCELLED = "Bekor"
 
 PAY_CASH = "naqd"
 PAY_CARD = "karta"
+PAY_USD = "dollar"     # cash dollars into Kassa USD, at a chosen rate
 
 
 class SkladOrder(Base):
@@ -703,8 +704,13 @@ class SkladOrderPayment(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("sklad_orders.id"), nullable=False, index=True)
     amount = Column(Float, nullable=False)
-    method = Column(String(10), nullable=False, default=PAY_CASH)  # naqd | karta
+    method = Column(String(10), nullable=False, default=PAY_CASH)  # naqd | karta | dollar
     register_id = Column(Integer, nullable=False)
+    # Paid in dollars: what came into Kassa USD and at what rate. `amount` is
+    # always what it took off the order (so'm) = pay_amount * rate.
+    pay_currency = Column(String(10), nullable=True)   # None = UZS
+    pay_amount = Column(Float, nullable=True)
+    rate = Column(Float, nullable=True)
     # Deliberately not a foreign key: Kassa may delete its transaction, and
     # a payment whose transaction is gone simply stops counting.
     cash_transaction_id = Column(Integer, nullable=True, index=True)

@@ -105,7 +105,7 @@ class TestCostingWithoutLines(unittest.TestCase):
             "out_sklad_id": 3, "out_code": 540, "quantity": 5,
             "date": str(date.today()), "consumed_materials": []}, headers=ADMIN))
         after = ok(client.get(f"/api/moliya/pnl?year_month={ym}", headers=ADMIN))
-        vol = lambda p: sum(l.get("production_volume_m2", 0) for l in p["line_breakdown"])
+        vol = lambda p: sum(o.get("production_volume", 0) for o in p["ombor_breakdown"])
         self.assertAlmostEqual(vol(after) - vol(before), 5, places=2)
 
 

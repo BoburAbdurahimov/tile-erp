@@ -47,7 +47,8 @@ def clear_demo(db: Session) -> dict:
     for p in pays:
         tx = db.query(CashTransaction).filter(CashTransaction.id == p.cash_transaction_id).first()
         # Only a receipt this payment really made (same amount, its order number).
-        if tx and tx.amount == p.amount and (tx.description or "").startswith("Buyurtma "):
+        received = p.pay_amount if p.pay_amount is not None else p.amount   # dollars for a dollar payment
+        if tx and tx.amount == received and (tx.description or "").startswith("Buyurtma "):
             reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
             if reg:
                 reg.balance = round((reg.balance or 0.0) - tx.amount, 4)

@@ -8,7 +8,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from backend.models import (
     Sale, Purchase, ProductionOrder, CashTransaction, MonthClosing,
-    StockItem, MDMMaterial, MDMCounterparty, Warehouse
+    StockItem, MDMMaterial, MDMCounterparty, Warehouse, SkladMovement, SKLAD_OP_OUT
 )
 from backend.services.currency_service import convert_amount
 from backend.services.cost_allocation_service import calculate_monthly_production_cost_allocation
@@ -23,11 +23,23 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         Sale.status == "Tasdiqlandi"
     ).all()
 
-    total_revenue_usd = 0.0
+    revenue_sales_usd = 0.0
     for s in sales:
-        total_revenue_usd += convert_amount(s.total_amount, s.currency, "USD", s.date, db)
+        revenue_sales_usd += convert_amount(s.total_amount, s.currency, "USD", s.date, db)
 
-    # 2. Production Cost Allocation for the 5 Lines
+    # Tiles sold from the Ombor (direct sales and delivered orders), priced in UZS.
+    # Goods only - delivery charged to the client is passed on, not earned.
+    ombor_sales = db.query(SkladMovement).filter(
+        extract('year', SkladMovement.occurred_at) == year,
+        extract('month', SkladMovement.occurred_at) == month,
+        SkladMovement.operation == SKLAD_OP_OUT,
+    ).all()
+    revenue_ombor_usd = 0.0
+    for m in ombor_sales:
+        revenue_ombor_usd += convert_amount(m.total_revenue or 0.0, "UZS", "USD", m.occurred_at.date(), db)
+    total_revenue_usd = revenue_sales_usd + revenue_ombor_usd
+
+    # 2. Production cost by Ombor
     alloc = calculate_monthly_production_cost_allocation(db, year_month)
     direct_materials_cogs = alloc["total_direct_materials_cost_usd"]
     line_expenses_cogs = alloc["total_line_equipment_expenses_usd"]
@@ -46,6 +58,8 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "year_month": year_month,
         "currency": "USD",
         "revenue_usd": round(total_revenue_usd, 2),
+        "revenue_ombor_usd": round(revenue_ombor_usd, 2),
+        "revenue_sales_usd": round(revenue_sales_usd, 2),
         "cogs_direct_materials_usd": round(direct_materials_cogs, 2),
         "cogs_line_expenses_usd": round(line_expenses_cogs, 2),
         "cogs_indirect_expenses_usd": round(indirect_expenses_cogs, 2),
@@ -54,52 +68,84 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "admin_expenses_usd": round(admin_expenses_usd, 2),
         "net_profit_usd": round(net_profit_usd, 2),
         "is_closed": is_closed,
-        "total_factory_volume_m2": alloc["total_factory_volume_m2"],
-        "line_breakdown": alloc["lines"]
+        "total_factory_volume_m2": alloc["total_factory_volume"],
+        "ombor_breakdown": alloc["ombors"]
     }
 
+# The same category is saved under a code by some screens and under its label
+# by others (order payments write "mijoz_tolovi", the Kassa form "Mijoz to'lovi");
+# report them as one.
+CATEGORY_ALIASES = {
+    "mijoz_tolovi": "Mijoz to'lovi",
+    "postavshik_tolovi": "Postavshikka to'lov",
+    "bilvosita_xarajatlar": "Bilvosita xarajatlar",
+    "admin_prochee": "Ma'muriy va boshqa xarajatlar",
+    "boshqa": "Boshqa",
+}
+CLIENT_CATEGORY = "Mijoz to'lovi"
+
+
 def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:
+    """Money in and out of the Kassa for a month, per category: the real so'm and
+    dollar amounts, and everything in dollars at each day's rate. Also lists what
+    clients paid in."""
     year, month = map(int, year_month.split("-"))
 
     txs = db.query(CashTransaction).filter(
         extract('year', CashTransaction.date) == year,
         extract('month', CashTransaction.date) == month
-    ).all()
+    ).order_by(CashTransaction.date, CashTransaction.id).all()
 
-    inflows_usd = 0.0
-    outflows_usd = 0.0
+    zero = lambda: {"in_usd": 0.0, "out_usd": 0.0, "in_uzs": 0.0, "out_uzs": 0.0, "in_usd_cash": 0.0, "out_usd_cash": 0.0}
+    totals = zero()
     categories: Dict[str, Dict[str, float]] = {}
+    client_receipts = []
 
     for tx in txs:
         usd_amt = convert_amount(tx.amount, tx.currency, "USD", tx.date, db)
-        cat = tx.category
-        if cat not in categories:
-            categories[cat] = {"inflow": 0.0, "outflow": 0.0}
+        cat = CATEGORY_ALIASES.get(tx.category, tx.category or "Boshqa")
+        c = categories.setdefault(cat, zero())
+        side = "in" if tx.type == "kirim" else "out"
+        native = "uzs" if tx.currency == "UZS" else "usd_cash"
+        for bucket in (c, totals):
+            bucket[f"{side}_usd"] += usd_amt
+            bucket[f"{side}_{native}"] += tx.amount
 
-        if tx.type == "kirim":
-            inflows_usd += usd_amt
-            categories[cat]["inflow"] += usd_amt
-        else: # chiqim
-            outflows_usd += usd_amt
-            categories[cat]["outflow"] += usd_amt
+        if tx.type == "kirim" and (cat == CLIENT_CATEGORY or tx.source_type == "client"):
+            client_receipts.append({
+                "date": tx.date.isoformat(),
+                "register_name": tx.register.name if tx.register else "",
+                "client": tx.counterparty.name if tx.counterparty else None,
+                "description": tx.description,
+                "amount": round(tx.amount, 2),
+                "currency": tx.currency,
+                "amount_usd": round(usd_amt, 2),
+            })
 
-    breakdown = []
-    for cat, val in categories.items():
-        breakdown.append({
-            "category": cat,
-            "inflow_usd": round(val["inflow"], 2),
-            "outflow_usd": round(val["outflow"], 2),
-            "net_usd": round(val["inflow"] - val["outflow"], 2)
-        })
-
-    net_cash_flow_usd = inflows_usd - outflows_usd
+    breakdown = [{
+        "category": cat,
+        "inflow_uzs": round(v["in_uzs"], 2),
+        "outflow_uzs": round(v["out_uzs"], 2),
+        "inflow_usd_cash": round(v["in_usd_cash"], 2),
+        "outflow_usd_cash": round(v["out_usd_cash"], 2),
+        "inflow_usd": round(v["in_usd"], 2),
+        "outflow_usd": round(v["out_usd"], 2),
+        "net_usd": round(v["in_usd"] - v["out_usd"], 2),
+    } for cat, v in categories.items()]
+    # Money in first, biggest first.
+    breakdown.sort(key=lambda b: (-b["inflow_usd"], b["outflow_usd"]))
 
     return {
         "year_month": year_month,
-        "total_inflows_usd": round(inflows_usd, 2),
-        "total_outflows_usd": round(outflows_usd, 2),
-        "net_cash_flow_usd": round(net_cash_flow_usd, 2),
-        "breakdown_by_category": breakdown
+        "total_inflows_usd": round(totals["in_usd"], 2),
+        "total_outflows_usd": round(totals["out_usd"], 2),
+        "net_cash_flow_usd": round(totals["in_usd"] - totals["out_usd"], 2),
+        "total_inflows_uzs": round(totals["in_uzs"], 2),
+        "total_outflows_uzs": round(totals["out_uzs"], 2),
+        "total_inflows_usd_cash": round(totals["in_usd_cash"], 2),
+        "total_outflows_usd_cash": round(totals["out_usd_cash"], 2),
+        "breakdown_by_category": breakdown,
+        "client_receipts": client_receipts,
     }
 
 def generate_stock_excel(db: Session, warehouse_id: int = None) -> io.BytesIO:

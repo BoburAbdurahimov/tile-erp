@@ -1,105 +1,75 @@
-from datetime import date
-from typing import Dict, List, Any
-from sqlalchemy import func, extract
+from typing import Dict, Any
+from sqlalchemy import extract
 from sqlalchemy.orm import Session
-from backend.models import ProductionOrder, ProductionLine, CashTransaction, MDMMaterial, LineExpense
+from backend.models import ProductionOrder, CashTransaction, LineExpense, SKLAD_CONFIG
 from backend.services.currency_service import convert_amount
+
+# Production goes into an Ombor (owner x eni) instead of onto a line. Orders made
+# before that, with no Ombor, are costed in one "other" bucket so none is lost.
+OTHER_BUCKET = 0
+
 
 def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -> Dict[str, Any]:
     """
-    Calculates:
-    1. Total production volume per line for the month.
-    2. Direct raw materials cost per line (Warehouse 2).
-    3. Target-line allocation of equipment spare parts & consumables (LineExpense from Warehouse 3).
-    4. Proportionate allocation of general indirect costs to each line:
-       Allocated Line Indirect = Total Indirect Costs * (Line Volume / Total Factory Volume)
-    5. Comprehensive unit cost breakdown per line ($/dona = Direct Materials + Line Equipment Expenses + Allocated Overhead).
+    Calculates, for each Ombor production went into this month:
+    1. Pieces produced.
+    2. Direct raw materials cost (consumed from Warehouse 2).
+    3. Spare parts & consumables issued from Warehouse 3 (LineExpense), spread by volume.
+    4. General indirect costs (Kassa), spread by volume:
+       Allocated Indirect = Total Indirect Costs * (Ombor Volume / Total Factory Volume)
+    5. Unit cost ($/dona = Direct Materials + Spare parts + Allocated Overhead) / volume.
     """
     try:
         year, month = map(int, year_month.split("-"))
     except ValueError:
         raise ValueError("year_month must be in 'YYYY-MM' format")
 
-    # 1. Fetch all confirmed production orders in this month
     orders = db.query(ProductionOrder).filter(
         extract('year', ProductionOrder.date) == year,
         extract('month', ProductionOrder.date) == month,
         ProductionOrder.status == "Tasdiqlandi"
     ).all()
 
-    # 2. Get production volume & direct costs by line
-    line_data: Dict[int, Dict[str, float]] = {}
-    lines = db.query(ProductionLine).order_by(ProductionLine.line_number).all()
-    for l in lines:
-        line_data[l.id] = {
-            "line_id": l.id,
-            "line_number": l.line_number,
-            "line_name": l.name,
-            "spec_tile_size": l.spec_tile_size,
-            "volume_m2": 0.0,
-            "direct_materials_cost_usd": 0.0,
-            "line_equipment_expenses_usd": 0.0
+    buckets: Dict[int, Dict[str, Any]] = {}
+    for s in SKLAD_CONFIG:
+        buckets[s["id"]] = {
+            "sklad_id": s["id"], "owner": s["name"], "eni": s["eni"], "label": f'{s["name"]} {s["eni"]}',
+            "volume": 0.0, "direct": 0.0, "equipment": 0.0,
         }
 
-    total_factory_volume_m2 = 0.0
-    total_direct_materials_cost_usd = 0.0
-
-    # Production no longer chooses a line: such orders (and materials issued
-    # without lines) are costed in one "no line" bucket so the PnL keeps them.
-    NO_LINE = 0
-
-    def no_line_bucket():
-        if NO_LINE not in line_data:
-            line_data[NO_LINE] = {
-                "line_id": NO_LINE,
-                "line_number": 0,
-                "line_name": "Liniyasiz (omborlarga)",
-                "spec_tile_size": "-",
-                "volume_m2": 0.0,
-                "direct_materials_cost_usd": 0.0,
-                "line_equipment_expenses_usd": 0.0
+    def other_bucket():
+        if OTHER_BUCKET not in buckets:
+            buckets[OTHER_BUCKET] = {
+                "sklad_id": OTHER_BUCKET, "owner": "-", "eni": 0, "label": "Boshqa (omborsiz)",
+                "volume": 0.0, "direct": 0.0, "equipment": 0.0,
             }
-        return line_data[NO_LINE]
+        return buckets[OTHER_BUCKET]
 
+    total_volume = 0.0
+    total_direct = 0.0
     for order in orders:
-        lid = order.line_id if order.line_id in line_data else NO_LINE
-        if lid == NO_LINE:
-            no_line_bucket()
-        if lid in line_data:
-            line_data[lid]["volume_m2"] += order.quantity
-            line_data[lid]["direct_materials_cost_usd"] += order.direct_cost_usd
-            total_factory_volume_m2 += order.quantity
-            total_direct_materials_cost_usd += order.direct_cost_usd
+        b = buckets.get(order.out_sklad_id) or other_bucket()
+        b["volume"] += order.quantity or 0.0
+        b["direct"] += order.direct_cost_usd or 0.0
+        total_volume += order.quantity or 0.0
+        total_direct += order.direct_cost_usd or 0.0
 
-    # 2b. Fetch & allocate Line Expenses (Spare parts / Consumables from Warehouse 3) to selected target lines
+    # Spare parts & consumables from Warehouse 3: spread over this month's production by volume.
     line_expenses = db.query(LineExpense).filter(
         extract('year', LineExpense.date) == year,
         extract('month', LineExpense.date) == month,
         LineExpense.status == "Tasdiqlandi"
     ).all()
-
-    total_line_equipment_expenses_usd = 0.0
+    total_equipment = 0.0
     for le in line_expenses:
-        total_line_equipment_expenses_usd += le.total_cost_usd
-        raw_ids = (le.line_ids_str or "").split(",")
-        target_lids = [int(x.strip()) for x in raw_ids if x.strip().isdigit() and int(x.strip()) in line_data]
-
-        if not target_lids:
-            # Issued without lines: spread over everything produced this month.
-            target_lids = [lid for lid, d in line_data.items() if d["volume_m2"] > 0] or [no_line_bucket()["line_id"]]
-
-        target_volume = sum(line_data[lid]["volume_m2"] for lid in target_lids)
-        if target_volume > 0:
-            for lid in target_lids:
-                portion = le.total_cost_usd * (line_data[lid]["volume_m2"] / target_volume)
-                line_data[lid]["line_equipment_expenses_usd"] += portion
+        cost = le.total_cost_usd or 0.0
+        total_equipment += cost
+        if total_volume > 0:
+            for b in buckets.values():
+                b["equipment"] += cost * (b["volume"] / total_volume)
         else:
-            # If production volume is 0 for all target lines, split cost equally among selected target lines
-            equal_share = le.total_cost_usd / len(target_lids)
-            for lid in target_lids:
-                line_data[lid]["line_equipment_expenses_usd"] += equal_share
+            other_bucket()["equipment"] += cost
 
-    # 3. Fetch all indirect expenses (Bilvosita xarajatlar) from CashTransactions for the month converted to USD
     INDIRECT_CATEGORIES = [
         "bilvosita_xarajatlar", "Bilvosita xarajatlar", "Elektr energiya (Svet)", "Tabiiy gaz", "Suv va kanalizatsiya",
         "Uskunalar ta'miri va ehtiyot qismlar", "Sex ijarasi va xizmatlar", "Transport va yoqilg'i",
@@ -111,13 +81,8 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         CashTransaction.type == "chiqim",
         CashTransaction.category.in_(INDIRECT_CATEGORIES)
     ).all()
+    total_indirect = sum(convert_amount(tx.amount, tx.currency, "USD", tx.date, db) for tx in indirect_txs)
 
-    total_indirect_expenses_usd = 0.0
-    for tx in indirect_txs:
-        usd_amount = convert_amount(tx.amount, tx.currency, "USD", tx.date, db)
-        total_indirect_expenses_usd += usd_amount
-
-    # 4. Fetch administrative & other expenses (Admin va Prochee)
     ADMIN_CATEGORIES = [
         "admin_prochee", "Ma'muriy xarajatlar", "Ma'muriy va boshqa xarajatlar",
         "Ofis ijarasi", "Aloqa, Internet va IT", "Buxgalteriya va audit",
@@ -130,43 +95,34 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         CashTransaction.type == "chiqim",
         CashTransaction.category.in_(ADMIN_CATEGORIES)
     ).all()
+    total_admin = sum(convert_amount(tx.amount, tx.currency, "USD", tx.date, db) for tx in admin_txs)
 
-    total_admin_expenses_usd = 0.0
-    for tx in admin_txs:
-        usd_amount = convert_amount(tx.amount, tx.currency, "USD", tx.date, db)
-        total_admin_expenses_usd += usd_amount
-
-    # 5. Build line summaries with direct materials, line equipment expenses & allocated indirect overhead
-    line_summaries = []
-    for lid, d in line_data.items():
-        vol = d["volume_m2"]
-        vol_pct = (vol / total_factory_volume_m2 * 100.0) if total_factory_volume_m2 > 0 else 0.0
-        
-        # Proportionate allocation of general indirect factory overhead
-        allocated_indirect = (total_indirect_expenses_usd * (vol / total_factory_volume_m2)) if total_factory_volume_m2 > 0 else 0.0
-        total_mfg_cost = d["direct_materials_cost_usd"] + d["line_equipment_expenses_usd"] + allocated_indirect
-        unit_cost = (total_mfg_cost / vol) if vol > 0 else 0.0
-
-        line_summaries.append({
-            "line_id": d["line_id"],
-            "line_number": d["line_number"],
-            "line_name": d["line_name"],
-            "spec_tile_size": d["spec_tile_size"],
-            "production_volume_m2": round(vol, 2),
-            "volume_percentage": round(vol_pct, 2),
-            "direct_materials_cost_usd": round(d["direct_materials_cost_usd"], 2),
-            "line_equipment_expenses_usd": round(d["line_equipment_expenses_usd"], 2),
-            "allocated_indirect_cost_usd": round(allocated_indirect, 2),
-            "total_manufacturing_cost_usd": round(total_mfg_cost, 2),
-            "unit_cost_usd_per_m2": round(unit_cost, 4)
+    rows = []
+    for b in buckets.values():
+        vol = b["volume"]
+        share = (vol / total_volume) if total_volume > 0 else 0.0
+        indirect = total_indirect * share
+        total_cost = b["direct"] + b["equipment"] + indirect
+        rows.append({
+            "sklad_id": b["sklad_id"],
+            "label": b["label"],
+            "owner": b["owner"],
+            "eni": b["eni"],
+            "production_volume": round(vol, 2),
+            "volume_percentage": round(share * 100.0, 2),
+            "direct_materials_cost_usd": round(b["direct"], 2),
+            "equipment_expenses_usd": round(b["equipment"], 2),
+            "allocated_indirect_cost_usd": round(indirect, 2),
+            "total_manufacturing_cost_usd": round(total_cost, 2),
+            "unit_cost_usd": round(total_cost / vol, 4) if vol > 0 else 0.0,
         })
 
     return {
         "year_month": year_month,
-        "total_factory_volume_m2": round(total_factory_volume_m2, 2),
-        "total_direct_materials_cost_usd": round(total_direct_materials_cost_usd, 2),
-        "total_line_equipment_expenses_usd": round(total_line_equipment_expenses_usd, 2),
-        "total_indirect_expenses_usd": round(total_indirect_expenses_usd, 2),
-        "total_admin_expenses_usd": round(total_admin_expenses_usd, 2),
-        "lines": line_summaries
+        "total_factory_volume": round(total_volume, 2),
+        "total_direct_materials_cost_usd": round(total_direct, 2),
+        "total_line_equipment_expenses_usd": round(total_equipment, 2),
+        "total_indirect_expenses_usd": round(total_indirect, 2),
+        "total_admin_expenses_usd": round(total_admin, 2),
+        "ombors": rows,
     }
