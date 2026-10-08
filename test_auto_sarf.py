@@ -114,8 +114,26 @@ class TestDemoSeed(unittest.TestCase):
         self.assertGreater(regs["Kassa UZS"]["balance"], 0)
         self.assertGreater(regs["Kassa USD"]["balance"], 0)
 
+        # Every 100 Ombor has its own norms, and Warehouse 2 holds enough raw material.
+        rules = ok(client.get(URL, headers=ADMIN))
+        self.assertEqual({r["sklad_id"] for r in rules if r["sklad_id"]}, {2, 4, 6, 8})
+        calc = ok(client.get(f"{URL}/calc?quantity=100&sklad_id=4", headers=ADMIN))
+        self.assertTrue(calc["items"] and all(i["enough"] and i["from_sklad"] for i in calc["items"]
+                                              if i["material_code"].startswith("RM-")))
+
+        # Already there: a second click only brings Avto sarf up to date.
+        for r in rules:
+            if r["sklad_id"] == 4:
+                ok(client.delete(f"{URL}/{r['id']}", headers=ADMIN))
+        db = SessionLocal()
+        purchases_before = db.query(Purchase).count()
+        db.close()
         again = ok(client.post("/api/demo/seed", headers=admin))
-        self.assertEqual(len(again["steps"]), 1)        # already there: nothing added
+        self.assertTrue(again["updated"])
+        self.assertIn(4, {r["sklad_id"] for r in ok(client.get(URL, headers=ADMIN))})
+        db = SessionLocal()
+        self.assertEqual(db.query(Purchase).count(), purchases_before)   # stock was enough: no new purchase
+        db.close()
 
 
 if __name__ == "__main__":

@@ -61,6 +61,7 @@ const KassaModule = {
     if (!div) return;
     try {
       const registers = await API.getCashRegisters();
+      this.registers = registers || [];
       div.innerHTML = registers.map(r => `
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
           <div>
@@ -272,8 +273,9 @@ const KassaModule = {
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('kassa_reg_select')}</label>
               <select id="tx-register" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                <option value="1">${isUz ? 'Kassa USD' : 'Касса USD'}</option>
-                <option value="2">${isUz ? 'Kassa UZS' : 'Касса UZS'}</option>
+                ${(this.registers && this.registers.length ? this.registers : [
+                    { id: 1, name: 'Kassa USD', currency: 'USD' }, { id: 2, name: 'Kassa UZS', currency: 'UZS' }
+                  ]).map(r => `<option value="${r.id}" data-currency="${r.currency}">${escapeHtml(tr(r.name))}</option>`).join("")}
               </select>
             </div>
             <div class="form-group">
@@ -336,16 +338,16 @@ const KassaModule = {
         }
 
         let cpId = null;
-        if (cpInput && KassaModule.cachedCounterparties) {
-          const lower = cpInput.toLowerCase();
-          const matched = KassaModule.cachedCounterparties.find(c => {
-            const full = `${c.code} - ${c.name} (${c.type === 'client' ? 'Mijoz' : 'Postavshik'})`.toLowerCase();
-            return full === lower || c.code.toLowerCase() === lower || c.name.toLowerCase() === lower || full.includes(lower);
-          });
-          if (matched) cpId = matched.id;
+        if (cpInput) {
+          const matched = KassaModule.findCounterparty(cpInput);
+          if (!matched) {
+            showToast(isUz ? "Kontragent topilmadi. Ro'yxatdan tanlang yoki maydonni bo'sh qoldiring." : "Контрагент не найден. Выберите из списка или оставьте поле пустым.", "error");
+            return false;
+          }
+          cpId = matched.id;
         }
 
-        const currency = regId === 1 ? "USD" : "UZS";
+        const currency = KassaModule.selectedRegisterCurrency();
 
         try {
           await API.createCashTransaction({
@@ -374,12 +376,12 @@ const KassaModule = {
       const amtInput = document.getElementById("tx-amount");
       const amtHint = document.getElementById("tx-amount-hint");
       const regSelect = document.getElementById("tx-register");
-      setupLiveMoneyInput(amtInput, amtHint, () => regSelect.value === "1" ? "USD" : "UZS");
+      setupLiveMoneyInput(amtInput, amtHint, () => KassaModule.selectedRegisterCurrency());
       regSelect.addEventListener("change", () => {
         if (amtInput.value) {
           const num = parseFormattedNumber(amtInput.value);
           if (num > 0 && amtHint) {
-            const curr = regSelect.value === "1" ? "USD" : "UZS";
+            const curr = KassaModule.selectedRegisterCurrency();
             amtHint.innerHTML = `<strong style="font-size: 14px; color: #2563eb;">${formatNumber(num, 0, 2)} ${curr}</strong>`;
           }
         }
@@ -554,6 +556,29 @@ const KassaModule = {
   },
 
   cachedCounterparties: [],
+
+  selectedRegisterCurrency() {
+    const sel = document.getElementById("tx-register");
+    const opt = sel && sel.options[sel.selectedIndex];
+    return (opt && opt.dataset.currency) || "UZS";
+  },
+
+  // The list shows the type in the current language ("Mijoz" / "Клиент"), so
+  // accept the label in either language, the code or the name.
+  findCounterparty(input) {
+    const lower = (input || "").toLowerCase().trim();
+    if (!lower) return null;
+    const list = this.cachedCounterparties || [];
+    const labels = c => {
+      const base = `${c.code} - ${c.name}`;
+      const kinds = c.type === "client" ? ["Mijoz", "Клиент"] : ["Postavshik", "Поставщик"];
+      return [base, ...kinds.map(k => `${base} (${k})`)].map(s => s.toLowerCase());
+    };
+    return list.find(c => labels(c).includes(lower))
+      || list.find(c => String(c.code).toLowerCase() === lower || c.name.toLowerCase() === lower)
+      || list.find(c => labels(c)[0].includes(lower))
+      || null;
+  },
 
   async populateCounterpartiesForTx() {
     const datalist = document.getElementById("tx-cp-datalist");

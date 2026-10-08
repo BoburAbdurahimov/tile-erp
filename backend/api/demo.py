@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from backend.api.auth import get_current_user, is_admin
 from backend.auth_utils import create_token
+from backend.database import SessionLocal
 from backend.models import User
 from backend.services import demo_seed
 
@@ -18,8 +19,13 @@ def seed_demo(force: bool = Query(False), user: User = Depends(get_current_user)
     # Each step runs as this admin, through the normal API and its checks.
     client = TestClient(app)
     headers = {"Authorization": f"Bearer {create_token(user.id, user.username)}"}
+    db = SessionLocal()
+    try:
+        updated = not force and demo_seed.has_demo(db)   # already there: only bring it up to date
+    finally:
+        db.close()
     try:
         steps = demo_seed.run(demo_seed.make_caller(client, headers), force=force)
     except demo_seed.DemoError as e:
         raise HTTPException(status_code=400, detail=f"Demo ma'lumot qo'shishda xato: {e}")
-    return {"success": True, "steps": steps}
+    return {"success": True, "updated": updated, "steps": steps}

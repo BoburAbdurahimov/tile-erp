@@ -123,7 +123,11 @@ def _register(db: Session, method: str) -> CashRegister:
         if not reg:
             raise SkladError("UZS kassasi topilmadi.")
         return reg
+    return ensure_card_register(db)
 
+
+def ensure_card_register(db: Session) -> CashRegister:
+    """The plastic card (Karta UZS) register, made on first use."""
     reg = db.query(CashRegister).filter(CashRegister.name == CARD_REGISTER_NAME).first()
     if not reg:
         # The seed inserts registers 1 and 2 with explicit ids, which leaves the
