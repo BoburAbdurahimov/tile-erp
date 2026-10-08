@@ -162,6 +162,9 @@ const UsersModule = (() => {
           <button class="btn btn-secondary" onclick="UsersModule.seedDemo()" style="display: flex; align-items: center; gap: 6px; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
 <span>${isUz ? "Demo ma'lumot qo'shish" : "Добавить демо-данные"}</span>
           </button>
+          <button class="btn btn-secondary" onclick="UsersModule.openReset()" style="display: flex; align-items: center; gap: 6px; border: 1.5px solid #fca5a5; color: #b91c1c; background: #fff;">
+<span>${isUz ? "0 dan boshlash" : "Начать с нуля"}</span>
+          </button>
           <button class="btn btn-secondary" onclick="UsersModule.loadData()" style="display: flex; align-items: center; gap: 6px;">
 <span>${isUz ? "Yangilash" : "Обновить"}</span>
           </button>
@@ -758,9 +761,62 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     }
   }
 
+  // Delete every document and start from zero; the Kassa money and the
+  // counterparties stay. Typing TOZALASH guards against a stray click.
+  function openReset() {
+    const isUz = CURRENT_LANG === "uz";
+    const li = s => `<li style="margin:2px 0;">${s}</li>`;
+    showModal(isUz ? "Hammasini tozalash - 0 dan boshlash" : "Очистить всё - начать с нуля", `
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;color:#334155;">
+        <div style="padding:10px 12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;">
+          <b style="color:#b91c1c;">${isUz ? "O'chiriladi (qaytarib bo'lmaydi):" : "Будет удалено (без возврата):"}</b>
+          <ul style="margin:6px 0 0 18px;padding:0;">
+            ${li(isUz ? "Xaridlar, sotuvlar, buyurtmalar va ularning to'lovlari" : "Закупки, продажи, заказы и их оплаты")}
+            ${li(isUz ? "Ishlab chiqarish, sarf materiallari, boshqa xarajatlar" : "Производство, расход материалов, прочие расходы")}
+            ${li(isUz ? "Ombor va xomashyo omborlaridagi barcha qoldiqlar" : "Все остатки на складах")}
+            ${li(isUz ? "Kassa operatsiyalari tarixi, ish haqi hisoblari, yopilgan oylar" : "История кассы, расчёты зарплаты, закрытые месяцы")}
+            ${li(isUz ? "Kontragentlar balansi (qarzlar) 0 ga tushadi" : "Балансы контрагентов (долги) обнуляются")}
+          </ul>
+        </div>
+        <div style="padding:10px 12px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;">
+          <b style="color:#15803d;">${isUz ? "Qoladi:" : "Останется:"}</b>
+          <ul style="margin:6px 0 0 18px;padding:0;">
+            ${li(isUz ? "Kassalardagi pul (har bir kassaga bitta 'Boshlang'ich qoldiq' yozuvi bilan)" : "Деньги в кассах (одной записью «Начальный остаток» в каждой)")}
+            ${li(isUz ? "Kontragentlar, MDM materiallari, foydalanuvchilar, xodimlar, valyuta kurslari" : "Контрагенты, материалы MDM, пользователи, сотрудники, курсы валют")}
+          </ul>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="reset-keep-norms" style="width:16px;height:16px;">
+          ${isUz ? "Avto sarf me'yorlari saqlansin" : "Сохранить нормы авто расхода"}
+        </label>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;">
+            ${isUz ? "Tasdiqlash uchun TOZALASH deb yozing" : "Для подтверждения введите TOZALASH"}</label>
+          <input id="reset-confirm" autocomplete="off" placeholder="TOZALASH"
+            style="width:100%;padding:9px 11px;border:1.5px solid #fca5a5;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+      </div>`, async () => {
+        const confirmText = (document.getElementById("reset-confirm").value || "").trim();
+        if (confirmText.toUpperCase() !== "TOZALASH") {
+          showToast(isUz ? "Tasdiqlash uchun TOZALASH deb yozing" : "Введите TOZALASH для подтверждения", "error");
+          return false;
+        }
+        try {
+          const res = await API.resetAllData({ confirm: confirmText, keep_norms: document.getElementById("reset-keep-norms").checked });
+          const kassa = Object.entries(res.kassa || {}).map(([n, b]) => `${n}: ${formatNumber(b, 0, 2)}`).join(" · ");
+          showToast(`${isUz ? "Tozalandi. Kassada qoldi" : "Очищено. В кассах осталось"}: ${kassa}`, "success");
+          return true;
+        } catch (e) {
+          showToast(e.message, "error");
+          return false;
+        }
+      });
+  }
+
   return {
     render,
     seedDemo,
+    openReset,
     loadData,
     switchTab,
     openCreateUserModal,
