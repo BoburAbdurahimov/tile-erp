@@ -40,14 +40,14 @@ const FinanceModule = {
           <!-- Rendered dynamically -->
         </div>
 
-        <!-- 5 Lines Manufacturing Cost Allocation Table -->
+        <!-- Manufacturing cost by Ombor -->
         <div class="card-header" style="margin-top: 10px;">
-          <div class="card-title">${isUz ? "5 ta Liniya bo'yicha ishlab chiqarish tannarxi va bilvosita xarajatlar taqsimoti" : "Себестоимость производства и распределение косвенных расходов по 5 линиям"}</div>
+          <div class="card-title">${isUz ? "Omborlar bo'yicha ishlab chiqarish tannarxi va bilvosita xarajatlar taqsimoti" : "Себестоимость производства и распределение косвенных расходов по складам"}</div>
         </div>
         <p style="font-size: 13px; color: #64748b; margin-top: -12px; margin-bottom: 16px;">
-          ${isUz 
-            ? "Qoida: Bilvosita xarajatlar (svet, gaz, sex maoshi, ijara) 5 ta liniyaga ularning oylik ishlab chiqarish hajmiga proporsional ravishda taqsimlanadi." 
-            : "Правило: Косвенные расходы (свет, газ, зарплата цеха, аренда) распределяются по 5 линиям пропорционально их месячному объему выпуска."}
+          ${isUz
+            ? "Qoida: Xomashyo tannarxi mahsulot chiqqan omborga yoziladi. Zapchastlar va bilvosita xarajatlar (svet, gaz, sex maoshi, ijara) omborlarga oylik ishlab chiqarish hajmiga proporsional taqsimlanadi."
+            : "Правило: Сырьё относится на склад, куда вышла продукция. Запчасти и косвенные расходы (свет, газ, зарплата цеха, аренда) распределяются по складам пропорционально месячному объему выпуска."}
         </p>
 
         <div class="table-container" id="lines-allocation-table-container" style="margin-bottom: 28px;">
@@ -108,7 +108,7 @@ const FinanceModule = {
           <div class="kpi-card" style="border-left: 4px solid #10b981;">
             <span class="kpi-title">${isUz ? "Tushum (Revenue)" : "Выручка (Revenue)"}</span>
             <span class="kpi-value" style="color: #10b981;">$${pnl.revenue_usd.toLocaleString()}</span>
-            <span class="kpi-sub">${isUz ? "Sotuvlar jami summasi" : "Общая сумма продаж"}</span>
+            <span class="kpi-sub">${isUz ? "Ombor sotuvlari va buyurtmalar" : "Продажи со склада и заказы"} ($${formatNumber(pnl.revenue_ombor_usd || 0, 0, 2)})${pnl.revenue_sales_usd ? ` + ${isUz ? "Sotish hujjatlari" : "Документы продаж"} ($${formatNumber(pnl.revenue_sales_usd, 0, 2)})` : ''}</span>
           </div>
           <div class="kpi-card" style="border-left: 4px solid #ef4444;">
             <span class="kpi-title">${isUz ? "Tannarx (COGS)" : "Себестоимость (COGS)"}</span>
@@ -128,15 +128,15 @@ const FinanceModule = {
         `;
       }
 
-      // Render 5 Lines Allocation Table
+      // Render the cost-by-Ombor table
       if (linesTable) {
         linesTable.innerHTML = `
           <table class="data-table" id="moliya-lines-table">
             <thead>
               <tr>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${isUz ? "Liniya №" : "Линия №"} <span class="sort-icon">↕</span></th>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">${isUz ? "Liniya Nomi" : "Наименование линии"} <span class="sort-icon">↕</span></th>
-                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)">${isUz ? "Kafel O'lchami" : "Размер плитки"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)">${isUz ? "Ombor" : "Склад"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)">${isUz ? "Egasi" : "Владелец"} <span class="sort-icon">↕</span></th>
+                <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, true)">${isUz ? "Eni" : "Ширина"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, true)" style="text-align: right;">${isUz ? "Hajmi (dona)" : "Объем (шт)"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, true)" style="text-align: right;">${isUz ? "Ulush (%)" : "Доля (%)"} <span class="sort-icon">↕</span></th>
                 <th class="sortable" onclick="TableFilterSort.sortTable(this, 5, true)" style="text-align: right;">${isUz ? "To'g'ridan-to'g'ri xomashyo ($)" : "Прямое сырье ($)"} <span class="sort-icon">↕</span></th>
@@ -147,18 +147,18 @@ const FinanceModule = {
               </tr>
             </thead>
             <tbody>
-              ${pnl.line_breakdown.map(l => `
-                <tr>
-                  <td data-sort-value="${l.line_number}">${isUz ? `Liniya ${l.line_number}` : `Линия ${l.line_number}`}</td>
-                  <td data-sort-value="${l.line_name}">${tr(l.line_name)}</td>
-                  <td data-sort-value="${l.spec_tile_size}"><span class="badge badge-info">${l.spec_tile_size}</span></td>
-                  <td data-sort-value="${l.production_volume_m2}" style="text-align: right;">${formatNumber(l.production_volume_m2, 0, 2)} ${isUz ? 'dona' : 'шт'}</td>
-                  <td data-sort-value="${l.volume_percentage}" style="text-align: right;">${l.volume_percentage}%</td>
-                  <td data-sort-value="${l.direct_materials_cost_usd}" style="text-align: right;">$${formatNumber(l.direct_materials_cost_usd, 2, 2)}</td>
-                  <td data-sort-value="${l.line_equipment_expenses_usd || 0}" style="text-align: right; color: #d97706; font-weight: 600;">$${formatNumber(l.line_equipment_expenses_usd || 0, 2, 2)}</td>
-                  <td data-sort-value="${l.allocated_indirect_cost_usd}" style="text-align: right;">$${formatNumber(l.allocated_indirect_cost_usd, 2, 2)}</td>
-                  <td data-sort-value="${l.total_manufacturing_cost_usd}" style="text-align: right; font-weight: 700;">$${formatNumber(l.total_manufacturing_cost_usd, 2, 2)}</td>
-                  <td data-sort-value="${l.unit_cost_usd_per_m2}" style="text-align: right;"><span style="color: #2563eb; font-size: 13px; font-weight: 600;">$${l.unit_cost_usd_per_m2.toFixed(4)} / ${isUz ? 'dona' : 'шт'}</span></td>
+              ${(pnl.ombor_breakdown || []).map(o => `
+                <tr style="${o.production_volume > 0 ? '' : 'color: #94a3b8;'}">
+                  <td data-sort-value="${o.sklad_id}"><strong>${o.sklad_id ? escapeHtml(o.label) : (isUz ? "Boshqa (omborsiz)" : "Прочее (без склада)")}</strong></td>
+                  <td data-sort-value="${escapeHtml(o.owner)}">${escapeHtml(o.owner)}</td>
+                  <td data-sort-value="${o.eni}">${o.eni ? `<span class="badge badge-info">${o.eni}</span>` : '-'}</td>
+                  <td data-sort-value="${o.production_volume}" style="text-align: right;">${formatNumber(o.production_volume, 0, 2)} ${isUz ? 'dona' : 'шт'}</td>
+                  <td data-sort-value="${o.volume_percentage}" style="text-align: right;">${o.volume_percentage}%</td>
+                  <td data-sort-value="${o.direct_materials_cost_usd}" style="text-align: right;">$${formatNumber(o.direct_materials_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${o.equipment_expenses_usd || 0}" style="text-align: right; color: #d97706; font-weight: 600;">$${formatNumber(o.equipment_expenses_usd || 0, 2, 2)}</td>
+                  <td data-sort-value="${o.allocated_indirect_cost_usd}" style="text-align: right;">$${formatNumber(o.allocated_indirect_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${o.total_manufacturing_cost_usd}" style="text-align: right; font-weight: 700;">$${formatNumber(o.total_manufacturing_cost_usd, 2, 2)}</td>
+                  <td data-sort-value="${o.unit_cost_usd}" style="text-align: right;"><span style="color: #2563eb; font-size: 13px; font-weight: 600;">$${o.unit_cost_usd.toFixed(4)} / ${isUz ? 'dona' : 'шт'}</span></td>
                 </tr>
               `).join("")}
             </tbody>

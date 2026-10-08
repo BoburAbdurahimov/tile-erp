@@ -8,7 +8,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from backend.models import (
     Sale, Purchase, ProductionOrder, CashTransaction, MonthClosing,
-    StockItem, MDMMaterial, MDMCounterparty, Warehouse
+    StockItem, MDMMaterial, MDMCounterparty, Warehouse, SkladMovement, SKLAD_OP_OUT
 )
 from backend.services.currency_service import convert_amount
 from backend.services.cost_allocation_service import calculate_monthly_production_cost_allocation
@@ -23,11 +23,23 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         Sale.status == "Tasdiqlandi"
     ).all()
 
-    total_revenue_usd = 0.0
+    revenue_sales_usd = 0.0
     for s in sales:
-        total_revenue_usd += convert_amount(s.total_amount, s.currency, "USD", s.date, db)
+        revenue_sales_usd += convert_amount(s.total_amount, s.currency, "USD", s.date, db)
 
-    # 2. Production Cost Allocation for the 5 Lines
+    # Tiles sold from the Ombor (direct sales and delivered orders), priced in UZS.
+    # Goods only - delivery charged to the client is passed on, not earned.
+    ombor_sales = db.query(SkladMovement).filter(
+        extract('year', SkladMovement.occurred_at) == year,
+        extract('month', SkladMovement.occurred_at) == month,
+        SkladMovement.operation == SKLAD_OP_OUT,
+    ).all()
+    revenue_ombor_usd = 0.0
+    for m in ombor_sales:
+        revenue_ombor_usd += convert_amount(m.total_revenue or 0.0, "UZS", "USD", m.occurred_at.date(), db)
+    total_revenue_usd = revenue_sales_usd + revenue_ombor_usd
+
+    # 2. Production cost by Ombor
     alloc = calculate_monthly_production_cost_allocation(db, year_month)
     direct_materials_cogs = alloc["total_direct_materials_cost_usd"]
     line_expenses_cogs = alloc["total_line_equipment_expenses_usd"]
@@ -46,6 +58,8 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "year_month": year_month,
         "currency": "USD",
         "revenue_usd": round(total_revenue_usd, 2),
+        "revenue_ombor_usd": round(revenue_ombor_usd, 2),
+        "revenue_sales_usd": round(revenue_sales_usd, 2),
         "cogs_direct_materials_usd": round(direct_materials_cogs, 2),
         "cogs_line_expenses_usd": round(line_expenses_cogs, 2),
         "cogs_indirect_expenses_usd": round(indirect_expenses_cogs, 2),
@@ -54,8 +68,8 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "admin_expenses_usd": round(admin_expenses_usd, 2),
         "net_profit_usd": round(net_profit_usd, 2),
         "is_closed": is_closed,
-        "total_factory_volume_m2": alloc["total_factory_volume_m2"],
-        "line_breakdown": alloc["lines"]
+        "total_factory_volume_m2": alloc["total_factory_volume"],
+        "ombor_breakdown": alloc["ombors"]
     }
 
 def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:

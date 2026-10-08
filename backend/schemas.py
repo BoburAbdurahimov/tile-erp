@@ -386,23 +386,25 @@ class MonthCloseRequest(BaseModel):
 class MonthReopenRequest(BaseModel):
     year_month: str # "YYYY-MM"
 
-class LineCostSummary(BaseModel):
-    line_id: int
-    line_number: int
-    line_name: str
-    spec_tile_size: str
-    production_volume_m2: float
+class OmborCostSummary(BaseModel):
+    sklad_id: int                 # 0 = production with no Ombor (old orders)
+    label: str                    # "Kodir 100"
+    owner: str
+    eni: int
+    production_volume: float      # pieces
     volume_percentage: float
     direct_materials_cost_usd: float
-    line_equipment_expenses_usd: float = 0.0
+    equipment_expenses_usd: float = 0.0
     allocated_indirect_cost_usd: float
     total_manufacturing_cost_usd: float
-    unit_cost_usd_per_m2: float
+    unit_cost_usd: float          # per piece
 
 class PnLReportResponse(BaseModel):
     year_month: str
     currency: str = "USD"
     revenue_usd: float
+    revenue_ombor_usd: float = 0.0      # Ombor sales and delivered orders
+    revenue_sales_usd: float = 0.0      # old Sotish documents
     cogs_direct_materials_usd: float
     cogs_line_expenses_usd: float = 0.0
     cogs_indirect_expenses_usd: float
@@ -412,7 +414,7 @@ class PnLReportResponse(BaseModel):
     net_profit_usd: float
     is_closed: bool
     total_factory_volume_m2: float = 0.0
-    line_breakdown: List[LineCostSummary] = []
+    ombor_breakdown: List[OmborCostSummary] = []
 
 class CashFlowItem(BaseModel):
     category: str

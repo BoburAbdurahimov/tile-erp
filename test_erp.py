@@ -214,7 +214,7 @@ class TestTileERP(unittest.TestCase):
         storno_sale = client.post(f"/api/savdo/sales/{sale_id}/storno", headers={"x-user-role": "Admin"})
         self.assertEqual(storno_sale.status_code, 200)
 
-    def test_07_finance_pnl_and_5_line_allocation(self):
+    def test_07_finance_pnl_and_ombor_allocation(self):
         ym = date.today().strftime("%Y-%m")
         # Check PnL
         res = client.get(f"/api/moliya/pnl?year_month={ym}", headers={"x-user-role": "Direktor"})
@@ -222,8 +222,9 @@ class TestTileERP(unittest.TestCase):
         pnl = res.json()
         self.assertIn("revenue_usd", pnl)
         self.assertIn("total_cogs_usd", pnl)
-        self.assertIn("line_breakdown", pnl)
-        self.assertGreaterEqual(len(pnl["line_breakdown"]), 5) # 5 lines (+ a "no line" bucket once used)
+        self.assertIn("ombor_breakdown", pnl)
+        ids = [o["sklad_id"] for o in pnl["ombor_breakdown"]]
+        self.assertEqual(ids[:8], [1, 2, 3, 4, 5, 6, 7, 8])  # every Ombor (+ an "other" bucket for old orders)
 
     def test_08_month_end_closing_and_admin_reopen(self):
         ym = "2026-07" # Test previous month
