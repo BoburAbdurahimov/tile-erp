@@ -16,8 +16,25 @@ from backend.services.currency_service import (
     fetch_cbu_rate_today, convert_amount
 )
 from backend.services.month_close_service import assert_month_open
+from backend.services.order_service import ensure_card_register
 
 router = APIRouter(prefix="/kassa", tags=["MODUL 3: KASSA (Treasury & Cash)"])
+
+
+def _move_counterparty(cp: MDMCounterparty, tx_type: str, currency: str, amount: float, rate: float, sign: int = 1):
+    """Money in from a counterparty lowers their balance, money out to them raises it.
+
+    That one rule covers both sides: a client paying (kirim) owes less, a supplier
+    being paid (chiqim) is owed less (purchases make a supplier's balance negative),
+    and refunds go the other way. sign=-1 undoes it.
+    """
+    delta = (-amount if tx_type == "kirim" else amount) * sign
+    if currency == "USD":
+        cp.current_balance_usd = (cp.current_balance_usd or 0.0) + delta
+        cp.current_balance_uzs = (cp.current_balance_uzs or 0.0) + delta * rate
+    else:
+        cp.current_balance_uzs = (cp.current_balance_uzs or 0.0) + delta
+        cp.current_balance_usd = (cp.current_balance_usd or 0.0) + (delta / rate if rate > 0 else 0.0)
 
 @router.get("/registers", response_model=List[CashRegisterResponse])
 def get_cash_registers(
@@ -30,7 +47,11 @@ def get_cash_registers(
         target_date = date.today()
         
     rate = get_exchange_rate_for_date(db, target_date)
-    registers = db.query(CashRegister).all()
+    # Plastic card payments have their own UZS register; make sure it is there.
+    if not db.query(CashRegister).filter(CashRegister.name == "Karta UZS").first():
+        ensure_card_register(db)
+        db.commit()
+    registers = db.query(CashRegister).order_by(CashRegister.id).all()
     
     result = []
     for reg in registers:
@@ -134,35 +155,27 @@ def create_cash_transaction(
     else:
         raise HTTPException(status_code=400, detail="Tranzaksiya turi faqat 'kirim' yoki 'chiqim' bo'lishi mumkin.")
 
+    # The money is in the register's own currency, whatever the form sent.
+    currency = reg.currency
+    source_type = payload.source_type
+
     # If linked to a counterparty, update their balance
     if payload.counterparty_id:
         cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == payload.counterparty_id).first()
-        if cp:
-            rate = get_exchange_rate_for_date(db, payload.date)
-            # When client pays (kirim): client debt decreases
-            if normalized_type == "kirim" and cp.type == "client":
-                if payload.currency == "USD":
-                    cp.current_balance_usd -= payload.amount
-                    cp.current_balance_uzs -= payload.amount * rate
-                else:
-                    cp.current_balance_uzs -= payload.amount
-                    cp.current_balance_usd -= payload.amount / rate if rate > 0 else 0.0
-            # When we pay supplier (chiqim): supplier debt to us decreases
-            elif normalized_type == "chiqim" and cp.type == "supplier":
-                if payload.currency == "USD":
-                    cp.current_balance_usd += payload.amount
-                    cp.current_balance_uzs += payload.amount * rate
-                else:
-                    cp.current_balance_uzs -= payload.amount
-                    cp.current_balance_usd += payload.amount / rate if rate > 0 else 0.0
+        if not cp:
+            raise HTTPException(status_code=404, detail="Kontragent topilmadi.")
+        _move_counterparty(cp, normalized_type, currency, payload.amount,
+                           get_exchange_rate_for_date(db, payload.date))
+        if source_type in (None, "", "other"):
+            source_type = cp.type          # client / supplier
 
     tx = CashTransaction(
         register_id=payload.register_id,
         type=normalized_type,
-        source_type=payload.source_type,
+        source_type=source_type,
         counterparty_id=payload.counterparty_id,
         amount=payload.amount,
-        currency=payload.currency,
+        currency=currency,
         category=payload.category,
         date=payload.date,
         description=payload.description
@@ -212,21 +225,8 @@ def delete_cash_transaction(
     if tx.counterparty_id:
         cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == tx.counterparty_id).first()
         if cp:
-            rate = get_exchange_rate_for_date(db, tx.date)
-            if tx.type.lower() == "kirim" and cp.type == "client":
-                if tx.currency == "USD":
-                    cp.current_balance_usd += tx.amount
-                    cp.current_balance_uzs += tx.amount * rate
-                else:
-                    cp.current_balance_uzs += tx.amount
-                    cp.current_balance_usd += tx.amount / rate if rate > 0 else 0.0
-            elif tx.type.lower() == "chiqim" and cp.type == "supplier":
-                if tx.currency == "USD":
-                    cp.current_balance_usd -= tx.amount
-                    cp.current_balance_uzs -= tx.amount * rate
-                else:
-                    cp.current_balance_uzs += tx.amount
-                    cp.current_balance_usd -= tx.amount / rate if rate > 0 else 0.0
+            _move_counterparty(cp, tx.type.lower(), tx.currency, tx.amount,
+                               get_exchange_rate_for_date(db, tx.date), sign=-1)
 
     db.delete(tx)
     db.commit()

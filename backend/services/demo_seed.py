@@ -20,7 +20,8 @@ from typing import Callable, List
 from fastapi.testclient import TestClient
 
 from backend.database import SessionLocal
-from backend.models import CashRegister, MDMCounterparty, MDMMaterial, Purchase, StockItem
+from backend.models import MDMCounterparty, MDMMaterial, Purchase, StockItem
+from backend.services.order_service import ensure_card_register
 
 MARK = "[DEMO]"
 
@@ -130,10 +131,8 @@ def run(call: Callable, force: bool = False) -> List[str]:
         except DemoError:
             pass  # today's rate already set
 
-        if not db.query(CashRegister).filter(CashRegister.name == "Karta UZS").first():
-            db.add(CashRegister(name="Karta UZS", currency="UZS", balance=0.0,
-                                description="Plastik karta orqali tushumlar"))
-            db.commit()
+        ensure_card_register(db)
+        db.commit()
         regs = {r["name"]: r for r in call("GET", "/kassa/registers")}
         uzs, usd, karta = regs.get("Kassa UZS"), regs.get("Kassa USD"), regs.get("Karta UZS")
         for reg, amount in [(uzs, 250_000_000), (usd, 40_000), (karta, 60_000_000)]:
