@@ -147,14 +147,14 @@ def ensure_card_register(db: Session) -> CashRegister:
 
 # ---------------------------------------------------------------- reads
 
-def paid_amounts(db: Session, order_ids: list[int]) -> dict[int, float]:
-    """Paid per order, counting only receipts that still stand in the Kassa."""
+def _standing_payments(db: Session, order_ids: list[int]) -> list[tuple]:
+    """(payment id, order id, amount) of the receipts that still stand in the Kassa."""
     if not order_ids:
-        return {}
+        return []
     # Matching on order number and amount as well as id, so a transaction id
     # reused after a Kassa deletion can never be credited to the wrong order.
-    rows = (
-        db.query(SkladOrderPayment.order_id, SkladOrderPayment.amount)
+    return (
+        db.query(SkladOrderPayment.id, SkladOrderPayment.order_id, SkladOrderPayment.amount)
         .join(SkladOrder, SkladOrder.id == SkladOrderPayment.order_id)
         .join(CashTransaction, CashTransaction.id == SkladOrderPayment.cash_transaction_id)
         .filter(CashTransaction.amount == SkladOrderPayment.amount)
@@ -163,8 +163,12 @@ def paid_amounts(db: Session, order_ids: list[int]) -> dict[int, float]:
         .filter(CashTransaction.status != "Storno")
         .all()
     )
+
+
+def paid_amounts(db: Session, order_ids: list[int]) -> dict[int, float]:
+    """Paid per order, counting only receipts that still stand in the Kassa."""
     out: dict[int, float] = {}
-    for oid, amount in rows:
+    for _, oid, amount in _standing_payments(db, order_ids):
         out[oid] = out.get(oid, 0.0) + (amount or 0.0)
     return out
 
@@ -202,7 +206,10 @@ def allocate(db: Session, override: Optional[dict[int, int]] = None) -> dict[int
     return result
 
 
-def serialize(o: SkladOrder, alloc: Optional[list[dict]], paid: float) -> dict:
+def serialize(o: SkladOrder, alloc: Optional[list[dict]], paid: float,
+              standing: Optional[set] = None) -> dict:
+    """`standing`: ids of payments still in the Kassa; others (cancelled, or
+    deleted in the Kassa) are left out of the list."""
     by_item = {a["item_id"]: a for a in (alloc or [])}
     items = []
     for it in o.items:
@@ -265,7 +272,7 @@ def serialize(o: SkladOrder, alloc: Optional[list[dict]], paid: float) -> dict:
             {"id": p.id, "amount": p.amount, "method": p.method,
              "paid_date": p.paid_date.isoformat() if p.paid_date else None,
              "cash_transaction_id": p.cash_transaction_id, "note": p.note}
-            for p in o.payments
+            for p in o.payments if standing is None or p.id in standing
         ],
     }
 
@@ -276,15 +283,21 @@ def list_orders(db: Session, status: Optional[str] = None) -> list[dict]:
         q = q.filter(SkladOrder.status == status)
     orders = q.order_by(SkladOrder.deadline.asc(), SkladOrder.id.asc()).all()
     alloc = allocate(db)
-    paid = paid_amounts(db, [o.id for o in orders])
-    return [serialize(o, alloc.get(o.id), paid.get(o.id, 0.0)) for o in orders]
+    rows = _standing_payments(db, [o.id for o in orders])
+    paid: dict[int, float] = {}
+    for _, oid, amount in rows:
+        paid[oid] = paid.get(oid, 0.0) + (amount or 0.0)
+    standing = {pid for pid, _, _ in rows}
+    return [serialize(o, alloc.get(o.id), paid.get(o.id, 0.0), standing) for o in orders]
 
 
 def get_order(db: Session, order_id: int) -> dict:
     o = db.query(SkladOrder).filter(SkladOrder.id == order_id).first()
     if not o:
         raise SkladError("Buyurtma topilmadi.")
-    return serialize(o, allocate(db).get(o.id), paid_amounts(db, [o.id]).get(o.id, 0.0))
+    rows = _standing_payments(db, [o.id])
+    return serialize(o, allocate(db).get(o.id), sum(a or 0.0 for _, _, a in rows),
+                     {pid for pid, _, _ in rows})
 
 
 def production_plan(db: Session) -> list[dict]:
@@ -552,6 +565,33 @@ def pay_order(db: Session, order_id: int, amount: float, method: str,
         cash_transaction_id=tx.id, paid_date=paid_date,
         note=(note or "").strip() or None, created_by=created_by,
     ))
+    db.commit()
+    db.refresh(o)
+    return o
+
+
+def cancel_payment(db: Session, order_id: int, payment_id: int) -> SkladOrder:
+    """Take a payment back: its Kassa receipt is removed and the register given
+    back the money, so the order owes that amount again."""
+    o = db.query(SkladOrder).filter(SkladOrder.id == order_id).first()
+    if not o:
+        raise SkladError("Buyurtma topilmadi.")
+    p = db.query(SkladOrderPayment).filter(
+        SkladOrderPayment.id == payment_id, SkladOrderPayment.order_id == o.id).first()
+    if not p or p.id not in {pid for pid, _, _ in _standing_payments(db, [o.id])}:
+        raise SkladError("Bu to'lov topilmadi yoki allaqachon bekor qilingan.")
+    tx = db.query(CashTransaction).filter(CashTransaction.id == p.cash_transaction_id).first()
+    if is_month_closed(db, tx.date):
+        raise SkladError(f"{tx.date:%Y-%m} oyi yopilgan - to'lovni bekor qilib bo'lmaydi.")
+    reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
+    if reg and round(reg.balance or 0.0, 2) < round(tx.amount, 2):
+        raise SkladError(
+            f"{reg.name} da {reg.balance:,.0f} so'm bor - {tx.amount:,.0f} so'mni qaytarib bo'lmaydi "
+            f"(pul allaqachon chiqim qilingan).")
+    if reg:
+        reg.balance = round((reg.balance or 0.0) - tx.amount, 4)
+    db.delete(tx)
+    db.delete(p)
     db.commit()
     db.refresh(o)
     return o

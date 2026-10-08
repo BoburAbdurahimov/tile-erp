@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.models import SELL_TYPE_METR, PAY_CASH
 from backend.services import order_service as svc
 from backend.services import demo_service
@@ -176,6 +176,17 @@ def pay(order_id: int, payload: PayRequest, db: Session = Depends(get_db),
         db, order_id, payload.amount, payload.method,
         payload.paid_date, payload.note, created_by=role,
     ))
+    return svc.get_order(db, order_id)
+
+
+@router.post("/{order_id}/payments/{payment_id}/cancel")
+def cancel_payment(order_id: int, payment_id: int, db: Session = Depends(get_db),
+                   role: str = Depends(get_current_user_role)):
+    """Admin only, like deleting a Kassa transaction: it takes money out of the Kassa."""
+    check_permission("sotish", role)
+    if not is_admin(role):
+        raise HTTPException(status_code=403, detail="To'lovni bekor qilish faqat Admin uchun.")
+    _guard(lambda: svc.cancel_payment(db, order_id, payment_id))
     return svc.get_order(db, order_id)
 
 

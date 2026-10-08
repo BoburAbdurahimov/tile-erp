@@ -534,7 +534,11 @@ const OrdersModule = {
                   <td style="padding:10px;text-align:right;color:#15803d;">${formatNumber(o.paid_amount, 0, 0)}</td>
                   <td style="padding:10px;text-align:right;font-weight:800;color:${o.balance > 0 ? "#b91c1c" : "#15803d"};">${formatNumber(o.balance, 0, 0)}</td>
                   <td style="padding:10px;text-align:right;">
-                    ${o.balance > 0 ? `<button class="btn btn-sm btn-primary" onclick="OrdersModule.openPay(${o.id})" style="padding:6px 12px;border-radius:8px;font-weight:700;white-space:nowrap;">${isUz ? "To'lov qabul qilish" : "Принять оплату"}</button>` : "✓"}
+                    <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+                      ${o.balance > 0 ? `<button class="btn btn-sm btn-primary" onclick="OrdersModule.openPay(${o.id})" style="padding:6px 12px;border-radius:8px;font-weight:700;white-space:nowrap;">${isUz ? "To'lov qabul qilish" : "Принять оплату"}</button>` : ""}
+                      ${o.payments.length && this.isAdmin() ? `<button class="btn btn-sm" onclick="OrdersModule.openCancelPayment(${o.id})" style="padding:6px 12px;border-radius:8px;font-weight:700;white-space:nowrap;background:#fff;color:#b91c1c;border:1.5px solid #fca5a5;">${isUz ? "To'lovni bekor qilish" : "Отменить оплату"}</button>` : ""}
+                      ${o.balance <= 0 && !(o.payments.length && this.isAdmin()) ? "✓" : ""}
+                    </div>
                   </td>
                 </tr>`).join("")
               : `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">${isUz ? "Ma'lumot yo'q" : "Нет данных"}</td></tr>`}
@@ -590,7 +594,6 @@ const OrdersModule = {
             <label style="${label}margin:0;">${isUz ? "Mahsulotlar (Ombordan)" : "Товары (со склада)"} *</label>
             <button type="button" class="btn btn-secondary btn-sm" onclick="OrdersModule.addLine()" style="padding:5px 10px;border-radius:7px;font-weight:600;">+ ${isUz ? "Qator" : "Строка"}</button>
           </div>
-          <datalist id="ord-products"></datalist>
           <div id="ord-lines" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
 
@@ -631,13 +634,114 @@ const OrdersModule = {
   },
 
   refreshDraft() {
-    const sid = this.draftSklad();
-    const dl = document.getElementById("ord-products");
-    if (dl) {
-      dl.innerHTML = this.products.filter(p => p.sklad_id === sid)
-        .map(p => `<option value="${p.code}">${p.length}×${p.width} — ${this.isUz() ? "bo'sh" : "свободно"}: ${p.free}</option>`).join("");
-    }
+    this.closeSizePicker();
     this.renderLines();
+  },
+
+  // ------------------------------------------------------------ size picker
+  // A wide list of the sizes in the chosen Ombor with what is free, in place
+  // of the browser's narrow datalist, which cuts the text off.
+
+  openSizePicker(i, input) {
+    this.closeSizePicker();
+    const pop = document.createElement("div");
+    pop.id = "ord-size-pop";
+    pop.dataset.line = i;
+    const r = input.getBoundingClientRect();
+    const width = Math.min(Math.max(r.width, 420), window.innerWidth - 16);
+    const left = Math.min(r.left, window.innerWidth - width - 8);
+    const below = window.innerHeight - r.bottom;
+    const maxH = Math.max(Math.min(below > 260 ? below - 16 : r.top - 16, 380), 200);
+    pop.style.cssText = `position:fixed;z-index:2000;left:${Math.max(left, 8)}px;width:${width}px;max-height:${maxH}px;overflow-y:auto;
+      background:#fff;border:1.5px solid #cbd5e1;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.22);padding:6px;`;
+    if (below > 260 || below >= r.top) pop.style.top = `${r.bottom + 4}px`;
+    else pop.style.bottom = `${window.innerHeight - r.top + 4}px`;
+    pop.addEventListener("mousedown", e => e.preventDefault());   // keep focus in the input
+    document.body.appendChild(pop);
+    // Opening shows every size (the current one highlighted); typing filters.
+    this._pickerTyping = false;
+    const all = this.pickerItems(i);
+    this._pickerActive = Math.max(all.findIndex(p => String(p.code) === String(this.draftLines[i]?.code)), 0);
+    this.renderSizePicker();
+    pop.children[this._pickerActive]?.scrollIntoView({ block: "nearest" });
+    if (!this._pickerOutside) {
+      this._pickerOutside = e => {
+        const p = document.getElementById("ord-size-pop");
+        if (p && !p.contains(e.target) && !e.target.classList.contains("ord-code-input")) this.closeSizePicker();
+      };
+      document.addEventListener("mousedown", this._pickerOutside);
+      // It is placed on screen, so a scroll anywhere but inside it would leave it behind.
+      document.addEventListener("scroll", e => {
+        const p = document.getElementById("ord-size-pop");
+        if (p && e.target !== p && !p.contains(e.target)) this.closeSizePicker();
+      }, true);
+    }
+  },
+
+  closeSizePicker() {
+    const p = document.getElementById("ord-size-pop");
+    if (p) p.remove();
+  },
+
+  pickerItems(i) {
+    const typed = this._pickerTyping ? String(this.draftLines[i]?.code || "").trim() : "";
+    return this.products
+      .filter(p => p.sklad_id === this.draftSklad() && (!typed || String(p.code).startsWith(typed)))
+      .sort((a, b) => a.code - b.code);
+  },
+
+  renderSizePicker() {
+    const pop = document.getElementById("ord-size-pop");
+    if (!pop) return;
+    const isUz = this.isUz();
+    const i = parseInt(pop.dataset.line, 10);
+    const items = this.pickerItems(i);
+    if (!items.length) {
+      pop.innerHTML = `<div style="padding:14px;text-align:center;color:#94a3b8;font-size:14px;">
+        ${isUz ? "Bu omborda mos o'lcham yo'q - kodni qo'lda yozing (masalan 680)" : "На этом складе нет такого размера - введите код вручную (напр. 680)"}</div>`;
+      return;
+    }
+    this._pickerActive = Math.min(this._pickerActive || 0, items.length - 1);
+    pop.innerHTML = items.map((p, k) => `
+      <div data-code="${p.code}" onclick="OrdersModule.pickSize(${i}, ${p.code})"
+        style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:9px;cursor:pointer;
+               background:${k === this._pickerActive ? "#eff6ff" : "transparent"};"
+        onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${k === this._pickerActive ? "#eff6ff" : "transparent"}'">
+        <div style="display:flex;align-items:baseline;gap:12px;">
+          <span style="font-size:18px;font-weight:800;color:#0f172a;min-width:48px;">${p.code}</span>
+          <span style="font-size:14px;color:#475569;">${p.length}×${p.width}</span>
+        </div>
+        <span style="font-size:13.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;
+                     background:${p.free > 0 ? "#dcfce7" : "#f1f5f9"};color:${p.free > 0 ? "#15803d" : "#94a3b8"};">
+          ${isUz ? "bo'sh" : "свободно"}: ${p.free} ${isUz ? "dona" : "шт"}</span>
+      </div>`).join("");
+  },
+
+  sizeKey(i, e) {
+    const pop = document.getElementById("ord-size-pop");
+    if (e.key === "Escape") { this.closeSizePicker(); return; }
+    if (!pop) { if (e.key === "ArrowDown") this.openSizePicker(i, e.target); return; }
+    const items = this.pickerItems(i);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = items.length;
+      if (!n) return;
+      this._pickerActive = ((this._pickerActive || 0) + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
+      this.renderSizePicker();
+      pop.children[this._pickerActive]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && items.length) {
+      e.preventDefault();
+      this.pickSize(i, items[this._pickerActive || 0].code);
+    }
+  },
+
+  pickSize(i, code) {
+    this.draftLines[i].code = String(code);
+    this.closeSizePicker();
+    const input = document.querySelector(`.ord-code-input[data-line="${i}"]`);
+    if (input) input.value = code;
+    this.updateLineInfo(i);
+    document.querySelector(`.ord-qty-input[data-line="${i}"]`)?.focus();
   },
 
   renderLines() {
@@ -649,10 +753,13 @@ const OrdersModule = {
     el.innerHTML = this.draftLines.map((ln, i) => `
       <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end;">
         <div><span style="font-size:11px;color:#64748b;font-weight:600;">${isUz ? "O'lcham kodi" : "Код размера"}</span>
-          <input list="ord-products" inputmode="numeric" value="${ln.code}" placeholder="680" style="${f}"
-            oninput="OrdersModule.draftLines[${i}].code=this.value;OrdersModule.updateLineInfo(${i})"></div>
+          <input class="ord-code-input" data-line="${i}" inputmode="numeric" autocomplete="off" value="${ln.code}"
+            placeholder="${isUz ? "680 - bosing va tanlang" : "680 - нажмите и выберите"}" style="${f}font-size:15px;font-weight:700;cursor:pointer;"
+            onfocus="OrdersModule.openSizePicker(${i}, this)" onclick="OrdersModule.openSizePicker(${i}, this)"
+            onkeydown="OrdersModule.sizeKey(${i}, event)"
+            oninput="OrdersModule.draftLines[${i}].code=this.value;OrdersModule._pickerTyping=true;OrdersModule._pickerActive=0;OrdersModule.renderSizePicker();OrdersModule.updateLineInfo(${i})"></div>
         <div><span style="font-size:11px;color:#64748b;font-weight:600;">${isUz ? "Miqdor (dona)" : "Кол-во (шт)"}</span>
-          <input type="number" min="1" step="1" value="${ln.quantity}" style="${f}"
+          <input class="ord-qty-input" data-line="${i}" type="number" min="1" step="1" value="${ln.quantity}" style="${f}"
             oninput="OrdersModule.draftLines[${i}].quantity=this.value;OrdersModule.updateLineInfo(${i})"></div>
         <div><span style="font-size:11px;color:#64748b;font-weight:600;">${isUz ? "Narx" : "Цена"} / ${unit}</span>
           <input type="number" min="0" step="any" value="${ln.unit_price}" style="${f}"
@@ -901,6 +1008,44 @@ const OrdersModule = {
         await this.reload();
         return true;
       });
+  },
+
+  // Take a payment back: the money leaves the Kassa it went into and the order
+  // owes it again, so "To'lov qabul qilish" shows once more.
+  openCancelPayment(id) {
+    const isUz = this.isUz();
+    const o = this.find(id);
+    if (!o || !o.payments.length) return;
+    const method = p => p.method === "karta" ? (isUz ? "Karta (Karta UZS)" : "Карта (Karta UZS)") : (isUz ? "Naqd (Kassa UZS)" : "Наличные (Kassa UZS)");
+    showModal(`${isUz ? "To'lovni bekor qilish" : "Отмена оплаты"} — ${o.order_number}`, `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <p style="margin:0;font-size:13px;color:#475569;">
+          ${isUz ? "Qaysi to'lov bekor qilinsin? Pul kassadan qaytariladi va buyurtma qarzi shu summaga ko'payadi."
+                 : "Какую оплату отменить? Деньги вернутся из кассы, долг по заказу увеличится на эту сумму."}</p>
+        ${o.payments.map(p => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;">
+            <div>
+              <div style="font-size:16px;font-weight:800;color:#0f172a;">${formatNumber(p.amount, 0, 0)} so'm</div>
+              <div style="font-size:12px;color:#64748b;">${method(p)} · ${p.paid_date || ""}${p.note ? ` · ${escapeHtml(p.note)}` : ""}</div>
+            </div>
+            <button class="btn btn-sm" onclick="OrdersModule.cancelPayment(${o.id}, ${p.id}, this)"
+              style="padding:7px 14px;border-radius:8px;font-weight:700;background:#dc2626;color:#fff;border:none;">${isUz ? "Bekor qilish" : "Отменить"}</button>
+          </div>`).join("")}
+      </div>`, null);
+  },
+
+  async cancelPayment(id, paymentId, btn) {
+    const isUz = this.isUz();
+    if (btn) btn.disabled = true;
+    try {
+      const updated = await API.cancelOrderPayment(id, paymentId);
+      showToast(`${isUz ? "To'lov bekor qilindi. Qoldiq" : "Оплата отменена. Остаток"}: ${formatNumber(updated.balance, 0, 0)} so'm`, "success");
+      if (typeof closeModal === "function") closeModal();
+      await this.reload();
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      showToast(e.message, "error");
+    }
   },
 
   cancel(id) {
