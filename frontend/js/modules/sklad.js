@@ -94,6 +94,7 @@ const SkladModule = {
 
     if (v === "matrix") {
       el.innerHTML = this.matrixView();
+      this.startAutoRefresh();
     } else if (v === "movements") {
       el.innerHTML = `<div style="padding:30px;text-align:center;color:#94a3b8;">...</div>`;
       try {
@@ -181,49 +182,138 @@ const SkladModule = {
           ${isUz ? "Qator = uzunlik, ustun = kenglik. 680 = 600×80." : "Строка = длина, столбец = ширина. 680 = 600×80."}
         </div>
       </div>
-      ${this.phoneList()}`;
+      ${this.phonePicture()}`;
   },
 
-  // On a phone the grid is wider than the screen and mostly empty, so the
-  // sizes in stock are listed instead, grouped by length.
-  phoneList() {
+  // ---------- phone: the grid as a picture ----------
+  // On a phone the grid is one picture in the Telegram bot's look (black
+  // corner number, red sizes, purple quantities) that fits the screen and is
+  // refreshed every PIC_REFRESH_MS. Tap it to see it bigger; like any picture
+  // it can also be saved or shared.
+  PIC_REFRESH_MS: 12000,
+
+  isPhone() {
+    return window.matchMedia("(max-width: 768px)").matches;
+  },
+
+  matrixPicture(m, scale = 2) {
+    const rows = m.rows || [], cols = m.cols || [];
+    const qty = {};
+    (m.cells || []).forEach(c => { if (c.quantity) qty[`${c.length}_${c.width}`] = c.quantity; });
+
+    const cw = 76, ch = 60;
+    const canvas = document.createElement("canvas");
+    canvas.width = (cw * (cols.length + 1) + 2) * scale;
+    canvas.height = (ch * (rows.length + 1) + 2) * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const put = (text, col, row, px, color) => {
+      let size = px;
+      ctx.font = `bold ${size}px Arial, "Helvetica Neue", sans-serif`;
+      while (ctx.measureText(text).width > cw - 8 && size > 12) {
+        size -= 2;
+        ctx.font = `bold ${size}px Arial, "Helvetica Neue", sans-serif`;
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(text, 1 + col * cw + cw / 2, 2 + row * ch + ch / 2);
+    };
+    put(String(m.corner_number ?? ""), 0, 0, 36, "#000000");
+    cols.forEach((c, ci) => put(String(c), ci + 1, 0, 30, "#dc0000"));
+    rows.forEach((r, ri) => {
+      put(String(r), 0, ri + 1, 30, "#dc0000");
+      cols.forEach((c, ci) => {
+        const q = qty[`${r}_${c}`];
+        if (q) put(String(q), ci + 1, ri + 1, 34, "#5a328c");
+      });
+    });
+
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    const w = cw * (cols.length + 1) + 2, h = ch * (rows.length + 1) + 2;
+    for (let i = 0; i <= cols.length + 1; i++) {
+      ctx.beginPath(); ctx.moveTo(1 + i * cw, 0); ctx.lineTo(1 + i * cw, h); ctx.stroke();
+    }
+    for (let i = 0; i <= rows.length + 1; i++) {
+      ctx.beginPath(); ctx.moveTo(0, 1 + i * ch); ctx.lineTo(w, 1 + i * ch); ctx.stroke();
+    }
+    return canvas.toDataURL("image/png");
+  },
+
+  phonePicture() {
+    if (!this.isPhone()) return `<div class="sklad-phone-pic"></div>`;
     const isUz = CURRENT_LANG === "uz";
     const m = this.matrix;
-    const pcs = isUz ? "dona" : "шт";
-    const cells = (m.cells || []).filter(c => c.quantity)
-      .sort((a, b) => a.length - b.length || a.width - b.width);
-    if (!cells.length) {
-      return `<div class="sklad-phone-list" style="text-align:center;padding:28px;color:#94a3b8;">${t("ombor_phone_empty")}</div>`;
-    }
-    const groups = [];
-    cells.forEach(c => {
-      let g = groups[groups.length - 1];
-      if (!g || g.length !== c.length) { g = { length: c.length, qty: 0, cells: [] }; groups.push(g); }
-      g.qty += c.quantity;
-      g.cells.push(c);
-    });
-    const metr = c => c.quantity * (c.length + c.width) / 100;
+    const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     return `
-      <div class="sklad-phone-list">
-        ${groups.map(g => `
-          <div style="border:1px solid #e2e8f0;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
-              <span style="font-weight:800;color:#dc2626;font-size:15px;">${g.length}</span>
-              <span style="font-size:12.5px;color:#64748b;">${formatNumber(g.qty)} ${pcs}</span>
-            </div>
-            ${g.cells.map(c => `
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;">
-                <div>
-                  <div style="font-weight:700;font-size:15px;color:#0f172a;">${c.length} × ${c.width}</div>
-                  <div style="font-size:11.5px;color:#94a3b8;">${isUz ? "kod" : "код"} ${c.code}</div>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-weight:800;font-size:16px;color:#6d28d9;">${formatNumber(c.quantity)} <span style="font-size:12px;font-weight:600;color:#64748b;">${pcs}</span></div>
-                  <div style="font-size:11.5px;color:#64748b;">${formatNumber(metr(c), 0, 2)} ${isUz ? "metr" : "м"}</div>
-                </div>
-              </div>`).join("")}
-          </div>`).join("")}
+      <div class="sklad-phone-pic">
+        <img id="sklad-pic" src="${this.matrixPicture(m)}" alt="${m.name} ${m.eni}"
+             onclick="SkladModule.openPicture()">
+        <div class="sklad-pic-meta">
+          <span>${isUz ? "Kattalashtirish uchun bosing" : "Нажмите, чтобы увеличить"}</span>
+          <span>${isUz ? "Yangilandi" : "Обновлено"} ${time}</span>
+        </div>
       </div>`;
+  },
+
+  openPicture() {
+    const pic = document.getElementById("sklad-pic");
+    if (!pic) return;
+    this.closePicture();
+    const m = this.matrix;
+    const viewer = document.createElement("div");
+    viewer.id = "sklad-pic-viewer";
+    viewer.className = "sklad-pic-viewer";
+    viewer.innerHTML = `
+      <div class="sklad-pic-bar">
+        <span>${m.name} ${m.eni}</span>
+        <button type="button" class="modal-close" onclick="SkladModule.closePicture()">✕</button>
+      </div>
+      <div class="sklad-pic-scroll"><img src="${pic.src}" alt="${m.name} ${m.eni}"></div>`;
+    document.body.appendChild(viewer);
+  },
+
+  closePicture() {
+    const viewer = document.getElementById("sklad-pic-viewer");
+    if (viewer) viewer.remove();
+  },
+
+  startAutoRefresh() {
+    clearInterval(this._picTimer);
+    this._picTimer = setInterval(() => this.refreshPicture(), this.PIC_REFRESH_MS);
+  },
+
+  // Fresh stock for the picture while the Ombor table is open on a phone.
+  async refreshPicture() {
+    const el = document.getElementById("sklad-content");
+    if (!el || this.view !== "matrix" || currentModule !== "ombor") {
+      clearInterval(this._picTimer);
+      this._picTimer = null;
+      this.closePicture();
+      return;
+    }
+    if (document.hidden || !this.isPhone() || this._refreshing) return;
+    this._refreshing = true;
+    const skladId = this.currentSkladId;
+    try {
+      const [matrix, whs] = await Promise.all([API.getSkladMatrix(skladId), API.getSkladWarehouses()]);
+      // Skip if the user switched warehouse or tab meanwhile.
+      if (skladId !== this.currentSkladId || this.view !== "matrix" || !document.getElementById("sklad-content")) return;
+      this.matrix = matrix;
+      this.warehouses = whs.warehouses || this.warehouses;
+      el.innerHTML = this.matrixView();
+      const pic = document.getElementById("sklad-pic");
+      const viewerImg = document.querySelector("#sklad-pic-viewer img");
+      if (pic && viewerImg) viewerImg.src = pic.src;
+    } catch (e) {
+      // Keep the last picture; the next round tries again.
+    } finally {
+      this._refreshing = false;
+    }
   },
 
   // ---------- movements ----------

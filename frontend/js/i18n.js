@@ -38,7 +38,6 @@ const I18N = {
     mob_purchases: "Xarid",
     mob_expenses: "Xarajat",
     menu_desktop_group: "Kompyuterda qulayroq",
-    ombor_phone_empty: "Bu omborda mahsulot yo'q",
     users_title: "Foydalanuvchilar va Rollar",
     
     // Header
@@ -182,7 +181,6 @@ const I18N = {
     mob_purchases: "Закупки",
     mob_expenses: "Расходы",
     menu_desktop_group: "Удобнее на компьютере",
-    ombor_phone_empty: "На этом складе нет продукции",
     users_title: "Пользователи и Роли",
     
     // Header

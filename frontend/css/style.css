@@ -1767,9 +1767,71 @@ table button {
    the Ombor size grid becomes a list. The desktop layout is unchanged.
    ========================================================================== */
 .mobile-page-title,
-.sklad-phone-list,
+.sklad-phone-pic,
 .odoo-apps-group-label {
   display: none;
+}
+
+/* Ombor picture on a phone (SkladModule.phonePicture) and its zoom view */
+.sklad-phone-pic img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #ffffff;
+  cursor: zoom-in;
+}
+
+.sklad-pic-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.sklad-pic-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+}
+
+.sklad-pic-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 16px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.sklad-pic-bar .modal-close {
+  width: 42px;
+  height: 42px;
+  color: #ffffff;
+  font-size: 22px;
+}
+
+.sklad-pic-scroll {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.sklad-pic-scroll img {
+  display: block;
+  flex-shrink: 0;
+  width: 760px;
+  min-width: 100%;
+  height: auto;
+  margin: auto;
+  background: #ffffff;
 }
 
 .toast-container {
@@ -1987,12 +2049,12 @@ table button {
     border-radius: 0 !important;
   }
 
-  /* ---- Ombor: a list of the sizes in stock instead of the size grid ---- */
+  /* ---- Ombor: the size grid as one picture that fits the screen ---- */
   .sklad-matrix-wrap {
     display: none;
   }
 
-  .sklad-phone-list {
+  .sklad-phone-pic {
     display: block;
   }
 
