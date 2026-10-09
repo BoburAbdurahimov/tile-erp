@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation, AuditLog
+from backend.models import Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation, AuditLog, SKLAD_CONFIG
 from backend.services.salary_service import (
     calculate_employee_salary, recalculate_all_salaries, get_payroll_summary,
     record_daily_attendance, record_daily_work_entry, delete_daily_work_entry,
@@ -14,13 +14,28 @@ from backend.services.salary_service import (
 
 router = APIRouter(prefix="/salary", tags=["Salary & HR Management"])
 
+# Where an employee works: the office, or one of the Omborlar (each owner's
+# production per eni - the same "Toxir 120" names used everywhere else).
+ADMIN_DEPARTMENT = "Ma'muriyat"
+
+
+def department_names() -> List[str]:
+    return [ADMIN_DEPARTMENT] + [f"{s['name']} {s['eni']}" for s in SKLAD_CONFIG]
+
+
+def _check_department(name: Optional[str]) -> str:
+    name = ADMIN_DEPARTMENT if name is None else name.strip()
+    if name not in department_names():
+        raise HTTPException(status_code=400, detail="Bo'lim noto'g'ri: Ma'muriyat yoki ombor tanlang")
+    return name
+
 # ==============================================================================
 # PYDANTIC SCHEMAS
 # ==============================================================================
 
 class EmployeeCreateSchema(BaseModel):
     full_name: str
-    department: Optional[str] = "Ma'muriyat" # "Ma'muriyat", "1-Liniya", "2-Liniya", "3-Liniya", "4-Liniya", "5-Liniya"
+    department: Optional[str] = "Ma'muriyat"  # "Ma'muriyat" or an Ombor, e.g. "Toxir 120"
     employee_type: str = Field(default="fixed", description="'fixed' or 'piecework'")
     position: Optional[str] = None
     phone_number: Optional[str] = None
@@ -87,6 +102,14 @@ def parse_bool(val: Any) -> Optional[bool]:
 # EMPLOYEE CRUD ENDPOINTS
 # ==============================================================================
 
+@router.get("/departments")
+def get_departments():
+    return {"departments": [
+        {"id": ADMIN_DEPARTMENT, "sklad_id": None},
+        *({"id": f"{s['name']} {s['eni']}", "sklad_id": s["id"]} for s in SKLAD_CONFIG),
+    ]}
+
+
 @router.get("/employees")
 def get_employees(
     department: Optional[str] = None,
@@ -132,7 +155,7 @@ def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin
     hire_date = data.hire_date or date.today()
     emp = Employee(
         full_name=data.full_name.strip(),
-        department=data.department or "Ma'muriyat",
+        department=_check_department(data.department),
         employee_type=data.employee_type,
         position=data.position.strip() if data.position else None,
         phone_number=data.phone_number.strip() if data.phone_number else None,
@@ -169,7 +192,7 @@ def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Que
     if data.full_name is not None:
         emp.full_name = data.full_name.strip()
     if data.department is not None:
-        emp.department = data.department
+        emp.department = _check_department(data.department)
     if data.position is not None:
         emp.position = data.position.strip()
     if data.phone_number is not None:

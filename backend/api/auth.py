@@ -244,7 +244,7 @@ def list_roles():
         {"role": "Mini App", "name": "Mini App (Telegram Mini App ochish)", "desc": "Telegram botda Mini App tugmasi"},
         {"role": "Ombor", "name": "Ombor (Sklad qoldiqlari)", "desc": "Ombor hisobi va qoldiqlari"},
         {"role": "Kassa", "name": "Kassa (Kirim & Chiqim)", "desc": "Kassa operatsiyalari"},
-        {"role": "Ishlab chiqarish", "name": "Ishlab chiqarish (Liniyalar)", "desc": "5 ta ishlab chiqarish liniyasi"},
+        {"role": "Ishlab chiqarish", "name": "Ishlab chiqarish (Omborlar)", "desc": "Omborlar bo'yicha ishlab chiqarish"},
         {"role": "Kontragentlar & Balanslar", "name": "Kontragentlar & Balanslar", "desc": "Mijoz va Yetkazib beruvchi qarzlari"},
         {"role": "Sotib olish (Zakup)", "name": "Sotib olish (Zakup)", "desc": "Xaridlar va ta'minot"},
         {"role": "Sotish (Realizatsiya)", "name": "Sotish (Realizatsiya)", "desc": "Tayyor kafel sotish"},

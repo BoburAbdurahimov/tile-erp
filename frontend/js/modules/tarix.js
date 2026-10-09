@@ -23,7 +23,7 @@ const HistoryModule = {
     sotuv_eski:       { uz: "Sotuv hujjati",       ru: "Документ продажи",    color: "#c026d3", bg: "#fdf4ff", section: "sotuv" },
     xarid:            { uz: "Xarid (ta'minotchi)", ru: "Закупка",             color: "#b45309", bg: "#fffbeb", section: "xarid" },
     ishlab_chiqarish: { uz: "Ishlab chiqarish",    ru: "Производство",        color: "#4f46e5", bg: "#eef2ff", section: "ishlab" },
-    sarf:             { uz: "Liniya sarfi",        ru: "Расход на линию",     color: "#0891b2", bg: "#ecfeff", section: "ishlab" },
+    sarf:             { uz: "Ishlab chiqarish sarfi", ru: "Расход на производство",     color: "#0891b2", bg: "#ecfeff", section: "ishlab" },
     kassa_kirim:      { uz: "Kassa kirim",         ru: "Касса приход",        color: "#15803d", bg: "#f0fdf4", section: "kassa" },
     kassa_chiqim:     { uz: "Kassa chiqim",        ru: "Касса расход",        color: "#b91c1c", bg: "#fef2f2", section: "kassa" },
     xarajat:          { uz: "Boshqa xarajat",      ru: "Прочий расход",       color: "#92400e", bg: "#fef3c7", section: "kassa" },

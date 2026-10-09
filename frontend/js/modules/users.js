@@ -9,7 +9,7 @@ const UsersModule = (() => {
     { id: "Mini App", name: { uz: "Mini App", ru: "Mini App" }, desc: { uz: "Telegram botda 'ERP Mini Appni ochish' tugmasi", ru: "Кнопка 'Открыть ERP Mini App' в Telegram боте" } },
     { id: "Ombor", name: { uz: "Ombor", ru: "Склад" }, desc: { uz: "Ombor hisobi, materiallar qoldig'i (AVG tannarxda)", ru: "Складской учет, остатки материалов (по средней себестоимости)" } },
     { id: "Kassa", name: { uz: "Kassa", ru: "Касса" }, desc: { uz: "Kassa kirim-chiqim operatsiyalari va pul oqimi", ru: "Приходно-расходные операции кассы и движение средств" } },
-    { id: "Ishlab chiqarish", name: { uz: "Ishlab chiqarish", ru: "Производство" }, desc: { uz: "5 ta ishlab chiqarish liniyasi va mahsulot tayyorlash", ru: "5 производственных линий и выпуск готовой плитки" } },
+    { id: "Ishlab chiqarish", name: { uz: "Ishlab chiqarish", ru: "Производство" }, desc: { uz: "Omborlar bo'yicha ishlab chiqarish va mahsulot tayyorlash", ru: "Производство по складам и выпуск готовой плитки" } },
     { id: "Kontragentlar & Balanslar", name: { uz: "Kontragentlar & Balanslar", ru: "Контрагенты и Балансы" }, desc: { uz: "Mijoz va ta'minotchilar qarzdorligi (debitor/kreditor)", ru: "Взаиморасчеты с клиентами и поставщиками (дебиторка/кредиторка)" } },
     { id: "Sotib olish (Zakup)", name: { uz: "Sotib olish (Zakup)", ru: "Закупки и Поступления" }, desc: { uz: "Xomashyo va materiallarni xarid qilish", ru: "Закупка и оприходование сырья и материалов" } },
     { id: "Sotish (Realizatsiya)", name: { uz: "Sotish (Realizatsiya)", ru: "Продажи и Реализация" }, desc: { uz: "Tayyor kafellarni mijozlarga sotish", ru: "Реализация готовой плитки покупателям" } },
