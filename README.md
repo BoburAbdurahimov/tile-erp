@@ -65,6 +65,18 @@ window from the home screen, like a normal app.
 offline page when there is no internet - all data still comes live from the
 server, so nothing stale is shown.
 
+## On a phone
+
+Screens up to 768px wide get a phone layout (`frontend/js/mobile.js` and the
+last section of `style.css`); the computer layout is unchanged.
+
+- A bottom bar with the main pages the user may open, plus **Menyu** with every
+  section. MDM, Xomashyo ombori, Ish haqi, Tarix and Foydalanuvchilar are only
+  in Menyu, under "Kompyuterda qulayroq".
+- Forms open full-screen and scroll; the title and the save buttons stay visible.
+- Tables show one card per row; the Ombor size grid becomes a list of the sizes
+  in stock. Give a table the `no-cards` class to keep it a table on phones.
+
 ## Deployment
 
 The web app and Mini App deploy to Vercel via its native FastAPI support. The

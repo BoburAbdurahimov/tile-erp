@@ -29,6 +29,16 @@ const I18N = {
     pwa_ios_step2: "Ro'yxatdan \"На экран «Домой»\" / \"Add to Home Screen\" ni tanlang",
     pwa_ios_step3: "\"Qo'shish\" (Добавить / Add) ni bosing - ilova ekranda paydo bo'ladi",
     pwa_ios_ok: "Tushunarli",
+
+    // Phone layout: bottom bar and Menyu
+    mob_menu: "Menyu",
+    mob_dashboard: "Bosh panel",
+    mob_production: "Ishlab ch.",
+    mob_balances: "Balanslar",
+    mob_purchases: "Xarid",
+    mob_expenses: "Xarajat",
+    menu_desktop_group: "Kompyuterda qulayroq",
+    ombor_phone_empty: "Bu omborda mahsulot yo'q",
     users_title: "Foydalanuvchilar va Rollar",
     
     // Header
@@ -163,6 +173,16 @@ const I18N = {
     pwa_ios_step2: "Выберите \"На экран «Домой»\" (Add to Home Screen)",
     pwa_ios_step3: "Нажмите \"Добавить\" - приложение появится на экране",
     pwa_ios_ok: "Понятно",
+
+    // Phone layout: bottom bar and Menyu
+    mob_menu: "Меню",
+    mob_dashboard: "Главная",
+    mob_production: "Произв.",
+    mob_balances: "Балансы",
+    mob_purchases: "Закупки",
+    mob_expenses: "Расходы",
+    menu_desktop_group: "Удобнее на компьютере",
+    ombor_phone_empty: "На этом складе нет продукции",
     users_title: "Пользователи и Роли",
     
     // Header
