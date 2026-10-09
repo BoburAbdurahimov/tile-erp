@@ -50,6 +50,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Auto month closing skipped: {e}")
 
+    # Orders taken before clients were tied to Kontragentlar: link them.
+    try:
+        from backend.services.counterparty_service import link_order_clients
+        db = SessionLocal()
+        try:
+            linked = link_order_clients(db)
+            if linked:
+                logger.info(f"Linked {linked} orders to Kontragent clients")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Linking order clients skipped: {e}")
+
     # The Telegram bot runs through a webhook on Vercel: make sure Telegram
     # sends its updates to this (production) site.
     try:

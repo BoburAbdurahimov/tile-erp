@@ -395,6 +395,7 @@ class OmborCostSummary(BaseModel):
     volume_percentage: float
     direct_materials_cost_usd: float
     equipment_expenses_usd: float = 0.0
+    salary_cost_usd: float = 0.0  # the Ombor's own people (Ish haqi)
     allocated_indirect_cost_usd: float
     total_manufacturing_cost_usd: float
     unit_cost_usd: float          # per piece
@@ -407,10 +408,12 @@ class PnLReportResponse(BaseModel):
     revenue_sales_usd: float = 0.0      # old Sotish documents
     cogs_direct_materials_usd: float
     cogs_line_expenses_usd: float = 0.0
+    cogs_salary_usd: float = 0.0        # salaries of the Omborlar's people
     cogs_indirect_expenses_usd: float
     total_cogs_usd: float
     gross_profit_usd: float
     admin_expenses_usd: float
+    admin_salary_usd: float = 0.0       # Ma'muriyat salaries (part of admin_expenses_usd)
     net_profit_usd: float
     is_closed: bool
     total_factory_volume_m2: float = 0.0

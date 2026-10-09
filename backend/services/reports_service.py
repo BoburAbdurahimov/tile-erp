@@ -44,7 +44,8 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     direct_materials_cogs = alloc["total_direct_materials_cost_usd"]
     line_expenses_cogs = alloc["total_line_equipment_expenses_usd"]
     indirect_expenses_cogs = alloc["total_indirect_expenses_usd"]
-    total_cogs_usd = direct_materials_cogs + line_expenses_cogs + indirect_expenses_cogs
+    salary_cogs = alloc["total_ombor_salary_usd"]          # the Omborlar's own people
+    total_cogs_usd = direct_materials_cogs + line_expenses_cogs + salary_cogs + indirect_expenses_cogs
 
     gross_profit_usd = total_revenue_usd - total_cogs_usd
     admin_expenses_usd = alloc["total_admin_expenses_usd"]
@@ -62,10 +63,12 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "revenue_sales_usd": round(revenue_sales_usd, 2),
         "cogs_direct_materials_usd": round(direct_materials_cogs, 2),
         "cogs_line_expenses_usd": round(line_expenses_cogs, 2),
+        "cogs_salary_usd": round(salary_cogs, 2),
         "cogs_indirect_expenses_usd": round(indirect_expenses_cogs, 2),
         "total_cogs_usd": round(total_cogs_usd, 2),
         "gross_profit_usd": round(gross_profit_usd, 2),
         "admin_expenses_usd": round(admin_expenses_usd, 2),
+        "admin_salary_usd": alloc["admin_salary_usd"],      # Ma'muriyat salaries, within admin
         "net_profit_usd": round(net_profit_usd, 2),
         "is_closed": is_closed,
         "total_factory_volume_m2": alloc["total_factory_volume"],

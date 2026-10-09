@@ -658,6 +658,8 @@ class SkladOrder(Base):
     client_name = Column(String(150), nullable=False)
     client_phone = Column(String(50), nullable=False)
     client_address = Column(Text, nullable=True)
+    # The Kontragent client (by phone) whose balance this order moves.
+    counterparty_id = Column(Integer, nullable=True, index=True)
 
     sklad_id = Column(Integer, nullable=False, index=True)
     sell_type = Column(String(10), nullable=False, default=SELL_TYPE_METR)

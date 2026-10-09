@@ -63,6 +63,7 @@ _ADDED_COLUMNS = [
     ("sklad_order_payments", "pay_currency", "VARCHAR(10)"),
     ("sklad_order_payments", "pay_amount", "FLOAT"),
     ("sklad_order_payments", "rate", "FLOAT"),
+    ("sklad_orders", "counterparty_id", "INTEGER"),
 ]
 
 
