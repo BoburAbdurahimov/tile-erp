@@ -15,9 +15,11 @@ async def run_server():
     logger.info("Verifying database and seed data...")
     seed_database()
     
-    # 2. Start Telegram Bot task
+    # 2. Start Telegram Bot task. The live bot runs on Vercel through a webhook;
+    # long polling here would remove that webhook and pull the bot off the site,
+    # so it only runs when asked for (TELEGRAM_POLLING=1, e.g. with a test bot).
     bot_task = None
-    if TELEGRAM_BOT_TOKEN:
+    if TELEGRAM_BOT_TOKEN and os.getenv("TELEGRAM_POLLING") == "1":
         try:
             logger.info("Starting Telegram Bot listener...")
             bot_task = asyncio.create_task(start_telegram_bot())

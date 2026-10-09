@@ -30,15 +30,26 @@ See `.env.example`. `.env` is gitignored and must never be committed.
 | `DATABASE_URL` | Postgres connection string. Falls back to SQLite if unreachable. |
 | `WEBAPP_HTTPS_URL` | Public HTTPS URL serving `/webapp`, for the Mini App button. |
 | `BOT_READ_ONLY` | `1` (default) = bot is view-only. `0` re-enables the entry wizards. |
+| `TELEGRAM_POLLING` | `1` = `run.py` also runs the bot by long polling (local testing only). |
 
-## The Telegram bot is read-only
+## The Telegram bot
 
-The bot reports stock, cash, production, balances, finance and payroll. It does not
-create or edit records - that happens in the web app. Set `BOT_READ_ONLY=0` to
-restore the cash and production entry wizards.
+The bot runs on Vercel with the web app, through a **webhook**: Telegram sends
+each message to `/api/telegram/webhook` and the bot answers it there with the
+`TELEGRAM_BOT_TOKEN` set in Vercel. Nothing else needs to stay running.
 
-The bot uses long polling, so it needs a machine that stays running. It is not
-deployed to Vercel; point it at the same `DATABASE_URL` as the web app.
+- The production deployment points the webhook at itself on start-up. An Admin
+  can also see the bot's state and connect it from Foydalanuvchilar -> Telegram.
+- Only Telegram can call the webhook: it sends a secret derived from the token.
+- Wizard steps a user is in the middle of are kept in the `telegram_bot_state`
+  table, since each message may be handled by a different server.
+- Long polling (`TELEGRAM_POLLING=1 python run.py`) removes the webhook, which
+  takes the live bot off the site - use it only with a separate test bot.
+
+The bot is read-only by default: it reports stock, cash, production, balances,
+finance and payroll, and the entry buttons point to the web app, whose rules
+(Ombor access, month closing, balances) the old bot wizards do not follow.
+`BOT_READ_ONLY=0` brings the cash, production and Ombor entry wizards back.
 
 ## Deployment
 

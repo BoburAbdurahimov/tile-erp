@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Float, Boolean, Date, DateTime,
-    ForeignKey, Text, Numeric, UniqueConstraint
+    ForeignKey, Text, Numeric, UniqueConstraint, LargeBinary
 )
 from sqlalchemy.orm import relationship
 from backend.database import Base
@@ -366,6 +366,16 @@ class OtherExpense(Base):
 
     register = relationship("CashRegister")
     counterparty = relationship("MDMCounterparty")
+
+class TelegramBotState(Base):
+    """What the bot remembers about a user between messages (an unfinished
+    wizard step). Kept in the database because, on Vercel, each message can be
+    handled by a different short-lived server."""
+    __tablename__ = "telegram_bot_state"
+
+    user_id = Column(BigInteger, primary_key=True)     # Telegram user id
+    data = Column(LargeBinary, nullable=True)          # pickled user_data dict
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class LoginChallenge(Base):
     """A pending two-step login: password accepted, Telegram code not yet."""

@@ -9,7 +9,7 @@ from telegram import (
 )
 from telegram.request import HTTPXRequest
 from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler,
+    Application, ApplicationHandlerStop, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters
 )
 
@@ -29,7 +29,37 @@ from telegram_bot import sklad_handlers
 
 logger = logging.getLogger("TileERPBot")
 
-WEBAPP_HTTPS_URL = "https://imposed-butler-ability-encourage.trycloudflare.com/webapp"
+import os
+
+def _webapp_url() -> str:
+    """The Mini App: WEBAPP_HTTPS_URL if set, else the site's own /webapp."""
+    if os.getenv("WEBAPP_HTTPS_URL"):
+        return os.getenv("WEBAPP_HTTPS_URL")
+    host = os.getenv("VERCEL_PROJECT_PRODUCTION_URL") or "tile-erp-main.vercel.app"
+    return f"https://{host}/webapp"
+
+WEBAPP_HTTPS_URL = _webapp_url()
+
+# The bot only shows reports unless BOT_READ_ONLY=0: records are entered in the
+# web app, whose rules (Ombor, month closing, balances) the old bot wizards
+# do not follow.
+BOT_READ_ONLY = os.getenv("BOT_READ_ONLY", "1") != "0"
+# Every button that starts or continues an entry: Kassa (cash_/ckr_/cch_/ctx_),
+# production (prod_wizard_start/pw_) and Ombor kirim/sotish (sk_...). Buttons on
+# old messages are caught too, not only the first step.
+ENTRY_CALLBACKS = r"^(cash_|ckr_|cch_|ctx_|pw_|prod_wizard_start|sk_menu_in$|sk_menu_out$|sk_in_|sk_out_|sk_confirm$|sk_type_)"
+
+
+async def read_only_notice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Entry buttons while the bot is read-only: point to the web app instead."""
+    q = update.callback_query
+    lang = get_user_lang(q.from_user.id)
+    await q.answer(
+        "Kiritish web ilovada (Mini App) qilinadi. Bot faqat hisobotlarni ko'rsatadi."
+        if lang == "uz" else
+        "Ввод данных - в веб-приложении (Mini App). Бот показывает только отчёты.",
+        show_alert=True)
+    raise ApplicationHandlerStop
 
 BOT_TEXTS = {
     "uz": {
@@ -1804,7 +1834,9 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
     else:
         await update.message.reply_text(BOT_TEXTS[lang]["welcome"], reply_markup=get_main_keyboard(lang, u_role if is_appr else ""), parse_mode="Markdown")
 
-def create_bot_app():
+def create_bot_app(persistence=None):
+    """The bot with all its handlers. With `persistence` (the webhook on
+    Vercel), per-user wizard state is kept in the database between messages."""
     req = HTTPXRequest(
         connection_pool_size=8,
         read_timeout=60.0,
@@ -1812,7 +1844,12 @@ def create_bot_app():
         connect_timeout=30.0,
         pool_timeout=30.0
     )
-    app = Application.builder().token(TELEGRAM_BOT_TOKEN).request(req).build()
+    builder = Application.builder().token(TELEGRAM_BOT_TOKEN).request(req)
+    if persistence is not None:
+        builder = builder.persistence(persistence)
+    app = builder.build()
+    if BOT_READ_ONLY:
+        app.add_handler(CallbackQueryHandler(read_only_notice, pattern=ENTRY_CALLBACKS), group=-1)
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CallbackQueryHandler(lang_callback, pattern="^lang_"))
     app.add_handler(CallbackQueryHandler(warehouse_callback, pattern="^wh"))

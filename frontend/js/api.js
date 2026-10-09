@@ -176,6 +176,8 @@ const API = {
   getAutoSarfRules: () => apiRequest("/ishlab-chiqarish/auto-sarf"),
   addAutoSarfRule: (data) => apiRequest("/ishlab-chiqarish/auto-sarf", "POST", data),
   deleteAutoSarfRule: (id) => apiRequest(`/ishlab-chiqarish/auto-sarf/${id}`, "DELETE"),
+  getTelegramBotStatus: () => apiRequest("/telegram/status"),
+  connectTelegramBot: () => apiRequest("/telegram/connect", "POST"),
   resetAllData: (data) => apiRequest("/demo/reset", "POST", data),
   seedDemoData: (force) => apiRequest(`/demo/seed${force ? "?force=true" : ""}`, "POST"),
   calcAutoSarf: (quantity, skladId) => apiRequest(`/ishlab-chiqarish/auto-sarf/calc?quantity=${encodeURIComponent(quantity)}${skladId ? `&sklad_id=${skladId}` : ""}`),

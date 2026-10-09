@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from backend import database
 from backend.database import create_tables, SessionLocal
 from backend.auth_utils import decode_token
-from backend.api import auth, mdm, ombor, kassa, ishlab_chiqarish, kontragentlar, savdo, moliya, ish_haqi, sklad, buyurtmalar, tarix, xarajatlar, auto_sarf, demo
+from backend.api import auth, mdm, ombor, kassa, ishlab_chiqarish, kontragentlar, savdo, moliya, ish_haqi, sklad, buyurtmalar, tarix, xarajatlar, auto_sarf, demo, telegram_bot_api
 from backend.services.currency_service import fetch_cbu_rate_today
 from backend.models import ExchangeRate, AuditLog
 from datetime import date
@@ -50,6 +50,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Auto month closing skipped: {e}")
 
+    # The Telegram bot runs through a webhook on Vercel: make sure Telegram
+    # sends its updates to this (production) site.
+    try:
+        from backend.services.telegram_webhook import ensure_webhook_on_startup
+        await ensure_webhook_on_startup()
+    except Exception as e:
+        logger.warning(f"Telegram webhook check skipped: {e}")
+
     yield
     logger.info("Application shutting down...")
 
@@ -72,7 +80,8 @@ app.add_middleware(
 # Who did what: every successful change through the API is written to the
 # audit log with the user from the (signed) login token.
 AUDITED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
-NOT_AUDITED = ("/api/auth/login", "/api/auth/verify-otp", "/api/orders/preview", "/api/sklad/preview")
+NOT_AUDITED = ("/api/auth/login", "/api/auth/verify-otp", "/api/orders/preview", "/api/sklad/preview",
+               "/api/telegram/webhook")
 
 @app.middleware("http")
 async def audit_changes(request: Request, call_next):
@@ -117,6 +126,7 @@ app.include_router(buyurtmalar.router, prefix="/api")
 app.include_router(tarix.router, prefix="/api")
 app.include_router(auto_sarf.router, prefix="/api")
 app.include_router(demo.router, prefix="/api")
+app.include_router(telegram_bot_api.router, prefix="/api")
 app.include_router(xarajatlar.router, prefix="/api")
 
 # Static frontend files mounting

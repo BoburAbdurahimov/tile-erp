@@ -245,6 +245,51 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
       renderWebUsersTable(content);
     } else {
       renderTelegramUsersTable(content);
+      content.insertAdjacentHTML("afterbegin", `<div id="tg-bot-status" style="margin-bottom:16px;"></div>`);
+      loadBotStatus();
+    }
+  }
+
+  // The bot runs on Vercel through a webhook: show whether Telegram is sending
+  // its messages to this site, and let the Admin connect it.
+  async function loadBotStatus(statusOverride) {
+    const isUz = CURRENT_LANG === "uz";
+    const box = document.getElementById("tg-bot-status");
+    if (!box) return;
+    box.innerHTML = `<div style="padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;color:#94a3b8;">${isUz ? "Bot holati tekshirilmoqda..." : "Проверка бота..."}</div>`;
+    let st = statusOverride;
+    if (!st) {
+      try { st = await API.getTelegramBotStatus(); }
+      catch (e) { box.innerHTML = ""; return; }   // not an Admin
+    }
+    const card = (bg, border, html) => `<div style="padding:12px 16px;border-radius:10px;background:${bg};border:1px solid ${border};display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px;">${html}</div>`;
+    const connectBtn = `<button class="btn btn-primary btn-sm" onclick="UsersModule.connectBot(this)" style="padding:7px 14px;border-radius:8px;font-weight:700;">${isUz ? "Saytga ulash" : "Подключить к сайту"}</button>`;
+    if (!st.configured) {
+      box.innerHTML = card("#fef2f2", "#fecaca", `<span><b style="color:#b91c1c;">${isUz ? "Telegram bot sozlanmagan" : "Telegram-бот не настроен"}</b> - ${isUz ? "Vercel'da TELEGRAM_BOT_TOKEN o'rnatilmagan." : "в Vercel не задан TELEGRAM_BOT_TOKEN."}</span>`);
+      return;
+    }
+    if (st.error) {
+      box.innerHTML = card("#fffbeb", "#fde68a", `<span>${escapeHtml(st.error)}</span>${connectBtn}`);
+      return;
+    }
+    const name = st.bot_username ? `<a href="https://t.me/${escapeHtml(st.bot_username)}" target="_blank" style="color:#2563eb;font-weight:700;">@${escapeHtml(st.bot_username)}</a>` : "";
+    const err = st.last_error_message ? `<div style="font-size:12px;color:#b91c1c;margin-top:3px;">${isUz ? "Oxirgi xato" : "Последняя ошибка"}: ${escapeHtml(st.last_error_message)}</div>` : "";
+    box.innerHTML = st.connected
+      ? card("#f0fdf4", "#bbf7d0", `<div><b style="color:#15803d;">✓ ${isUz ? "Bot ishlayapti" : "Бот работает"}</b> - ${name} ${isUz ? "saytga ulangan (Vercel, webhook)." : "подключён к сайту (Vercel, webhook)."}${err}</div>${connectBtn.replace("btn-primary", "btn-secondary")}`)
+      : card("#fffbeb", "#fde68a", `<div><b style="color:#b45309;">${isUz ? "Bot saytga ulanmagan" : "Бот не подключён к сайту"}</b> - ${name}
+          ${st.webhook_url ? `(${isUz ? "hozir boshqa manzilga" : "сейчас на другой адрес"}: ${escapeHtml(st.webhook_url)})` : `(${isUz ? "xabarlar navbatda" : "в очереди"}: ${st.pending_update_count || 0})`}${err}</div>${connectBtn}`);
+  }
+
+  async function connectBot(btn) {
+    const isUz = CURRENT_LANG === "uz";
+    if (btn) btn.disabled = true;
+    try {
+      const st = await API.connectTelegramBot();
+      showToast(isUz ? "Bot saytga ulandi" : "Бот подключён к сайту", "success");
+      await loadBotStatus(st);
+    } catch (e) {
+      if (btn) btn.disabled = false;
+      showToast(e.message, "error");
     }
   }
 
@@ -817,6 +862,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     render,
     seedDemo,
     openReset,
+    connectBot,
     loadData,
     switchTab,
     openCreateUserModal,
