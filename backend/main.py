@@ -134,16 +134,37 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+# The page itself is always revalidated (a cheap 304 when unchanged), so a new
+# deploy - with its new ?v= script links - reaches the installed app at once.
+NO_CACHE = {"Cache-Control": "no-cache"}
+
 @app.get("/")
 def serve_index():
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
-        return FileResponse(str(index_path))
+        return FileResponse(str(index_path), headers=NO_CACHE)
     return {"message": "Ceramic Tile Factory ERP API is running. Visit /docs for Swagger."}
 
 @app.get("/webapp")
 def serve_webapp():
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
-        return FileResponse(str(index_path))
+        return FileResponse(str(index_path), headers=NO_CACHE)
     return {"message": "Telegram Mini App Endpoint"}
+
+# Installable app (PWA). The manifest and service worker are served from the
+# site root: a service worker only controls pages under its own path, so it
+# must live at /sw.js to cover the whole site.
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def serve_manifest():
+    return FileResponse(str(FRONTEND_DIR / "manifest.webmanifest"), media_type="application/manifest+json",
+                        headers=NO_CACHE)
+
+@app.get("/sw.js", include_in_schema=False)
+def serve_service_worker():
+    return FileResponse(str(FRONTEND_DIR / "sw.js"), media_type="application/javascript",
+                        headers=NO_CACHE)
+
+@app.get("/favicon.ico", include_in_schema=False)
+def serve_favicon():
+    return FileResponse(str(FRONTEND_DIR / "icons" / "favicon-32.png"), media_type="image/png")

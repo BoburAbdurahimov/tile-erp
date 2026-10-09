@@ -51,6 +51,20 @@ finance and payroll, and the entry buttons point to the web app, whose rules
 (Ombor access, month closing, balances) the old bot wizards do not follow.
 `BOT_READ_ONLY=0` brings the cash, production and Ombor entry wizards back.
 
+## Installing as an app (PWA)
+
+The site can be installed on a phone or computer and then opens in its own
+window from the home screen, like a normal app.
+
+- Android / Chrome / Edge: the "Ilovani o'rnatish" button on the login screen
+  or in the user menu (top right) opens the browser's install prompt.
+- iPhone / iPad: the same button shows the steps: Share -> "Add to Home Screen".
+
+`frontend/manifest.webmanifest` describes the app and its icons
+(`frontend/icons/`), and `frontend/sw.js` (served at `/sw.js`) only shows an
+offline page when there is no internet - all data still comes live from the
+server, so nothing stale is shown.
+
 ## Deployment
 
 The web app and Mini App deploy to Vercel via its native FastAPI support. The

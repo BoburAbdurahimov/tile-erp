@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Kafel Zavodi ERP | Ceramic Tile Factory ERP</title>
+
+  <!-- Installable app (PWA) -->
+  <meta name="description" content="Kafel zavodi boshqaruv tizimi: ombor, kassa, ishlab chiqarish, savdo, moliya va ish haqi." />
+  <meta name="theme-color" content="#0b1727" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Kafel ERP" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   <!-- Google Fonts: Outfit, Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,7 +24,7 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <link rel="stylesheet" href="/static/css/style.css?v=50.0" />
+  <link rel="stylesheet" href="/static/css/style.css?v=51.0" />
 </head>
 <body>
   <!-- Login Screen Overlay -->
@@ -57,6 +68,10 @@
 
         <button type="submit" id="login-btn" style="width: 100%; padding: 13px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); transition: background 0.2s;">
           Tizimga kirish
+        </button>
+
+        <button type="button" class="pwa-install-btn pwa-install-login" data-pwa-install onclick="PWA.install()" style="display: none;">
+          <span aria-hidden="true">📲</span> <span data-i18n="pwa_install">Ilovani o'rnatish</span>
         </button>
       </form>
     </div>
@@ -159,6 +174,10 @@
                 <option value="uz">O'zbekcha</option>
                 <option value="ru">Русский</option>
               </select>
+
+              <button type="button" class="pwa-install-btn header-menu-install" data-pwa-install onclick="closeHeaderMenu(); PWA.install()" style="display: none;">
+                <span aria-hidden="true">📲</span> <span data-i18n="pwa_install">Ilovani o'rnatish</span>
+              </button>
 
               <button type="button" onclick="logout()" class="header-menu-logout">
                 <span id="header-logout-label">Chiqish</span>
@@ -308,23 +327,24 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- JavaScript Scripts with Cache Busting -->
-  <script src="/static/js/i18n.js?v=73.0"></script>
-  <script src="/static/js/api.js?v=73.0"></script>
-  <script src="/static/js/modules/dashboard.js?v=73.0"></script>
-  <script src="/static/js/modules/mdm.js?v=73.0"></script>
-  <script src="/static/js/modules/ombor.js?v=73.0"></script>
-  <script src="/static/js/modules/sklad.js?v=73.0"></script>
-  <script src="/static/js/modules/buyurtma.js?v=73.0"></script>
-  <script src="/static/js/modules/kassa.js?v=73.0"></script>
-  <script src="/static/js/modules/ishlab_chiqarish.js?v=73.0"></script>
-  <script src="/static/js/modules/kontragentlar.js?v=73.0"></script>
-  <script src="/static/js/modules/zakup.js?v=73.0"></script>
-  <script src="/static/js/modules/sotish.js?v=73.0"></script>
-  <script src="/static/js/modules/moliya.js?v=73.0"></script>
-  <script src="/static/js/modules/ish_haqi.js?v=73.0"></script>
-  <script src="/static/js/modules/users.js?v=73.0"></script>
-  <script src="/static/js/modules/xarajatlar.js?v=73.0"></script>
-  <script src="/static/js/modules/tarix.js?v=73.0"></script>
-  <script src="/static/js/app.js?v=73.0"></script>
+  <script src="/static/js/i18n.js?v=74.0"></script>
+  <script src="/static/js/api.js?v=74.0"></script>
+  <script src="/static/js/pwa.js?v=74.0"></script>
+  <script src="/static/js/modules/dashboard.js?v=74.0"></script>
+  <script src="/static/js/modules/mdm.js?v=74.0"></script>
+  <script src="/static/js/modules/ombor.js?v=74.0"></script>
+  <script src="/static/js/modules/sklad.js?v=74.0"></script>
+  <script src="/static/js/modules/buyurtma.js?v=74.0"></script>
+  <script src="/static/js/modules/kassa.js?v=74.0"></script>
+  <script src="/static/js/modules/ishlab_chiqarish.js?v=74.0"></script>
+  <script src="/static/js/modules/kontragentlar.js?v=74.0"></script>
+  <script src="/static/js/modules/zakup.js?v=74.0"></script>
+  <script src="/static/js/modules/sotish.js?v=74.0"></script>
+  <script src="/static/js/modules/moliya.js?v=74.0"></script>
+  <script src="/static/js/modules/ish_haqi.js?v=74.0"></script>
+  <script src="/static/js/modules/users.js?v=74.0"></script>
+  <script src="/static/js/modules/xarajatlar.js?v=74.0"></script>
+  <script src="/static/js/modules/tarix.js?v=74.0"></script>
+  <script src="/static/js/app.js?v=74.0"></script>
 </body>
 </html>
