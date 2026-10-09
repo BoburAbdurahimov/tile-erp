@@ -251,6 +251,7 @@ const API = {
     if (params.length > 0) url += `?${params.join("&")}`;
     return apiRequest(url);
   },
+  getSalaryDepartments: () => apiRequest("/salary/departments"),
   createEmployee: (data) => apiRequest("/salary/employees", "POST", data),
   updateEmployee: (id, data) => apiRequest(`/salary/employees/${id}`, "PUT", data),
   toggleEmployeeActive: (id) => apiRequest(`/salary/employees/${id}/toggle-active`, "PUT"),

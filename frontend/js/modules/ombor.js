@@ -321,7 +321,7 @@ const OmborModule = {
 
           <div class="form-group">
             <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_description')}</label>
-            <textarea id="tr-desc" class="form-control" rows="2" placeholder="${CURRENT_LANG === 'uz' ? "Masalan: Liniyalararo material yetkazish yoki sexga o'tkazish..." : 'Описание...'}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"></textarea>
+            <textarea id="tr-desc" class="form-control" rows="2" placeholder="${CURRENT_LANG === 'uz' ? "Masalan: omborlararo material yetkazish yoki sexga o'tkazish..." : 'Описание...'}" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"></textarea>
           </div>
         </form>
       `,

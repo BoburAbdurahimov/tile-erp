@@ -19,7 +19,7 @@ def seed_database():
         from sqlalchemy import text
         with db.bind.connect() as conn:
             try:
-                conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(100) DEFAULT '1-Liniya';"))
+                conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(100) DEFAULT 'Ma''muriyat';"))
                 conn.execute(text("ALTER TABLE monthly_salary_calculations ADD COLUMN IF NOT EXISTS department VARCHAR(100);"))
                 conn.commit()
             except Exception:
@@ -207,65 +207,65 @@ def seed_database():
             ("Narzullayev Otabek", "Ma'muriyat", "Sotuv Boshlig'i", "fixed", 14000000.0),
             ("Xoliqov Jasur", "Ma'muriyat", "IT va Tizim Admini", "fixed", 13000000.0),
 
-            # --- 1-Liniya (30x30 Standart Zavod) (10 xodim) ---
-            ("Axmedov Rustam", "1-Liniya", "Zavod Liniya Masteri", "fixed", 10000000.0),
-            ("Yusupov Botir", "1-Liniya", "Press Operatori", "piecework", 0.0),
-            ("Raximov Sherzod", "1-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Zokirov Anvar", "1-Liniya", "Glazur Master", "piecework", 0.0),
-            ("Ergashev Umid", "1-Liniya", "Pech Operatori", "piecework", 0.0),
-            ("Toshmatov Dilshod", "1-Liniya", "Kafel Saralovchi", "piecework", 0.0),
-            ("Qodirov Baxodir", "1-Liniya", "Qadoqlovchi", "piecework", 0.0),
-            ("Sulaymonov Alisher", "1-Liniya", "Karoxona Haydovchisi", "fixed", 6500000.0),
-            ("Meliyev Javoxir", "1-Liniya", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
-            ("Umarov Sanjar", "1-Liniya", "Elektrik", "fixed", 7500000.0),
+            # --- Toxir 120 (10 xodim) ---
+            ("Axmedov Rustam", "Toxir 120", "Sex Masteri", "fixed", 10000000.0),
+            ("Yusupov Botir", "Toxir 120", "Press Operatori", "piecework", 0.0),
+            ("Raximov Sherzod", "Toxir 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Zokirov Anvar", "Toxir 120", "Glazur Master", "piecework", 0.0),
+            ("Ergashev Umid", "Toxir 120", "Pech Operatori", "piecework", 0.0),
+            ("Toshmatov Dilshod", "Toxir 120", "Kafel Saralovchi", "piecework", 0.0),
+            ("Qodirov Baxodir", "Toxir 120", "Qadoqlovchi", "piecework", 0.0),
+            ("Sulaymonov Alisher", "Toxir 120", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("Meliyev Javoxir", "Toxir 120", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Umarov Sanjar", "Toxir 120", "Elektrik", "fixed", 7500000.0),
 
-            # --- 2-Liniya (60x60 Katta Zavod) (10 xodim) ---
-            ("Sobirov Farrux", "2-Liniya", "Zavod Liniya Masteri", "fixed", 10500000.0),
-            ("Xamidov Abror", "2-Liniya", "Press Operatori", "piecework", 0.0),
-            ("Botirov Jamshid", "2-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Nazarov Eldor", "2-Liniya", "Glazur Master", "piecework", 0.0),
-            ("Usmonov Timur", "2-Liniya", "Pech Operatori", "piecework", 0.0),
-            ("Jo'rayev Olim", "2-Liniya", "Kafel Saralovchi", "piecework", 0.0),
-            ("Xakimov Nodir", "2-Liniya", "Qadoqlovchi", "piecework", 0.0),
-            ("Ortiqov Shohrux", "2-Liniya", "Karoxona Haydovchisi", "fixed", 6500000.0),
-            ("G'ofurov Bunyod", "2-Liniya", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
-            ("Bozorov Ilhom", "2-Liniya", "Elektrik", "fixed", 7500000.0),
+            # --- Kodir 120 (10 xodim) ---
+            ("Sobirov Farrux", "Kodir 120", "Sex Masteri", "fixed", 10500000.0),
+            ("Xamidov Abror", "Kodir 120", "Press Operatori", "piecework", 0.0),
+            ("Botirov Jamshid", "Kodir 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Nazarov Eldor", "Kodir 120", "Glazur Master", "piecework", 0.0),
+            ("Usmonov Timur", "Kodir 120", "Pech Operatori", "piecework", 0.0),
+            ("Jo'rayev Olim", "Kodir 120", "Kafel Saralovchi", "piecework", 0.0),
+            ("Xakimov Nodir", "Kodir 120", "Qadoqlovchi", "piecework", 0.0),
+            ("Ortiqov Shohrux", "Kodir 120", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("G'ofurov Bunyod", "Kodir 120", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Bozorov Ilhom", "Kodir 120", "Elektrik", "fixed", 7500000.0),
 
-            # --- 3-Liniya (60x120 Granit Zavod) (10 xodim) ---
-            ("Oripov Akmal", "3-Liniya", "Zavod Liniya Masteri", "fixed", 11000000.0),
-            ("Kamilov Bekzod", "3-Liniya", "Press Operatori", "piecework", 0.0),
-            ("Raimov Azamat", "3-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Valiyev Sarvar", "3-Liniya", "Glazur Master", "piecework", 0.0),
-            ("Xursandov Sherali", "3-Liniya", "Pech Operatori", "piecework", 0.0),
-            ("Niyazov Farxod", "3-Liniya", "Kafel Saralovchi", "piecework", 0.0),
-            ("Matniyazov Mansur", "3-Liniya", "Qadoqlovchi", "piecework", 0.0),
-            ("Isroilov Zafar", "3-Liniya", "Karoxona Haydovchisi", "fixed", 6800000.0),
-            ("Nurmamatov Xurshid", "3-Liniya", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
-            ("Turdiyev Shahram", "3-Liniya", "Elektrik", "fixed", 7800000.0),
+            # --- Istam 120 (10 xodim) ---
+            ("Oripov Akmal", "Istam 120", "Sex Masteri", "fixed", 11000000.0),
+            ("Kamilov Bekzod", "Istam 120", "Press Operatori", "piecework", 0.0),
+            ("Raimov Azamat", "Istam 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Valiyev Sarvar", "Istam 120", "Glazur Master", "piecework", 0.0),
+            ("Xursandov Sherali", "Istam 120", "Pech Operatori", "piecework", 0.0),
+            ("Niyazov Farxod", "Istam 120", "Kafel Saralovchi", "piecework", 0.0),
+            ("Matniyazov Mansur", "Istam 120", "Qadoqlovchi", "piecework", 0.0),
+            ("Isroilov Zafar", "Istam 120", "Karoxona Haydovchisi", "fixed", 6800000.0),
+            ("Nurmamatov Xurshid", "Istam 120", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
+            ("Turdiyev Shahram", "Istam 120", "Elektrik", "fixed", 7800000.0),
 
-            # --- 4-Liniya (40x40 Premium Zavod) (10 xodim) ---
-            ("Davronov Jalol", "4-Liniya", "Zavod Liniya Masteri", "fixed", 10000000.0),
-            ("Xolmatov Muzaffar", "4-Liniya", "Press Operatori", "piecework", 0.0),
-            ("Mirzayev Otabek", "4-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Yoqubov Laziz", "4-Liniya", "Glazur Master", "piecework", 0.0),
-            ("Shamsiyev Kamron", "4-Liniya", "Pech Operatori", "piecework", 0.0),
-            ("Sotvoldiyev Ulug'bek", "4-Liniya", "Kafel Saralovchi", "piecework", 0.0),
-            ("G'aniyev Ravshan", "4-Liniya", "Qadoqlovchi", "piecework", 0.0),
-            ("Eshonqulov Xikmat", "4-Liniya", "Karoxona Haydovchisi", "fixed", 6500000.0),
-            ("Vahobov Murod", "4-Liniya", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
-            ("Sultonov Jamol", "4-Liniya", "Elektrik", "fixed", 7500000.0),
+            # --- Aziz 120 (10 xodim) ---
+            ("Davronov Jalol", "Aziz 120", "Sex Masteri", "fixed", 10000000.0),
+            ("Xolmatov Muzaffar", "Aziz 120", "Press Operatori", "piecework", 0.0),
+            ("Mirzayev Otabek", "Aziz 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Yoqubov Laziz", "Aziz 120", "Glazur Master", "piecework", 0.0),
+            ("Shamsiyev Kamron", "Aziz 120", "Pech Operatori", "piecework", 0.0),
+            ("Sotvoldiyev Ulug'bek", "Aziz 120", "Kafel Saralovchi", "piecework", 0.0),
+            ("G'aniyev Ravshan", "Aziz 120", "Qadoqlovchi", "piecework", 0.0),
+            ("Eshonqulov Xikmat", "Aziz 120", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("Vahobov Murod", "Aziz 120", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Sultonov Jamol", "Aziz 120", "Elektrik", "fixed", 7500000.0),
 
-            # --- 5-Liniya (80x80 Keramogranit Zavod) (10 xodim) ---
-            ("Murodov Bobomurod", "5-Liniya", "Zavod Liniya Masteri", "fixed", 11500000.0),
-            ("Norboyev Komil", "5-Liniya", "Press Operatori", "piecework", 0.0),
-            ("Jumayev Rustam", "5-Liniya", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Ro'ziyev Sardor", "5-Liniya", "Glazur Master", "piecework", 0.0),
-            ("Xudoyberdiyev Elbek", "5-Liniya", "Pech Operatori", "piecework", 0.0),
-            ("Yo'ldoshev Faxriddin", "5-Liniya", "Kafel Saralovchi", "piecework", 0.0),
-            ("Allabergenov Doniyor", "5-Liniya", "Qadoqlovchi", "piecework", 0.0),
-            ("Tangriberdiyev Oybek", "5-Liniya", "Karoxona Haydovchisi", "fixed", 6800000.0),
-            ("Mamirov Shavkat", "5-Liniya", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
-            ("Xaitov Bahrom", "5-Liniya", "Elektrik", "fixed", 7800000.0)
+            # --- Kodir 100 (10 xodim) ---
+            ("Murodov Bobomurod", "Kodir 100", "Sex Masteri", "fixed", 11500000.0),
+            ("Norboyev Komil", "Kodir 100", "Press Operatori", "piecework", 0.0),
+            ("Jumayev Rustam", "Kodir 100", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Ro'ziyev Sardor", "Kodir 100", "Glazur Master", "piecework", 0.0),
+            ("Xudoyberdiyev Elbek", "Kodir 100", "Pech Operatori", "piecework", 0.0),
+            ("Yo'ldoshev Faxriddin", "Kodir 100", "Kafel Saralovchi", "piecework", 0.0),
+            ("Allabergenov Doniyor", "Kodir 100", "Qadoqlovchi", "piecework", 0.0),
+            ("Tangriberdiyev Oybek", "Kodir 100", "Karoxona Haydovchisi", "fixed", 6800000.0),
+            ("Mamirov Shavkat", "Kodir 100", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
+            ("Xaitov Bahrom", "Kodir 100", "Elektrik", "fixed", 7800000.0)
         ]
 
         emp_objects = []
@@ -299,11 +299,11 @@ def seed_database():
         job_pack = jt_map.get("Qadoqlash va Poddon Yig'ish")
 
         dept_job_mapping = {
-            "1-Liniya": (job_press_30, 800.0),
-            "2-Liniya": (job_press_60, 600.0),
-            "3-Liniya": (job_press_120, 350.0),
-            "4-Liniya": (job_press_40, 700.0),
-            "5-Liniya": (job_press_80, 300.0),
+            "Toxir 120": (job_press_30, 800.0),
+            "Kodir 120": (job_press_60, 600.0),
+            "Istam 120": (job_press_120, 350.0),
+            "Aziz 120": (job_press_40, 700.0),
+            "Kodir 100": (job_press_80, 300.0),
         }
 
         # Days to seed in 2026-08 (1 to 26)

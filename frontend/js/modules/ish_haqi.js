@@ -1,6 +1,6 @@
 const IshHaqiModule = (function () {
   let activeTab = "payroll"; // 'payroll' | 'daily' | 'employees' | 'job_types'
-  let activeDept = "all"; // 'all' | "Ma'muriyat" | "1-Liniya" | "2-Liniya" | "3-Liniya" | "4-Liniya" | "5-Liniya"
+  let activeDept = "all"; // 'all' | "Ma'muriyat" | an Ombor ("Toxir 120") | NO_DEPT
   let currentYearMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
   let currentDailyDate = new Date().toISOString().slice(0, 10); // e.g. "2026-08-15"
 
@@ -9,15 +9,42 @@ const IshHaqiModule = (function () {
   let employeesList = [];
   let jobTypesList = [];
 
-  const DEPARTMENTS = [
-    { id: "all", name: { uz: "Barchasi", ru: "Все отделы" }, icon: "" },
-    { id: "Ma'muriyat", name: { uz: "Ma'muriyat & Ofis", ru: "Администрация & Офис" }, icon: "" },
-    { id: "1-Liniya", name: { uz: "1-Liniya (30x30 Standart Zavod)", ru: "1-Линия (30x30 Стандарт Завод)" }, icon: "" },
-    { id: "2-Liniya", name: { uz: "2-Liniya (60x60 Katta Zavod)", ru: "2-Линия (60x60 Большой Завод)" }, icon: "" },
-    { id: "3-Liniya", name: { uz: "3-Liniya (60x120 Granit Zavod)", ru: "3-Линия (60x120 Гранит Завод)" }, icon: "" },
-    { id: "4-Liniya", name: { uz: "4-Liniya (40x40 Premium Zavod)", ru: "4-Линия (40x40 Премиум Завод)" }, icon: "" },
-    { id: "5-Liniya", name: { uz: "5-Liniya (80x80 Keramogranit Zavod)", ru: "5-Линия (80x80 Керамогранит Завод)" }, icon: "" }
-  ];
+  // Where people work: "Ma'muriyat" and the Omborlar ("Toxir 120" ...), from
+  // /salary/departments. An employee still on a department that no longer
+  // exists (an old production line) is shown as "Ombor tanlanmagan".
+  const NO_DEPT = "__none";
+  let departmentIds = ["Ma'muriyat"];
+
+  async function loadDepartments() {
+    try {
+      const r = await API.getSalaryDepartments();
+      departmentIds = (r.departments || []).map(d => d.id);
+    } catch (e) {
+      // keep what we have; the lists still show every employee under "Barchasi"
+    }
+  }
+
+  function deptKey(dept) {
+    const d = dept || "Ma'muriyat";
+    return departmentIds.includes(d) ? d : NO_DEPT;
+  }
+
+  function deptLabel(id) {
+    const isUz = isUzbek();
+    if (id === "all") return isUz ? "Barchasi" : "Все отделы";
+    if (id === "Ma'muriyat") return isUz ? "Ma'muriyat & Ofis" : "Администрация & Офис";
+    if (id === NO_DEPT) return isUz ? "Ombor tanlanmagan" : "Склад не выбран";
+    return id;
+  }
+
+  function matchesDept(dept) {
+    return activeDept === "all" || deptKey(dept) === activeDept;
+  }
+
+  function hasUnassigned() {
+    const lists = [employeesList || [], (payrollData && payrollData.calculations) || []];
+    return lists.some(list => list.some(x => deptKey(x.department) === NO_DEPT));
+  }
 
   function formatNumber(num) {
     if (num === null || num === undefined || isNaN(num)) return "0";
@@ -42,7 +69,7 @@ const IshHaqiModule = (function () {
     const isUz = isUzbek();
     return {
       title: isUz ? "Ish haqi va Xodimlar boshqaruvi" : "Управление зарплатой и персоналом",
-      subtitle: isUz ? "6 ta bo'lim (5 ta liniya + Ma'muriyat), fiks va ishbay oyliklar hisobi" : "6 отделов (5 линий + Администрация), окладный и сдельный расчет ЗП",
+      subtitle: isUz ? "Ma'muriyat va omborlar bo'yicha fiks va ishbay oyliklar hisobi" : "Окладный и сдельный расчет ЗП по администрации и складам",
       tab_payroll: isUz ? "Oylik hisob-kitob" : "Ведомость ЗП",
       tab_daily: isUz ? "Kunlik davomat & Ishlar" : "Ежедневный учет",
       tab_employees: isUz ? "Xodimlar ro'yxati" : "Сотрудники",
@@ -73,29 +100,30 @@ const IshHaqiModule = (function () {
     };
   }
 
+  // One colour per owner, so both of an owner's Omborlar read as a pair.
+  const OWNER_COLORS = {
+    Toxir: ["#d97706", "#fffbeb"], Kodir: ["#0284c7", "#f0f9ff"],
+    Istam: ["#7c3aed", "#f5f3ff"], Aziz: ["#059669", "#ecfdf5"],
+  };
+
   function getDeptBadge(dept) {
-    const d = dept || "Ma'muriyat";
-    let color = "#3b82f6";
-    let bg = "#eff6ff";
-    let icon = "";
-
-    if (d === "Ma'muriyat") { color = "#dc2626"; bg = "#fef2f2"; icon = ""; }
-    else if (d === "1-Liniya") { color = "#d97706"; bg = "#fffbeb"; icon = ""; }
-    else if (d === "2-Liniya") { color = "#0284c7"; bg = "#f0f9ff"; icon = ""; }
-    else if (d === "3-Liniya") { color = "#ea580c"; bg = "#fff7ed"; icon = ""; }
-    else if (d === "4-Liniya") { color = "#7c3aed"; bg = "#f5f3ff"; icon = ""; }
-    else if (d === "5-Liniya") { color = "#059669"; bg = "#ecfdf5"; icon = ""; }
-
-    return `<span class="badge" style="background:${bg}; color:${color}; border:1px solid ${color}30; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;">${escapeHtml(d)}</span>`;
+    const key = deptKey(dept);
+    let [color, bg] = ["#3b82f6", "#eff6ff"];
+    if (key === "Ma'muriyat") [color, bg] = ["#dc2626", "#fef2f2"];
+    else if (key === NO_DEPT) [color, bg] = ["#c2410c", "#fff7ed"];
+    else if (OWNER_COLORS[key.split(" ")[0]]) [color, bg] = OWNER_COLORS[key.split(" ")[0]];
+    const label = key === NO_DEPT ? deptLabel(NO_DEPT) : key;
+    return `<span class="badge" style="background:${bg}; color:${color}; border:1px solid ${color}30; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;">${escapeHtml(label)}</span>`;
   }
 
   function renderDeptFilterBar() {
     const isUz = isUzbek();
     return `
       <div class="tabs-nav" style="display: flex; gap: 6px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; flex-wrap: wrap; padding-bottom: 6px;">
-        ${DEPARTMENTS.map(d => {
+        ${["all", ...departmentIds, ...(hasUnassigned() || activeDept === NO_DEPT ? [NO_DEPT] : [])].map(id => {
+          const d = { id };
           const isActive = activeDept === d.id;
-          const label = isUz ? d.name.uz : d.name.ru;
+          const label = deptLabel(d.id);
           return `
             <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment('${d.id}')" 
               style="padding: 6px 12px; font-size: 12.5px; font-weight: ${isActive ? '700' : '600'}; border-radius: 8px; border: ${isActive ? '1px solid #2563eb' : '1px solid #cbd5e1'}; background: ${isActive ? '#eff6ff' : '#f8fafc'}; color: ${isActive ? '#1d4ed8' : '#475569'}; cursor: pointer; transition: all 0.2s;">
@@ -113,6 +141,7 @@ const IshHaqiModule = (function () {
 
     const t = getI18n();
 
+    await loadDepartments();
     container.innerHTML = `
       <div class="card" style="margin-bottom: 16px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -192,9 +221,7 @@ const IshHaqiModule = (function () {
 
     // Filter calculations by active department
     let calculations = payrollData.calculations || [];
-    if (activeDept !== "all") {
-      calculations = calculations.filter(c => c.department === activeDept);
-    }
+    calculations = calculations.filter(c => matchesDept(c.department));
 
     let rowsHtml = "";
     if (calculations.length === 0) {
@@ -333,7 +360,7 @@ const IshHaqiModule = (function () {
                   <input type="text" class="table-col-filter" placeholder="${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
-                  <div>${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</div>
+                  <div>${isUz ? "Bo'lim / Ombor" : "Отдел / Склад"}</div>
                   <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
@@ -431,15 +458,11 @@ const IshHaqiModule = (function () {
 
     // Filter fixed employees by active department
     let fixedEmps = dailyData.fixed_employees || [];
-    if (activeDept !== "all") {
-      fixedEmps = fixedEmps.filter(e => e.department === activeDept);
-    }
+    fixedEmps = fixedEmps.filter(e => matchesDept(e.department));
 
     // Filter piecework entries by active department
     let pieceEntries = dailyData.piecework_entries || [];
-    if (activeDept !== "all") {
-      pieceEntries = pieceEntries.filter(p => p.department === activeDept);
-    }
+    pieceEntries = pieceEntries.filter(p => matchesDept(p.department));
 
     // Fixed employees attendance rows
     let fixedRows = "";
@@ -461,7 +484,6 @@ const IshHaqiModule = (function () {
                 <input type="checkbox" class="att-checkbox" data-empid="${emp.id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.id})">
                 <span>${emp.is_absent ? (isUz ? 'Kelmadi' : 'Не вышел') : (isUz ? 'Ishda' : 'На работе')}</span>
               </label>
-              <input type="text" id="att-reason-${emp.id}" class="form-control" placeholder="${isUz ? 'Sababi...' : 'Причина...'}" value="${escapeHtml(emp.reason || '')}" style="width: 140px; padding: 4px 8px; font-size: 12px; display: ${emp.is_absent ? 'block' : 'none'};" ${isLocked ? 'disabled' : ''}>
             </div>
           </div>
         `;
@@ -561,18 +583,12 @@ const IshHaqiModule = (function () {
   function toggleAttRow(chk, empId) {
     const isUz = isUzbek();
     const span = chk.nextElementSibling;
-    const reasonInput = document.getElementById(`att-reason-${empId}`);
     if (chk.checked) {
       span.innerText = isUz ? "Kelmadi" : "Не вышел";
       span.parentElement.style.color = "#ef4444";
-      if (reasonInput) reasonInput.style.display = "block";
     } else {
       span.innerText = isUz ? "Ishda" : "На работе";
       span.parentElement.style.color = "#10b981";
-      if (reasonInput) {
-        reasonInput.style.display = "none";
-        reasonInput.value = "";
-      }
     }
   }
 
@@ -581,12 +597,7 @@ const IshHaqiModule = (function () {
     const absentRecords = [];
     checkboxes.forEach(chk => {
       if (chk.checked) {
-        const empId = parseInt(chk.getAttribute("data-empid"));
-        const reasonInput = document.getElementById(`att-reason-${empId}`);
-        absentRecords.push({
-          employee_id: empId,
-          reason: reasonInput ? reasonInput.value : ""
-        });
+        absentRecords.push({ employee_id: parseInt(chk.getAttribute("data-empid")) });
       }
     });
 
@@ -632,9 +643,7 @@ const IshHaqiModule = (function () {
 
     // Filter employees by active department
     let filteredList = employeesList;
-    if (activeDept !== "all") {
-      filteredList = filteredList.filter(e => e.department === activeDept);
-    }
+    filteredList = filteredList.filter(e => matchesDept(e.department));
 
     let rowsHtml = "";
     if (filteredList.length === 0) {
@@ -683,7 +692,7 @@ const IshHaqiModule = (function () {
         <div class="card-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
-              <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Fabrika xodimlari ro'yxati (6 ta bo'lim bo'yicha)" : "Штатное расписание (по 6 отделам)"}</div>
+              <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Fabrika xodimlari ro'yxati (Ma'muriyat va omborlar bo'yicha)" : "Штатное расписание (администрация и склады)"}</div>
               <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${filteredList.length} ${isUz ? "nafar xodim" : "сотрудников"}</p>
             </div>
             <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddEmployeeModal()">${t.btn_add_emp}</button>
@@ -701,7 +710,7 @@ const IshHaqiModule = (function () {
                   <input type="text" class="table-col-filter" placeholder="${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
-                  <div>${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</div>
+                  <div>${isUz ? "Bo'lim / Ombor" : "Отдел / Склад"}</div>
                   <input type="text" class="table-col-filter" placeholder="${isUz ? 'Filtr...' : 'Фильтр...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
                 <th>
@@ -827,8 +836,10 @@ const IshHaqiModule = (function () {
   // ===========================================================================
   function getDeptOptions(selectedDept = "Ma'muriyat") {
     const isUz = isUzbek();
-    return DEPARTMENTS.filter(d => d.id !== "all").map(d => `
-      <option value="${d.id}" ${d.id === selectedDept ? 'selected' : ''}>${isUz ? d.name.uz : d.name.ru}</option>
+    const known = departmentIds.includes(selectedDept);
+    return (known ? "" : `<option value="" selected disabled>${isUz ? "Ombor tanlang" : "Выберите склад"}</option>`)
+      + departmentIds.map(id => `
+      <option value="${escapeHtml(id)}" ${id === selectedDept ? 'selected' : ''}>${escapeHtml(deptLabel(id))}</option>
     `).join("");
   }
 
@@ -851,9 +862,9 @@ const IshHaqiModule = (function () {
 
               <div class="form-row">
                 <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Bo'lim / Ishlab chiqarish liniyasi" : "Отдел / Производственная линия"} *</label>
-                  <select id="emp-dept" class="form-control">
-                    ${getDeptOptions(activeDept !== "all" ? activeDept : "1-Liniya")}
+                  <label class="form-label">${isUz ? "Bo'lim / Ombor" : "Отдел / Склад"} *</label>
+                  <select id="emp-dept" class="form-control" required>
+                    ${getDeptOptions(departmentIds.includes(activeDept) ? activeDept : "Ma'muriyat")}
                   </select>
                 </div>
                 <div class="form-group" style="flex: 1;">
@@ -964,8 +975,8 @@ const IshHaqiModule = (function () {
 
               <div class="form-row">
                 <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Bo'lim / Liniya" : "Отдел / Линия"}</label>
-                  <select id="edit-emp-dept" class="form-control">
+                  <label class="form-label">${isUz ? "Bo'lim / Ombor" : "Отдел / Склад"} *</label>
+                  <select id="edit-emp-dept" class="form-control" required>
                     ${getDeptOptions(emp.department || "Ma'muriyat")}
                   </select>
                 </div>
@@ -1199,7 +1210,7 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}">[${escapeHtml(e.department || '1-Liniya')}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
+    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}">[${escapeHtml(deptLabel(deptKey(e.department)))}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
     let jobOptions = jobTypesList.map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${j.unit_of_measure}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${j.unit_of_measure}</option>`).join("");
 
     const modalHost = document.getElementById("salary-modals-host");
