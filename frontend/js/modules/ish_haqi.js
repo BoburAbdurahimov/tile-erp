@@ -514,7 +514,7 @@ const IshHaqiModule = (function () {
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
             ${isUz ? "Ishga kelmagan bo'lsa, 'Kelmadi' deb belgilang. Kunlik maosh avtomatik chegiriladi." : "Отметьте сотрудников, которые не вышли. Дневная ставка будет удержана."}
           </p>
-          <div style="max-height: 480px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <div class="scroll-box" style="max-height: 480px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
             ${fixedRows}
           </div>
         </div>
@@ -528,7 +528,7 @@ const IshHaqiModule = (function () {
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
             ${isUz ? "Bajarilgan ishlar hajmini kiriting. Oylik hisob-kitob avtomatik yangilanadi." : "Внесите объем работ за день. Сумма сразу отобразится в ведомости."}
           </p>
-          <div class="table-container" style="max-height: 480px;">
+          <div class="table-container scroll-box" style="max-height: 480px;">
             <table class="data-table" id="daily-piecework-table">
               <thead>
                 <tr>

@@ -172,7 +172,7 @@ const BalancesModule = {
             </div>
           </div>
 
-          <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+          <div class="table-container scroll-box" style="max-height: 400px; overflow-y: auto;">
             <table class="data-table">
               <thead>
                 <tr>

@@ -95,7 +95,7 @@ const UsersModule = (() => {
         <button type="button" onclick="UsersModule.selectAllRoles('${inputName}')" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">${isUz ? 'Barchasini tanlash' : 'Выбрать все'}</button>
         <button type="button" onclick="UsersModule.clearAllRoles('${inputName}')" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;">${isUz ? 'Tozalash' : 'Очистить'}</button>
       </div>
-      <div style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; background: #f8fafc; max-height: 250px; overflow-y: auto;">
+      <div class="scroll-box" style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; background: #f8fafc; max-height: 250px; overflow-y: auto;">
         ${ALL_ROLES.map(r => {
           const isChecked = selected.includes(r.id) || (r.id === "Ombor" && selected.includes("Omborchi")) || (r.id === "Kassa" && selected.includes("Kassir")) || (r.id === "Ishlab chiqarish" && selected.includes("Sex boshlig'i")) || (r.id === "Moliya & PnL" && (selected.includes("Direktor") || selected.includes("Buxgalter")));
           const rName = isUz ? r.name.uz : r.name.ru;
@@ -504,9 +504,9 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     modalsContainer.innerHTML = `
       <div class="modal-overlay" id="create-user-modal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px);">
         <div class="modal-card" style="background: #fff; border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;">
-          <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">${isUz ? "Yangi foydalanuvchi yaratish" : "Создать пользователя"}</h3>
-            <button onclick="UsersModule.closeModal('create-user-modal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
+            <button type="button" class="modal-close" onclick="UsersModule.closeModal('create-user-modal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
           </div>
 
           <form id="create-user-form" onsubmit="UsersModule.handleCreateUser(event)" style="padding: 24px;">
@@ -541,7 +541,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
               ${renderSkladCheckboxes("new_user_sklads", [])}
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
               <button type="button" onclick="UsersModule.closeModal('create-user-modal')" class="btn btn-secondary" style="padding: 10px 18px;">${isUz ? "Bekor qilish" : "Отмена"}</button>
               <button type="submit" class="btn btn-primary" style="padding: 10px 22px;">${isUz ? "Saqlash" : "Сохранить"}</button>
             </div>
@@ -594,9 +594,9 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     modalsContainer.innerHTML = `
       <div class="modal-overlay" id="edit-user-modal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px);">
         <div class="modal-card" style="background: #fff; border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;">
-          <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">${isUz ? "Foydalanuvchini tahrirlash:" : "Редактирование пользователя:"} ${user.username}</h3>
-            <button onclick="UsersModule.closeModal('edit-user-modal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
+            <button type="button" class="modal-close" onclick="UsersModule.closeModal('edit-user-modal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
           </div>
 
           <form id="edit-user-form" onsubmit="UsersModule.handleEditUser(event, ${user.id})" style="padding: 24px;">
@@ -625,7 +625,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
               <input type="password" id="edit-password" class="input-styled" placeholder="${isUz ? "Parolni o'zgartirmaslik uchun bo'sh qoldiring" : "Оставьте пустым, чтобы не менять пароль"}" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px;" />
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
               <button type="button" onclick="UsersModule.closeModal('edit-user-modal')" class="btn btn-secondary" style="padding: 10px 18px;">${isUz ? "Bekor qilish" : "Отмена"}</button>
               <button type="submit" class="btn btn-primary" style="padding: 10px 22px;">${isUz ? "Yangilash" : "Обновить"}</button>
             </div>
@@ -720,9 +720,9 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     modalsContainer.innerHTML = `
       <div class="modal-overlay" id="approve-tg-modal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px);">
         <div class="modal-card" style="background: #fff; border-radius: 16px; width: 100%; max-width: 540px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;">
-          <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">${isUz ? "Telegram foydalanuvchisiga ruxsatlar biriktirish" : "Назначение прав пользователю Telegram"}</h3>
-            <button onclick="UsersModule.closeModal('approve-tg-modal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
+            <button type="button" class="modal-close" onclick="UsersModule.closeModal('approve-tg-modal')" style="border: none; background: transparent; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
           </div>
 
           <form id="approve-tg-form" onsubmit="UsersModule.handleApproveTgUser(event, ${u.id})" style="padding: 24px;">
@@ -737,7 +737,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
               ${renderRoleCheckboxes("tg_user_roles", u.role === 'Kutilmoqda' ? 'Ombor' : u.role)}
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
               <button type="button" onclick="UsersModule.closeModal('approve-tg-modal')" class="btn btn-secondary" style="padding: 10px 18px;">${isUz ? "Bekor qilish" : "Отмена"}</button>
               <button type="submit" class="btn btn-primary" style="padding: 10px 22px;">${isUz ? "Tasdiqlash & Saqlash" : "Одобрить и Сохранить"}</button>
             </div>

@@ -171,13 +171,58 @@ const SkladModule = {
         <div style="color:#64748b;">${isUz ? "Metr" : "Метр"}: <strong>${formatNumber(m.total_metr, 0, 2)}</strong></div>
         <div style="color:#64748b;">m²: <strong>${formatNumber(m.total_mkv, 0, 2)}</strong></div>
       </div>
-      <div class="table-container">
-        <table class="data-table" id="sklad-matrix-table" style="width:100%;border-collapse:collapse;">
-          <thead>${head}</thead><tbody>${body}</tbody>
-        </table>
+      <div class="sklad-matrix-wrap">
+        <div class="table-container">
+          <table class="data-table" id="sklad-matrix-table" style="width:100%;border-collapse:collapse;">
+            <thead>${head}</thead><tbody>${body}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:11.5px;color:#94a3b8;">
+          ${isUz ? "Qator = uzunlik, ustun = kenglik. 680 = 600×80." : "Строка = длина, столбец = ширина. 680 = 600×80."}
+        </div>
       </div>
-      <div style="margin-top:8px;font-size:11.5px;color:#94a3b8;">
-        ${isUz ? "Qator = uzunlik, ustun = kenglik. 680 = 600×80." : "Строка = длина, столбец = ширина. 680 = 600×80."}
+      ${this.phoneList()}`;
+  },
+
+  // On a phone the grid is wider than the screen and mostly empty, so the
+  // sizes in stock are listed instead, grouped by length.
+  phoneList() {
+    const isUz = CURRENT_LANG === "uz";
+    const m = this.matrix;
+    const pcs = isUz ? "dona" : "шт";
+    const cells = (m.cells || []).filter(c => c.quantity)
+      .sort((a, b) => a.length - b.length || a.width - b.width);
+    if (!cells.length) {
+      return `<div class="sklad-phone-list" style="text-align:center;padding:28px;color:#94a3b8;">${t("ombor_phone_empty")}</div>`;
+    }
+    const groups = [];
+    cells.forEach(c => {
+      let g = groups[groups.length - 1];
+      if (!g || g.length !== c.length) { g = { length: c.length, qty: 0, cells: [] }; groups.push(g); }
+      g.qty += c.quantity;
+      g.cells.push(c);
+    });
+    const metr = c => c.quantity * (c.length + c.width) / 100;
+    return `
+      <div class="sklad-phone-list">
+        ${groups.map(g => `
+          <div style="border:1px solid #e2e8f0;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;padding:9px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+              <span style="font-weight:800;color:#dc2626;font-size:15px;">${g.length}</span>
+              <span style="font-size:12.5px;color:#64748b;">${formatNumber(g.qty)} ${pcs}</span>
+            </div>
+            ${g.cells.map(c => `
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;">
+                <div>
+                  <div style="font-weight:700;font-size:15px;color:#0f172a;">${c.length} × ${c.width}</div>
+                  <div style="font-size:11.5px;color:#94a3b8;">${isUz ? "kod" : "код"} ${c.code}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:800;font-size:16px;color:#6d28d9;">${formatNumber(c.quantity)} <span style="font-size:12px;font-weight:600;color:#64748b;">${pcs}</span></div>
+                  <div style="font-size:11.5px;color:#64748b;">${formatNumber(metr(c), 0, 2)} ${isUz ? "metr" : "м"}</div>
+                </div>
+              </div>`).join("")}
+          </div>`).join("")}
       </div>`;
   },
 

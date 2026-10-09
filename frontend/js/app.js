@@ -325,13 +325,8 @@ function updateUserDisplay() {
     }
   });
 
-  // Filter mobile bottom navigation items
-  document.querySelectorAll(".mob-nav-item").forEach(item => {
-    const nav = item.getAttribute("data-mobnav");
-    if (nav) {
-      item.style.display = hasModuleAccess(nav) ? "flex" : "none";
-    }
-  });
+  // Phone bottom bar: the main pages this user may open, plus Menyu
+  if (typeof MobileUI !== "undefined") MobileUI.buildBottomNav();
 
   // Filter Odoo App Launcher cards
   document.querySelectorAll(".odoo-app-card").forEach(card => {
@@ -415,13 +410,7 @@ async function navigateTo(moduleName) {
     }
   });
 
-  document.querySelectorAll(".mob-nav-item").forEach(item => {
-    if (item.getAttribute("data-mobnav") === moduleName) {
-      item.classList.add("active");
-    } else {
-      item.classList.remove("active");
-    }
-  });
+  if (typeof MobileUI !== "undefined") MobileUI.setActive(moduleName);
 
   const pageTitle = document.getElementById("page-title");
   const container = document.getElementById("module-container");
