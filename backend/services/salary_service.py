@@ -435,6 +435,24 @@ def pay_employee_salary(
     if not cash_reg:
         raise ValueError("Kassa hisobi topilmadi")
 
+    # Salaries are in so'm, so they leave a so'm register (Kassa UZS / Karta
+    # UZS) - taking so'm off Kassa USD would remove that many dollars.
+    if (cash_reg.currency or "UZS") != "UZS":
+        raise ValueError(f"Ish haqi so'mda to'lanadi: {cash_reg.name} emas, so'mli kassani tanlang (Kassa UZS yoki Karta UZS).")
+    payment_amount = round(float(payment_amount or 0.0), 2)
+    if payment_amount <= 0:
+        raise ValueError("To'lov summasi musbat bo'lishi kerak.")
+    if payment_amount > round(calc.final_amount or 0.0, 2) + 0.5:
+        raise ValueError(f"To'lov hisoblangan ish haqidan ({calc.final_amount:,.0f} so'm) oshmasligi kerak.")
+    if round(cash_reg.balance or 0.0, 2) < payment_amount:
+        raise ValueError(f"Kassada yetarli mablag' yo'q: {cash_reg.name} da {cash_reg.balance:,.0f} so'm, "
+                         f"kerak {payment_amount:,.0f} so'm.")
+
+    from backend.services.month_close_service import is_month_closed, local_today
+    pay_date = local_today()
+    if is_month_closed(db, pay_date):
+        raise ValueError(f"{pay_date:%Y-%m} oyi yopilgan - to'lov kiritib bo'lmaydi.")
+
     # Generate Cash Transaction (Chiqim)
     desc = f"Ish haqi to'lovi ({calc.year_month}): {emp.full_name}"
     if notes:
@@ -447,14 +465,14 @@ def pay_employee_salary(
         amount=payment_amount,
         currency=cash_reg.currency,
         category="Ishchilar oyligi / Avans",
-        date=date.today(),
+        date=pay_date,
         description=desc,
         status="Tasdiqlandi"
     )
     db.add(tx)
     
     # Update Cash Register balance
-    cash_reg.balance = (cash_reg.balance or 0.0) - payment_amount
+    cash_reg.balance = round((cash_reg.balance or 0.0) - payment_amount, 4)
     db.flush()
 
     # Update calculation status

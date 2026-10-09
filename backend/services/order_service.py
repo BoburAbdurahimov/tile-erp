@@ -27,6 +27,7 @@ from backend.models import (
 from backend.services import sklad_service as sklad
 from backend.services.sklad_service import SkladError
 from backend.services.month_close_service import is_month_closed
+from backend.services.counterparty_service import charge_delivery, client_for, credit_payment
 
 ORDER_CURRENCY = "UZS"
 CASH_REGISTER_NAME = "Kassa UZS"
@@ -403,6 +404,7 @@ def create_order(db: Session, data: dict, created_by: Optional[str]) -> SkladOrd
         order_number=_next_number(db),
         client_name=name,
         client_phone=phone,
+        counterparty_id=client_for(db, name, phone).id,     # shows in Kontragentlar
         client_address=(data.get("client_address") or "").strip() or None,
         sklad_id=int(data["sklad_id"]),
         sell_type=data.get("sell_type") or SELL_TYPE_METR,
@@ -516,6 +518,7 @@ def deliver_order(db: Session, order_id: int, car_number: str, driver_name: Opti
     o.driver_name = (driver_name or "").strip() or None
     o.driver_phone = driver_phone.strip()
     o.delivery_note = (note or "").strip() or None
+    charge_delivery(db, o)          # the client now owes the order (committed with the stock)
     try:
         # sell_stock checks every line, then commits this order with the stock.
         movement = sklad.sell_stock(
@@ -578,7 +581,7 @@ def pay_order(db: Session, order_id: int, amount: Optional[float], method: str,
         register_id=reg.id,
         type="kirim",
         source_type="client",
-        counterparty_id=None,
+        counterparty_id=o.counterparty_id,
         amount=received,
         currency=reg.currency if method == PAY_USD else o.currency,
         category="mijoz_tolovi",
@@ -588,6 +591,7 @@ def pay_order(db: Session, order_id: int, amount: Optional[float], method: str,
     )
     db.add(tx)
     db.flush()
+    credit_payment(db, tx)          # the client owes that much less
     db.add(SkladOrderPayment(
         order_id=o.id, amount=amount, method=method, register_id=reg.id,
         cash_transaction_id=tx.id, paid_date=paid_date,
@@ -621,6 +625,7 @@ def cancel_payment(db: Session, order_id: int, payment_id: int) -> SkladOrder:
             f"(pul allaqachon chiqim qilingan).")
     if reg:
         reg.balance = round((reg.balance or 0.0) - tx.amount, 4)
+    credit_payment(db, tx, sign=-1)
     db.delete(tx)
     db.delete(p)
     db.commit()

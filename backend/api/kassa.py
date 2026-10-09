@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from backend.database import get_db
-from backend.models import CashRegister, CashTransaction, ExchangeRate, MDMCounterparty
+from backend.models import (CashRegister, CashTransaction, ExchangeRate, MDMCounterparty,
+                            MonthlySalaryCalculation, OtherExpense)
 from backend.schemas import (
     CashRegisterResponse, CashTransactionCreate, CashTransactionResponse,
     ExchangeRateCreate, ExchangeRateResponse
@@ -16,25 +17,11 @@ from backend.services.currency_service import (
     fetch_cbu_rate_today, convert_amount
 )
 from backend.services.month_close_service import assert_month_open
+from backend.services.counterparty_service import move_cash
 from backend.services.order_service import ensure_card_register
 
 router = APIRouter(prefix="/kassa", tags=["MODUL 3: KASSA (Treasury & Cash)"])
 
-
-def _move_counterparty(cp: MDMCounterparty, tx_type: str, currency: str, amount: float, rate: float, sign: int = 1):
-    """Money in from a counterparty lowers their balance, money out to them raises it.
-
-    That one rule covers both sides: a client paying (kirim) owes less, a supplier
-    being paid (chiqim) is owed less (purchases make a supplier's balance negative),
-    and refunds go the other way. sign=-1 undoes it.
-    """
-    delta = (-amount if tx_type == "kirim" else amount) * sign
-    if currency == "USD":
-        cp.current_balance_usd = (cp.current_balance_usd or 0.0) + delta
-        cp.current_balance_uzs = (cp.current_balance_uzs or 0.0) + delta * rate
-    else:
-        cp.current_balance_uzs = (cp.current_balance_uzs or 0.0) + delta
-        cp.current_balance_usd = (cp.current_balance_usd or 0.0) + (delta / rate if rate > 0 else 0.0)
 
 @router.get("/registers", response_model=List[CashRegisterResponse])
 def get_cash_registers(
@@ -164,7 +151,7 @@ def create_cash_transaction(
         cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == payload.counterparty_id).first()
         if not cp:
             raise HTTPException(status_code=404, detail="Kontragent topilmadi.")
-        _move_counterparty(cp, normalized_type, currency, payload.amount,
+        move_cash(cp, normalized_type, currency, payload.amount,
                            get_exchange_rate_for_date(db, payload.date))
         if source_type in (None, "", "other"):
             source_type = cp.type          # client / supplier
@@ -225,8 +212,22 @@ def delete_cash_transaction(
     if tx.counterparty_id:
         cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == tx.counterparty_id).first()
         if cp:
-            _move_counterparty(cp, tx.type.lower(), tx.currency, tx.amount,
+            move_cash(cp, tx.type.lower(), tx.currency, tx.amount,
                                get_exchange_rate_for_date(db, tx.date), sign=-1)
+
+    # Documents paid through this entry go back to unpaid / cancelled, so Ish
+    # haqi and Xarajatlar agree with Kassa (and the salary's foreign key does
+    # not stop the delete).
+    for calc in db.query(MonthlySalaryCalculation).filter(
+            MonthlySalaryCalculation.cash_transaction_id == tx.id).all():
+        calc.cash_transaction_id = None
+        calc.status = "finalized" if calc.finalized_at else "draft"
+        calc.paid_at = None
+        calc.paid_by = None
+    for exp in db.query(OtherExpense).filter(OtherExpense.cash_transaction_id == tx.id).all():
+        exp.status = "Bekor"
+        exp.cash_transaction_id = None
+    db.flush()
 
     db.delete(tx)
     db.commit()

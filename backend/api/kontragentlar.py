@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,12 +7,24 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import (
     MDMCounterparty, Sale, SaleItem, Purchase, PurchaseItem,
-    CashTransaction, ExchangeRate
+    CashTransaction, ExchangeRate, SkladOrder
 )
 from backend.api.auth import get_current_user_role, check_permission
 from backend.services.currency_service import get_exchange_rate_for_date, convert_amount
+from backend.services.counterparty_service import link_order_clients
+from backend.services.order_service import ORDER_DELIVERED
 
 router = APIRouter(prefix="/kontragentlar", tags=["MODUL 5: MIJOZLAR VA POSTAVSHIKLAR BALANSI"])
+logger = logging.getLogger("TileERP.kontragentlar")
+
+
+def _link_order_clients(db: Session) -> None:
+    # Orders taken before clients were tied to Kontragentlar; normally none.
+    try:
+        link_order_clients(db)
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Linking order clients skipped: {e}")
 
 @router.get("/summary")
 def get_counterparties_summary(
@@ -20,6 +33,7 @@ def get_counterparties_summary(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("kontragentlar", role)
+    _link_order_clients(db)
     today = date.today()
     today_rate = get_exchange_rate_for_date(db, today)
 
@@ -88,6 +102,7 @@ def get_counterparty_ledger(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("kontragentlar", role)
+    _link_order_clients(db)
     cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == counterparty_id).first()
     if not cp:
         raise HTTPException(status_code=404, detail="Kontragent topilmadi.")
@@ -136,6 +151,29 @@ def get_counterparty_ledger(
                     "amount_view_currency": round(conv_amount, 2),
                     "description": s.description or f"Sotuv #{s.sale_number}"
                 })
+
+        # Ombor orders (Sotish) delivered to this client. Their payments come
+        # through the Kassa with this client attached, so they are below.
+        orders = db.query(SkladOrder).filter(
+            SkladOrder.counterparty_id == counterparty_id,
+            SkladOrder.status == ORDER_DELIVERED,
+        ).all()
+        for o in orders:
+            day = o.delivered_at.date() if o.delivered_at else o.created_at.date()
+            ledger_entries.append({
+                "id": f"ORD-{o.order_number}",
+                "date": day,
+                "type": "Buyurtma yetkazildi (Tovar berildi)",
+                "item_name": ", ".join(f"{it.size_code} x{it.quantity}" for it in o.items) or "Kafel",
+                "quantity": sum(it.quantity for it in o.items),
+                "unit": "dona",
+                "price": o.total_amount,
+                "doc_currency": o.currency,
+                "doc_amount": round(o.total_amount, 2),
+                "rate_on_date": get_exchange_rate_for_date(db, day),
+                "amount_view_currency": round(convert_amount(o.total_amount, o.currency, view_currency, day, db), 2),
+                "description": f"Buyurtma {o.order_number} - {o.client_name}",
+            })
 
     # 3. Purchases (if supplier)
     if cp.type == "supplier":

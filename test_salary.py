@@ -89,10 +89,13 @@ class TestSalaryModule(unittest.TestCase):
         summary = get_payroll_summary(self.db, self.test_month)
         self.assertTrue(summary["is_all_finalized"])
 
-        # Attempt to pay first calculation
-        first_calc_id = summary["calculations"][0]["id"]
-        reg = self.db.query(CashRegister).first()
+        # Pay a calculation that has something to pay, from a so'm register
+        first_calc_id = next(c["id"] for c in summary["calculations"] if c["final_amount"] >= 100000)
+        reg = self.db.query(CashRegister).filter(CashRegister.currency == "UZS").first()
         self.assertIsNotNone(reg)
+        if (reg.balance or 0) < 100000:
+            reg.balance = 100000.0
+            self.db.commit()
 
         initial_bal = reg.balance
         calc_res = pay_employee_salary(self.db, first_calc_id, reg.id, 100000.0, current_user="Test", notes="Test payout")

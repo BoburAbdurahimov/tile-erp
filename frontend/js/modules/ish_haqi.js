@@ -1,6 +1,6 @@
 const IshHaqiModule = (function () {
   let activeTab = "payroll"; // 'payroll' | 'daily' | 'employees' | 'job_types'
-  let activeDept = "all"; // 'all' | "Ma'muriyat" | an Ombor ("Toxir 120") | NO_DEPT
+  let activeDept = "all"; // 'all' | "Ma'muriyat" | an Ombor ("Toxir") | NO_DEPT
   let currentYearMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
   let currentDailyDate = new Date().toISOString().slice(0, 10); // e.g. "2026-08-15"
 
@@ -9,7 +9,7 @@ const IshHaqiModule = (function () {
   let employeesList = [];
   let jobTypesList = [];
 
-  // Where people work: "Ma'muriyat" and the Omborlar ("Toxir 120" ...), from
+  // Where people work: "Ma'muriyat" and the 4 Omborlar (Toxir, Kodir ...), from
   // /salary/departments. An employee still on a department that no longer
   // exists (an old production line) is shown as "Ombor tanlanmagan".
   const NO_DEPT = "__none";
@@ -100,7 +100,7 @@ const IshHaqiModule = (function () {
     };
   }
 
-  // One colour per owner, so both of an owner's Omborlar read as a pair.
+  // One colour per Ombor.
   const OWNER_COLORS = {
     Toxir: ["#d97706", "#fffbeb"], Kodir: ["#0284c7", "#f0f9ff"],
     Istam: ["#7c3aed", "#f5f3ff"], Aziz: ["#059669", "#ecfdf5"],
@@ -111,7 +111,7 @@ const IshHaqiModule = (function () {
     let [color, bg] = ["#3b82f6", "#eff6ff"];
     if (key === "Ma'muriyat") [color, bg] = ["#dc2626", "#fef2f2"];
     else if (key === NO_DEPT) [color, bg] = ["#c2410c", "#fff7ed"];
-    else if (OWNER_COLORS[key.split(" ")[0]]) [color, bg] = OWNER_COLORS[key.split(" ")[0]];
+    else if (OWNER_COLORS[key]) [color, bg] = OWNER_COLORS[key];
     const label = key === NO_DEPT ? deptLabel(NO_DEPT) : key;
     return `<span class="badge" style="background:${bg}; color:${color}; border:1px solid ${color}30; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;">${escapeHtml(label)}</span>`;
   }
@@ -1311,13 +1311,10 @@ const IshHaqiModule = (function () {
       cashRegisters = await API.getCashRegisters();
     } catch (_) {}
 
-    let regOptions = cashRegisters.map(r => `
+    // Salaries are in so'm: only so'm registers (Kassa UZS, Karta UZS).
+    const regOptions = cashRegisters.filter(r => r.currency === "UZS").map(r => `
       <option value="${r.id}">${escapeHtml(r.name)} (${formatNumber(r.balance)} ${r.currency})</option>
     `).join("");
-
-    if (!regOptions) {
-      regOptions = `<option value="2">Kassa UZS</option><option value="1">Kassa USD</option>`;
-    }
 
     const modalHost = document.getElementById("salary-modals-host");
     modalHost.innerHTML = `
@@ -1345,7 +1342,7 @@ const IshHaqiModule = (function () {
 
               <div class="form-group">
                 <label class="form-label">${isUz ? "To'lov summasi" : "Сумма выплаты"} *</label>
-                <input type="number" id="pay-amount" class="form-control" value="${amount}" required step="1000" style="font-weight: 700; font-family: monospace;">
+                <input type="number" id="pay-amount" class="form-control" value="${amount}" required min="1" max="${amount}" step="any" style="font-weight: 700; font-family: monospace;">
               </div>
 
               <div class="form-group">
