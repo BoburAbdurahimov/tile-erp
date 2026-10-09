@@ -1,4 +1,4 @@
-"""Ish haqi departments are "Ma'muriyat" and the Omborlar - the production
+"""Ish haqi departments are "Ma'muriyat" and the 4 Omborlar - the production
 lines are gone - and saving the attendance no longer wipes the day's
 piecework of people who are still on an old line."""
 import unittest
@@ -23,14 +23,8 @@ class TestIshHaqiDepartments(unittest.TestCase):
         self.created = []
 
     def tearDown(self):
-        db = SessionLocal()
-        try:
-            for emp_id in self.created:
-                db.query(WorkEntry).filter(WorkEntry.employee_id == emp_id).delete()
-                db.query(Employee).filter(Employee.id == emp_id).delete()
-            db.commit()
-        finally:
-            db.close()
+        for emp_id in self.created:                       # the app's delete clears their salary rows
+            client.delete(f"/api/salary/employees/{emp_id}", headers=ADMIN)
 
     def create(self, department, **extra):
         res = client.post("/api/salary/employees", headers=ADMIN, json={
@@ -42,22 +36,43 @@ class TestIshHaqiDepartments(unittest.TestCase):
     def test_departments_are_omborlar(self):
         ids = [d["id"] for d in client.get("/api/salary/departments", headers=ADMIN).json()["departments"]]
         self.assertEqual(ids[0], "Ma'muriyat")
-        self.assertEqual(ids[1:], ["Toxir 120", "Toxir 100", "Kodir 120", "Kodir 100",
-                                   "Istam 120", "Istam 100", "Aziz 120", "Aziz 100"])
+        self.assertEqual(ids[1:], ["Toxir", "Kodir", "Istam", "Aziz"])           # 4 Omborlar
         self.assertFalse([i for i in ids if "Liniya" in i])
 
     def test_employee_on_an_ombor(self):
-        res = self.create("Kodir 100")
+        res = self.create("Kodir")
         self.assertEqual(res.status_code, 200, res.text)
         emp_id = res.json()["id"]
         self.assertEqual(self.create("3-Liniya").status_code, 400)          # lines are gone
+        self.assertEqual(self.create("Kodir 120").status_code, 400)         # a yo'nalish, not an Ombor
 
         self.assertEqual(client.put(f"/api/salary/employees/{emp_id}", headers=ADMIN,
                                     json={"department": ""}).status_code, 400)
         self.assertEqual(client.put(f"/api/salary/employees/{emp_id}", headers=ADMIN,
-                                    json={"department": "Aziz 120"}).status_code, 200)
+                                    json={"department": "Aziz"}).status_code, 200)
         emps = client.get("/api/salary/employees", headers=ADMIN).json()
-        self.assertEqual(next(e for e in emps if e["id"] == emp_id)["department"], "Aziz 120")
+        self.assertEqual(next(e for e in emps if e["id"] == emp_id)["department"], "Aziz")
+
+    def test_yonalish_departments_become_their_ombor(self):
+        # Employees saved on a yo'nalish ("Kodir 120") while that was offered
+        # are moved to its Ombor on start-up.
+        from backend.database import run_data_migrations
+        db = SessionLocal()
+        try:
+            emp = Employee(full_name="Yo'nalish xodimi", department="Kodir 120", employee_type="fixed",
+                           hire_date=date(2026, 1, 1), is_active=True)
+            db.add(emp)
+            db.commit()
+            self.created.append(emp.id)
+            emp_id = emp.id
+        finally:
+            db.close()
+        run_data_migrations()
+        db = SessionLocal()
+        try:
+            self.assertEqual(db.query(Employee).get(emp_id).department, "Kodir")
+        finally:
+            db.close()
 
     def test_attendance_keeps_piecework_of_old_line_workers(self):
         db = SessionLocal()

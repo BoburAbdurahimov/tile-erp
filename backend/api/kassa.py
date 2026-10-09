@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from backend.database import get_db
-from backend.models import CashRegister, CashTransaction, ExchangeRate, MDMCounterparty
+from backend.models import (CashRegister, CashTransaction, ExchangeRate, MDMCounterparty,
+                            MonthlySalaryCalculation, OtherExpense)
 from backend.schemas import (
     CashRegisterResponse, CashTransactionCreate, CashTransactionResponse,
     ExchangeRateCreate, ExchangeRateResponse
@@ -227,6 +228,20 @@ def delete_cash_transaction(
         if cp:
             _move_counterparty(cp, tx.type.lower(), tx.currency, tx.amount,
                                get_exchange_rate_for_date(db, tx.date), sign=-1)
+
+    # Documents paid through this entry go back to unpaid / cancelled, so Ish
+    # haqi and Xarajatlar agree with Kassa (and the salary's foreign key does
+    # not stop the delete).
+    for calc in db.query(MonthlySalaryCalculation).filter(
+            MonthlySalaryCalculation.cash_transaction_id == tx.id).all():
+        calc.cash_transaction_id = None
+        calc.status = "finalized" if calc.finalized_at else "draft"
+        calc.paid_at = None
+        calc.paid_by = None
+    for exp in db.query(OtherExpense).filter(OtherExpense.cash_transaction_id == tx.id).all():
+        exp.status = "Bekor"
+        exp.cash_transaction_id = None
+    db.flush()
 
     db.delete(tx)
     db.commit()

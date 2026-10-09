@@ -113,7 +113,25 @@ def run_nullable_migrations():
         logger.warning(f"Nullable migrations skipped: {e}")
 
 
+def run_data_migrations():
+    """Small idempotent data fixes, run on every start like the ones above."""
+    from sqlalchemy import inspect, text
+    from backend.models import SKLAD_CONFIG
+    try:
+        if not inspect(engine).has_table("employees"):
+            return
+        with engine.begin() as conn:
+            # Ish haqi departments are the 4 Omborlar (owners), not their 8
+            # yo'nalish: "Kodir 120" / "Kodir 100" -> "Kodir".
+            for s in SKLAD_CONFIG:
+                conn.execute(text("UPDATE employees SET department = :owner WHERE department = :old"),
+                             {"owner": s["name"], "old": f"{s['name']} {s['eni']}"})
+    except Exception as e:
+        logger.warning(f"Data migrations skipped: {e}")
+
+
 def create_tables():
     Base.metadata.create_all(bind=engine)
     run_column_migrations()
     run_nullable_migrations()
+    run_data_migrations()

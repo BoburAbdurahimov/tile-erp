@@ -207,65 +207,65 @@ def seed_database():
             ("Narzullayev Otabek", "Ma'muriyat", "Sotuv Boshlig'i", "fixed", 14000000.0),
             ("Xoliqov Jasur", "Ma'muriyat", "IT va Tizim Admini", "fixed", 13000000.0),
 
-            # --- Toxir 120 (10 xodim) ---
-            ("Axmedov Rustam", "Toxir 120", "Sex Masteri", "fixed", 10000000.0),
-            ("Yusupov Botir", "Toxir 120", "Press Operatori", "piecework", 0.0),
-            ("Raximov Sherzod", "Toxir 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Zokirov Anvar", "Toxir 120", "Glazur Master", "piecework", 0.0),
-            ("Ergashev Umid", "Toxir 120", "Pech Operatori", "piecework", 0.0),
-            ("Toshmatov Dilshod", "Toxir 120", "Kafel Saralovchi", "piecework", 0.0),
-            ("Qodirov Baxodir", "Toxir 120", "Qadoqlovchi", "piecework", 0.0),
-            ("Sulaymonov Alisher", "Toxir 120", "Karoxona Haydovchisi", "fixed", 6500000.0),
-            ("Meliyev Javoxir", "Toxir 120", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
-            ("Umarov Sanjar", "Toxir 120", "Elektrik", "fixed", 7500000.0),
+            # --- Toxir (10 xodim) ---
+            ("Axmedov Rustam", "Toxir", "Sex Masteri", "fixed", 10000000.0),
+            ("Yusupov Botir", "Toxir", "Press Operatori", "piecework", 0.0),
+            ("Raximov Sherzod", "Toxir", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Zokirov Anvar", "Toxir", "Glazur Master", "piecework", 0.0),
+            ("Ergashev Umid", "Toxir", "Pech Operatori", "piecework", 0.0),
+            ("Toshmatov Dilshod", "Toxir", "Kafel Saralovchi", "piecework", 0.0),
+            ("Qodirov Baxodir", "Toxir", "Qadoqlovchi", "piecework", 0.0),
+            ("Sulaymonov Alisher", "Toxir", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("Meliyev Javoxir", "Toxir", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Umarov Sanjar", "Toxir", "Elektrik", "fixed", 7500000.0),
 
-            # --- Kodir 120 (10 xodim) ---
-            ("Sobirov Farrux", "Kodir 120", "Sex Masteri", "fixed", 10500000.0),
-            ("Xamidov Abror", "Kodir 120", "Press Operatori", "piecework", 0.0),
-            ("Botirov Jamshid", "Kodir 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Nazarov Eldor", "Kodir 120", "Glazur Master", "piecework", 0.0),
-            ("Usmonov Timur", "Kodir 120", "Pech Operatori", "piecework", 0.0),
-            ("Jo'rayev Olim", "Kodir 120", "Kafel Saralovchi", "piecework", 0.0),
-            ("Xakimov Nodir", "Kodir 120", "Qadoqlovchi", "piecework", 0.0),
-            ("Ortiqov Shohrux", "Kodir 120", "Karoxona Haydovchisi", "fixed", 6500000.0),
-            ("G'ofurov Bunyod", "Kodir 120", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
-            ("Bozorov Ilhom", "Kodir 120", "Elektrik", "fixed", 7500000.0),
+            # --- Kodir (10 xodim) ---
+            ("Sobirov Farrux", "Kodir", "Sex Masteri", "fixed", 10500000.0),
+            ("Xamidov Abror", "Kodir", "Press Operatori", "piecework", 0.0),
+            ("Botirov Jamshid", "Kodir", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Nazarov Eldor", "Kodir", "Glazur Master", "piecework", 0.0),
+            ("Usmonov Timur", "Kodir", "Pech Operatori", "piecework", 0.0),
+            ("Jo'rayev Olim", "Kodir", "Kafel Saralovchi", "piecework", 0.0),
+            ("Xakimov Nodir", "Kodir", "Qadoqlovchi", "piecework", 0.0),
+            ("Ortiqov Shohrux", "Kodir", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("G'ofurov Bunyod", "Kodir", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Bozorov Ilhom", "Kodir", "Elektrik", "fixed", 7500000.0),
 
-            # --- Istam 120 (10 xodim) ---
-            ("Oripov Akmal", "Istam 120", "Sex Masteri", "fixed", 11000000.0),
-            ("Kamilov Bekzod", "Istam 120", "Press Operatori", "piecework", 0.0),
-            ("Raimov Azamat", "Istam 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Valiyev Sarvar", "Istam 120", "Glazur Master", "piecework", 0.0),
-            ("Xursandov Sherali", "Istam 120", "Pech Operatori", "piecework", 0.0),
-            ("Niyazov Farxod", "Istam 120", "Kafel Saralovchi", "piecework", 0.0),
-            ("Matniyazov Mansur", "Istam 120", "Qadoqlovchi", "piecework", 0.0),
-            ("Isroilov Zafar", "Istam 120", "Karoxona Haydovchisi", "fixed", 6800000.0),
-            ("Nurmamatov Xurshid", "Istam 120", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
-            ("Turdiyev Shahram", "Istam 120", "Elektrik", "fixed", 7800000.0),
+            # --- Istam (10 xodim) ---
+            ("Oripov Akmal", "Istam", "Sex Masteri", "fixed", 11000000.0),
+            ("Kamilov Bekzod", "Istam", "Press Operatori", "piecework", 0.0),
+            ("Raimov Azamat", "Istam", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Valiyev Sarvar", "Istam", "Glazur Master", "piecework", 0.0),
+            ("Xursandov Sherali", "Istam", "Pech Operatori", "piecework", 0.0),
+            ("Niyazov Farxod", "Istam", "Kafel Saralovchi", "piecework", 0.0),
+            ("Matniyazov Mansur", "Istam", "Qadoqlovchi", "piecework", 0.0),
+            ("Isroilov Zafar", "Istam", "Karoxona Haydovchisi", "fixed", 6800000.0),
+            ("Nurmamatov Xurshid", "Istam", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
+            ("Turdiyev Shahram", "Istam", "Elektrik", "fixed", 7800000.0),
 
-            # --- Aziz 120 (10 xodim) ---
-            ("Davronov Jalol", "Aziz 120", "Sex Masteri", "fixed", 10000000.0),
-            ("Xolmatov Muzaffar", "Aziz 120", "Press Operatori", "piecework", 0.0),
-            ("Mirzayev Otabek", "Aziz 120", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Yoqubov Laziz", "Aziz 120", "Glazur Master", "piecework", 0.0),
-            ("Shamsiyev Kamron", "Aziz 120", "Pech Operatori", "piecework", 0.0),
-            ("Sotvoldiyev Ulug'bek", "Aziz 120", "Kafel Saralovchi", "piecework", 0.0),
-            ("G'aniyev Ravshan", "Aziz 120", "Qadoqlovchi", "piecework", 0.0),
-            ("Eshonqulov Xikmat", "Aziz 120", "Karoxona Haydovchisi", "fixed", 6500000.0),
-            ("Vahobov Murod", "Aziz 120", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
-            ("Sultonov Jamol", "Aziz 120", "Elektrik", "fixed", 7500000.0),
+            # --- Aziz (10 xodim) ---
+            ("Davronov Jalol", "Aziz", "Sex Masteri", "fixed", 10000000.0),
+            ("Xolmatov Muzaffar", "Aziz", "Press Operatori", "piecework", 0.0),
+            ("Mirzayev Otabek", "Aziz", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Yoqubov Laziz", "Aziz", "Glazur Master", "piecework", 0.0),
+            ("Shamsiyev Kamron", "Aziz", "Pech Operatori", "piecework", 0.0),
+            ("Sotvoldiyev Ulug'bek", "Aziz", "Kafel Saralovchi", "piecework", 0.0),
+            ("G'aniyev Ravshan", "Aziz", "Qadoqlovchi", "piecework", 0.0),
+            ("Eshonqulov Xikmat", "Aziz", "Karoxona Haydovchisi", "fixed", 6500000.0),
+            ("Vahobov Murod", "Aziz", "Mexanik (Zapchastlar)", "fixed", 8000000.0),
+            ("Sultonov Jamol", "Aziz", "Elektrik", "fixed", 7500000.0),
 
-            # --- Kodir 100 (10 xodim) ---
-            ("Murodov Bobomurod", "Kodir 100", "Sex Masteri", "fixed", 11500000.0),
-            ("Norboyev Komil", "Kodir 100", "Press Operatori", "piecework", 0.0),
-            ("Jumayev Rustam", "Kodir 100", "Press Operatori (Yordamchi)", "piecework", 0.0),
-            ("Ro'ziyev Sardor", "Kodir 100", "Glazur Master", "piecework", 0.0),
-            ("Xudoyberdiyev Elbek", "Kodir 100", "Pech Operatori", "piecework", 0.0),
-            ("Yo'ldoshev Faxriddin", "Kodir 100", "Kafel Saralovchi", "piecework", 0.0),
-            ("Allabergenov Doniyor", "Kodir 100", "Qadoqlovchi", "piecework", 0.0),
-            ("Tangriberdiyev Oybek", "Kodir 100", "Karoxona Haydovchisi", "fixed", 6800000.0),
-            ("Mamirov Shavkat", "Kodir 100", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
-            ("Xaitov Bahrom", "Kodir 100", "Elektrik", "fixed", 7800000.0)
+            # --- Kodir (10 xodim) ---
+            ("Murodov Bobomurod", "Kodir", "Sex Masteri", "fixed", 11500000.0),
+            ("Norboyev Komil", "Kodir", "Press Operatori", "piecework", 0.0),
+            ("Jumayev Rustam", "Kodir", "Press Operatori (Yordamchi)", "piecework", 0.0),
+            ("Ro'ziyev Sardor", "Kodir", "Glazur Master", "piecework", 0.0),
+            ("Xudoyberdiyev Elbek", "Kodir", "Pech Operatori", "piecework", 0.0),
+            ("Yo'ldoshev Faxriddin", "Kodir", "Kafel Saralovchi", "piecework", 0.0),
+            ("Allabergenov Doniyor", "Kodir", "Qadoqlovchi", "piecework", 0.0),
+            ("Tangriberdiyev Oybek", "Kodir", "Karoxona Haydovchisi", "fixed", 6800000.0),
+            ("Mamirov Shavkat", "Kodir", "Mexanik (Zapchastlar)", "fixed", 8500000.0),
+            ("Xaitov Bahrom", "Kodir", "Elektrik", "fixed", 7800000.0)
         ]
 
         emp_objects = []
@@ -299,11 +299,11 @@ def seed_database():
         job_pack = jt_map.get("Qadoqlash va Poddon Yig'ish")
 
         dept_job_mapping = {
-            "Toxir 120": (job_press_30, 800.0),
-            "Kodir 120": (job_press_60, 600.0),
-            "Istam 120": (job_press_120, 350.0),
-            "Aziz 120": (job_press_40, 700.0),
-            "Kodir 100": (job_press_80, 300.0),
+            "Toxir": (job_press_30, 800.0),
+            "Kodir": (job_press_60, 600.0),
+            "Istam": (job_press_120, 350.0),
+            "Aziz": (job_press_40, 700.0),
+            "Kodir": (job_press_80, 300.0),
         }
 
         # Days to seed in 2026-08 (1 to 26)

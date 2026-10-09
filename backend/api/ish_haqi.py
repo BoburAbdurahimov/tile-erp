@@ -14,13 +14,18 @@ from backend.services.salary_service import (
 
 router = APIRouter(prefix="/salary", tags=["Salary & HR Management"])
 
-# Where an employee works: the office, or one of the Omborlar (each owner's
-# production per eni - the same "Toxir 120" names used everywhere else).
+# Where an employee works: the office, or one of the 4 Omborlar (Toxir,
+# Kodir, Istam, Aziz). Each Ombor has two yo'nalish (eni 120 and 100), but
+# people work for the Ombor, not for one of its yo'nalish.
 ADMIN_DEPARTMENT = "Ma'muriyat"
 
 
+def ombor_names() -> List[str]:
+    return list(dict.fromkeys(s["name"] for s in SKLAD_CONFIG))
+
+
 def department_names() -> List[str]:
-    return [ADMIN_DEPARTMENT] + [f"{s['name']} {s['eni']}" for s in SKLAD_CONFIG]
+    return [ADMIN_DEPARTMENT] + ombor_names()
 
 
 def _check_department(name: Optional[str]) -> str:
@@ -35,7 +40,7 @@ def _check_department(name: Optional[str]) -> str:
 
 class EmployeeCreateSchema(BaseModel):
     full_name: str
-    department: Optional[str] = "Ma'muriyat"  # "Ma'muriyat" or an Ombor, e.g. "Toxir 120"
+    department: Optional[str] = "Ma'muriyat"  # "Ma'muriyat" or an Ombor, e.g. "Toxir"
     employee_type: str = Field(default="fixed", description="'fixed' or 'piecework'")
     position: Optional[str] = None
     phone_number: Optional[str] = None
@@ -105,8 +110,9 @@ def parse_bool(val: Any) -> Optional[bool]:
 @router.get("/departments")
 def get_departments():
     return {"departments": [
-        {"id": ADMIN_DEPARTMENT, "sklad_id": None},
-        *({"id": f"{s['name']} {s['eni']}", "sklad_id": s["id"]} for s in SKLAD_CONFIG),
+        {"id": ADMIN_DEPARTMENT, "sklad_ids": []},
+        *({"id": name, "sklad_ids": [s["id"] for s in SKLAD_CONFIG if s["name"] == name]}
+          for name in ombor_names()),
     ]}
 
 

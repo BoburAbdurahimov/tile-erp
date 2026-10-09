@@ -409,7 +409,7 @@ class Employee(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(150), nullable=False, index=True)
-    department = Column(String(50), nullable=False, default="Ma'muriyat") # "Ma'muriyat" or an Ombor, e.g. "Toxir 120"
+    department = Column(String(50), nullable=False, default="Ma'muriyat") # "Ma'muriyat" or an Ombor, e.g. "Toxir"
     employee_type = Column(String(20), nullable=False, default="fixed") # "fixed" or "piecework"
     position = Column(String(100), nullable=True) # e.g. "Kafel ustalari brigadiri", "Saralovchi"
     phone_number = Column(String(50), nullable=True)
