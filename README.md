@@ -74,8 +74,10 @@ last section of `style.css`); the computer layout is unchanged.
   section. MDM, Xomashyo ombori, Ish haqi, Tarix and Foydalanuvchilar are only
   in Menyu, under "Kompyuterda qulayroq".
 - Forms open full-screen and scroll; the title and the save buttons stay visible.
-- Tables show one card per row; the Ombor size grid becomes a list of the sizes
-  in stock. Give a table the `no-cards` class to keep it a table on phones.
+- Tables show one card per row. Give a table the `no-cards` class to keep it a
+  table on phones.
+- The Ombor size grid is one picture in the Telegram bot's look that fits the
+  screen, refreshes every 12 seconds and opens bigger when tapped.
 
 ## Deployment
 
