@@ -484,7 +484,6 @@ const IshHaqiModule = (function () {
                 <input type="checkbox" class="att-checkbox" data-empid="${emp.id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.id})">
                 <span>${emp.is_absent ? (isUz ? 'Kelmadi' : 'Не вышел') : (isUz ? 'Ishda' : 'На работе')}</span>
               </label>
-              <input type="text" id="att-reason-${emp.id}" class="form-control" placeholder="${isUz ? 'Sababi...' : 'Причина...'}" value="${escapeHtml(emp.reason || '')}" style="width: 140px; padding: 4px 8px; font-size: 12px; display: ${emp.is_absent ? 'block' : 'none'};" ${isLocked ? 'disabled' : ''}>
             </div>
           </div>
         `;
@@ -584,18 +583,12 @@ const IshHaqiModule = (function () {
   function toggleAttRow(chk, empId) {
     const isUz = isUzbek();
     const span = chk.nextElementSibling;
-    const reasonInput = document.getElementById(`att-reason-${empId}`);
     if (chk.checked) {
       span.innerText = isUz ? "Kelmadi" : "Не вышел";
       span.parentElement.style.color = "#ef4444";
-      if (reasonInput) reasonInput.style.display = "block";
     } else {
       span.innerText = isUz ? "Ishda" : "На работе";
       span.parentElement.style.color = "#10b981";
-      if (reasonInput) {
-        reasonInput.style.display = "none";
-        reasonInput.value = "";
-      }
     }
   }
 
@@ -604,12 +597,7 @@ const IshHaqiModule = (function () {
     const absentRecords = [];
     checkboxes.forEach(chk => {
       if (chk.checked) {
-        const empId = parseInt(chk.getAttribute("data-empid"));
-        const reasonInput = document.getElementById(`att-reason-${empId}`);
-        absentRecords.push({
-          employee_id: empId,
-          reason: reasonInput ? reasonInput.value : ""
-        });
+        absentRecords.push({ employee_id: parseInt(chk.getAttribute("data-empid")) });
       }
     });
 
