@@ -4,11 +4,13 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 def get_font(size=18, bold=False):
-    # Try Windows fonts, fallback to PIL default
+    # Windows or Linux system fonts if present, else Pillow's built-in font -
+    # at the size asked for (on Vercel there are no system fonts).
     font_paths = [
         ("C:/Windows/Fonts/segoeuib.ttf" if bold else "C:/Windows/Fonts/segoeui.ttf"),
         ("C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf"),
         ("C:/Windows/Fonts/calibrib.ttf" if bold else "C:/Windows/Fonts/calibri.ttf"),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
     ]
     for path in font_paths:
         if os.path.exists(path):
@@ -16,7 +18,10 @@ def get_font(size=18, bold=False):
                 return ImageFont.truetype(path, size)
             except Exception:
                 pass
-    return ImageFont.load_default()
+    try:
+        return ImageFont.load_default(size=size)   # Pillow >= 10.1: scalable
+    except TypeError:
+        return ImageFont.load_default()
 
 def render_excel_table_image(
     title: str,

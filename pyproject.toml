@@ -4,9 +4,8 @@ version = "1.0.0"
 description = "Ceramic tile factory ERP - web dashboard and Telegram Mini App"
 requires-python = ">=3.12"
 
-# Web/API dependencies only. The Telegram bot (python-telegram-bot, Pillow)
-# runs locally, not on Vercel, so it is deliberately not listed here - see
-# requirements.txt for the full local set.
+# What Vercel installs. The Telegram bot runs here too (webhook), so it needs
+# python-telegram-bot, and Pillow for the table / Ombor images it sends.
 dependencies = [
     "fastapi>=0.110.0",
     "sqlalchemy>=2.0.28",
@@ -17,6 +16,8 @@ dependencies = [
     "jinja2>=3.1.3",
     "psycopg2-binary>=2.9.9",
     "libsql-client>=0.3.1",
+    "python-telegram-bot>=21.0",
+    "Pillow>=10.0.0",
 ]
 
 [tool.vercel]
