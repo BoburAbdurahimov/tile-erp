@@ -20,6 +20,15 @@ const I18N = {
     nav_expenses: "Xarajatlar",
     nav_xomashyo: "Xomashyo ombori",
     apps_all_sections: "Barcha bo'limlar",
+
+    // Installable app (PWA)
+    pwa_install: "Ilovani o'rnatish",
+    pwa_installed: "Ilova o'rnatildi",
+    pwa_ios_title: "Ilovani telefonga o'rnatish",
+    pwa_ios_step1: "Safari pastidagi \"Ulashish\" tugmasini bosing",
+    pwa_ios_step2: "Ro'yxatdan \"На экран «Домой»\" / \"Add to Home Screen\" ni tanlang",
+    pwa_ios_step3: "\"Qo'shish\" (Добавить / Add) ni bosing - ilova ekranda paydo bo'ladi",
+    pwa_ios_ok: "Tushunarli",
     users_title: "Foydalanuvchilar va Rollar",
     
     // Header
@@ -145,6 +154,15 @@ const I18N = {
     nav_expenses: "Расходы",
     nav_xomashyo: "Склад сырья",
     apps_all_sections: "Все разделы",
+
+    // Installable app (PWA)
+    pwa_install: "Установить приложение",
+    pwa_installed: "Приложение установлено",
+    pwa_ios_title: "Установить приложение на телефон",
+    pwa_ios_step1: "Нажмите кнопку \"Поделиться\" внизу Safari",
+    pwa_ios_step2: "Выберите \"На экран «Домой»\" (Add to Home Screen)",
+    pwa_ios_step3: "Нажмите \"Добавить\" - приложение появится на экране",
+    pwa_ios_ok: "Понятно",
     users_title: "Пользователи и Роли",
     
     // Header
