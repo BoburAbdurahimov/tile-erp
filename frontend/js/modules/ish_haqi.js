@@ -772,9 +772,9 @@ const IshHaqiModule = (function () {
   // How a job (position) is paid: ishbay = units done x rate, soatbay =
   // hours x rate (both through naryad entries), fiks = a monthly salary.
   const PAY_TYPES = ["ishbay", "soatbay", "fiks"];
+  // An Ish turi already saved with another unit keeps it (jobTypeFields adds it).
   const UNITS = [
-    ["m2", "m² (Kvadrat metr)"], ["dona", "dona (Штука)"], ["metr", "metr (Метр)"],
-    ["taglik", "taglik (Поддон)"], ["quti", "quti (Коробка)"], ["tonna", "tonna (Тонна)"],
+    ["m2", "m² (Kvadrat metr)"], ["dona", "dona (Штука)"], ["metr", "metr (Метр)"], ["tonna", "tonna (Тонна)"],
   ];
 
   function payTypeOf(j) {
