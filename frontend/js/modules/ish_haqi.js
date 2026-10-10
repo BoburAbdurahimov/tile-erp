@@ -125,7 +125,7 @@ const IshHaqiModule = (function () {
           const isActive = activeDept === d.id;
           const label = deptLabel(d.id);
           return `
-            <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment('${d.id}')" 
+            <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment(${jsArg(d.id)})" 
               style="padding: 6px 12px; font-size: 12.5px; font-weight: ${isActive ? '700' : '600'}; border-radius: 8px; border: ${isActive ? '1px solid #2563eb' : '1px solid #cbd5e1'}; background: ${isActive ? '#eff6ff' : '#f8fafc'}; color: ${isActive ? '#1d4ed8' : '#475569'}; cursor: pointer; transition: all 0.2s;">
               <span>${label}</span>
             </button>
@@ -273,7 +273,7 @@ const IshHaqiModule = (function () {
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openDetailsModal(${c.id})" title="${isUz ? "Batafsil hisob-kitob" : "Детали начисления"}">${CURRENT_LANG === 'uz' ? "Batafsil" : "Подробнее"}</button>
               ${c.status !== "paid" 
-                ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, '${escapeHtml(c.full_name)}', ${c.final_amount})" style="margin-left: 4px;">${isUz ? "To'lash" : "Выплатить"}</button>`
+                ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, ${jsArg(c.full_name)}, ${c.final_amount})" style="margin-left: 4px;">${isUz ? "To'lash" : "Выплатить"}</button>`
                 : `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 4px;">✓ ${isUz ? "To'langan" : "Оплачено"}</span>`
               }
             </td>
@@ -678,7 +678,7 @@ const IshHaqiModule = (function () {
               <button class="btn ${e.is_active ? 'btn-secondary' : 'btn-success'} btn-sm" onclick="IshHaqiModule.toggleEmployeeStatus(${e.id})" style="margin-left: 4px;">
                 ${e.is_active ? (isUz ? "Arxiv" : "В архив") : (isUz ? "Tiklash" : "Восстановить")}
               </button>
-              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteEmployee(${e.id}, '${escapeHtml(e.full_name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteEmployee(${e.id}, ${jsArg(e.full_name)})" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">
                 ${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}
               </button>
             </td>
@@ -791,7 +791,7 @@ const IshHaqiModule = (function () {
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditJobTypeModal(${j.id})">${isUz ? "Tahrirlash" : "Изм."}</button>
-              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, '${escapeHtml(j.name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, ${jsArg(j.name)})" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
             </td>
           </tr>
         `;

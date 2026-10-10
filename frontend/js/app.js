@@ -75,6 +75,14 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+// A value as an argument of an inline handler: onclick="f(${jsArg(name)})".
+// Written as f('${name}'), names with an apostrophe - Farg'ona, Ma'muriyat,
+// G'ofurov - broke the handler ("missing ) after argument list") and the
+// button did nothing. This is a JSON string, escaped for the attribute.
+function jsArg(value) {
+  return escapeHtml(JSON.stringify(value == null ? "" : value));
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Initialize Telegram WebApp SDK if running inside Telegram
   if (window.Telegram && window.Telegram.WebApp) {
@@ -761,7 +769,7 @@ const TableFilterSort = {
 
     if (top7.length > 0) {
       itemsHtml += top7.map(val => `
-        <div class="filter-dropdown-item" onmousedown="TableFilterSort.selectSuggestion('${val.replace(/'/g, "\\'")}')">
+        <div class="filter-dropdown-item" onmousedown="TableFilterSort.selectSuggestion(${jsArg(val)})">
           <span style="overflow: hidden; text-overflow: ellipsis;">${val}</span>
           <span style="font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 10px;">${valueCountMap[val]}</span>
         </div>

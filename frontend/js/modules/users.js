@@ -349,7 +349,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
                 <button class="btn btn-sm" onclick="UsersModule.toggleArchiveUser(${u.id}, ${u.is_archived})" style="background: ${u.is_archived ? '#ecfdf5' : '#fffbeb'}; color: ${u.is_archived ? '#059669' : '#b45309'}; border: 1px solid ${u.is_archived ? '#a7f3d0' : '#fde68a'}; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
                   ${u.is_archived ? (isUz ? 'Faollashtirish' : 'Активировать') : (isUz ? 'Arxivlash' : 'В архив')}
                 </button>
-                <button class="btn btn-sm" onclick="UsersModule.deleteWebUser(${u.id}, '${u.username}')" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" title="${isUz ? "O'chirish" : "Удалить"}">
+                <button class="btn btn-sm" onclick="UsersModule.deleteWebUser(${u.id}, ${jsArg(u.username)})" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;" title="${isUz ? "O'chirish" : "Удалить"}">
                   ${isUz ? "O'chirish" : "Удалить"}
                 </button>
               ` : ""}
