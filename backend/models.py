@@ -436,6 +436,10 @@ class JobType(Base):
     name = Column(String(150), nullable=False, index=True) # e.g. "Kafel saralash", "Pechga ortish"
     unit_of_measure = Column(String(30), nullable=False, default="dona") # m2, dona, taglik, tonna, quti
     price_per_unit = Column(Float, nullable=False, default=0.0) # Rate in UZS
+    # How the work is paid: "ishbay" per unit done (unit_of_measure), "soatbay"
+    # per hour worked, "fiks" a set sum per job. Pay is quantity x rate either
+    # way; the quantity is units, hours or jobs. Empty (older rows) = ishbay.
+    pay_type = Column(String(20), nullable=True, default="ishbay")
     is_active = Column(Boolean, default=True) # Active for new entries
     created_by = Column(String(50), default="Admin")
     created_at = Column(DateTime, default=datetime.utcnow)

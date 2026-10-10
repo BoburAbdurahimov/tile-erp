@@ -59,14 +59,33 @@ class EmployeeUpdateSchema(BaseModel):
 
 class JobTypeCreateSchema(BaseModel):
     name: str
+    pay_type: str = "ishbay"          # ishbay | soatbay | fiks
     unit_of_measure: str = "dona"
     price_per_unit: float
 
 class JobTypeUpdateSchema(BaseModel):
     name: Optional[str] = None
+    pay_type: Optional[str] = None
     unit_of_measure: Optional[str] = None
     price_per_unit: Optional[float] = None
     is_active: Optional[bool] = None
+
+
+# How a job is paid. Pay is always quantity x rate; what the quantity counts
+# follows from the type: units done, hours worked, or jobs done.
+PAY_TYPES = ("ishbay", "soatbay", "fiks")
+PAY_TYPE_UNITS = {"soatbay": "soat", "fiks": "ish"}
+
+
+def _pay_type(value: Optional[str]) -> str:
+    value = (value or "ishbay").strip().lower()
+    if value not in PAY_TYPES:
+        raise HTTPException(status_code=400, detail="Ish turi: ishbay, soatbay yoki fiks bo'lishi kerak")
+    return value
+
+
+def _unit_for(pay_type: str, unit: Optional[str]) -> str:
+    return PAY_TYPE_UNITS.get(pay_type) or ((unit or "").strip() or "dona")
 
 class DailyAbsenceItem(BaseModel):
     employee_id: int
@@ -292,6 +311,7 @@ def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depend
         {
             "id": j.id,
             "name": j.name,
+            "pay_type": j.pay_type or "ishbay",
             "unit_of_measure": j.unit_of_measure,
             "price_per_unit": j.price_per_unit,
             "is_active": j.is_active,
@@ -302,9 +322,13 @@ def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depend
 
 @router.post("/job-types")
 def create_job_type(data: JobTypeCreateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+    if float(data.price_per_unit) <= 0:
+        raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak")
+    pay_type = _pay_type(data.pay_type)
     jt = JobType(
         name=data.name.strip(),
-        unit_of_measure=data.unit_of_measure.strip() if data.unit_of_measure else "dona",
+        pay_type=pay_type,
+        unit_of_measure=_unit_for(pay_type, data.unit_of_measure),
         price_per_unit=float(data.price_per_unit),
         is_active=True,
         created_by=current_user
@@ -331,9 +355,14 @@ def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Quer
 
     if data.name is not None:
         jt.name = data.name.strip()
-    if data.unit_of_measure is not None:
-        jt.unit_of_measure = data.unit_of_measure.strip()
+    if data.pay_type is not None:
+        jt.pay_type = _pay_type(data.pay_type)
+    if data.unit_of_measure is not None or data.pay_type is not None:
+        jt.unit_of_measure = _unit_for(jt.pay_type or "ishbay",
+                                       data.unit_of_measure if data.unit_of_measure is not None else jt.unit_of_measure)
     if data.price_per_unit is not None:
+        if float(data.price_per_unit) <= 0:
+            raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak")
         jt.price_per_unit = float(data.price_per_unit)
     if data.is_active is not None:
         jt.is_active = data.is_active
