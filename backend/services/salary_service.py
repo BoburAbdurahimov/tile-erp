@@ -10,7 +10,7 @@ from sqlalchemy import func
 
 from backend.models import (
     Employee, JobType, AttendanceEntry, WorkEntry,
-    MonthlySalaryCalculation, CashRegister, CashTransaction, AuditLog
+    MonthlySalaryCalculation, SalaryAdjustment, CashRegister, CashTransaction, AuditLog
 )
 
 logger = logging.getLogger(__name__)
@@ -25,16 +25,34 @@ def get_month_date_range(year_month: str):
     end_date = date(year, month, num_days)
     return start_date, end_date, num_days
 
+# Avans is money paid ahead from a so'm Kassa; shtraf and premiya only change
+# what is left to pay. All three count in one month's pay.
+ADJUSTMENT_KINDS = ("avans", "shtraf", "premiya")
+SALARY_CATEGORY = "Ishchilar oyligi / Avans"
+
+
+def adjustment_totals(db: Session, employee_id: int, year_month: str) -> Dict[str, float]:
+    totals = {k: 0.0 for k in ADJUSTMENT_KINDS}
+    rows = db.query(SalaryAdjustment.kind, func.sum(SalaryAdjustment.amount)).filter(
+        SalaryAdjustment.employee_id == employee_id,
+        SalaryAdjustment.year_month == year_month,
+    ).group_by(SalaryAdjustment.kind).all()
+    for kind, total in rows:
+        if kind in totals:
+            totals[kind] = round(float(total or 0.0), 2)
+    return totals
+
+
 def calculate_employee_salary(
     db: Session,
     employee_id: int,
     year_month: str,
-    bonus: float = 0.0,
-    advance: float = 0.0,
     notes: Optional[str] = None,
     current_user: str = "Admin"
 ) -> MonthlySalaryCalculation:
-    """Calculate and upsert salary calculation for a specific employee and month."""
+    """Calculate and upsert salary calculation for a specific employee and month.
+    To pay = earned (monthly salary less absences, or naryad entries)
+    + premiya - shtraf - avans."""
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
         raise ValueError("Xodim topilmadi (Employee not found)")
@@ -60,10 +78,11 @@ def calculate_employee_salary(
         db.add(calc)
 
     calc.employee_type = employee.employee_type
-    if bonus > 0:
-        calc.bonus_amount = bonus
-    if advance > 0:
-        calc.advance_paid = advance
+    adj = adjustment_totals(db, employee_id, year_month)
+    calc.bonus_amount = adj["premiya"]
+    calc.penalty_amount = adj["shtraf"]
+    calc.advance_paid = adj["avans"]
+    extras = adj["premiya"] - adj["shtraf"] - adj["avans"]
     if notes is not None:
         calc.notes = notes
 
@@ -90,7 +109,7 @@ def calculate_employee_salary(
 
         per_day_rate = round(base_salary / max(1, effective_days), 2)
         deduction_amount = min(base_salary, round(per_day_rate * absent_days, 2))
-        final_amount = max(0.0, round(base_salary - deduction_amount + (calc.bonus_amount or 0.0) - (calc.advance_paid or 0.0), 2))
+        final_amount = max(0.0, round(base_salary - deduction_amount + extras, 2))
 
         calc.base_salary = base_salary
         calc.standard_days = effective_days
@@ -109,7 +128,7 @@ def calculate_employee_salary(
         ).all()
         
         piecework_total = round(sum(float(w.total_amount or 0.0) for w in work_entries), 2)
-        final_amount = max(0.0, round(piecework_total + (calc.bonus_amount or 0.0) - (calc.advance_paid or 0.0), 2))
+        final_amount = max(0.0, round(piecework_total + extras, 2))
 
         calc.base_salary = 0.0
         calc.standard_days = 0
@@ -173,6 +192,7 @@ def get_payroll_summary(db: Session, year_month: str) -> Dict[str, Any]:
             "deduction_amount": c.deduction_amount,
             "piecework_total": c.piecework_total,
             "bonus_amount": c.bonus_amount or 0.0,
+            "penalty_amount": c.penalty_amount or 0.0,
             "advance_paid": c.advance_paid or 0.0,
             "final_amount": c.final_amount,
             "status": c.status,
@@ -365,6 +385,215 @@ def delete_daily_work_entry(db: Session, entry_id: int, current_user: str = "Adm
     db.commit()
     return True
 
+def _assert_payroll_open(db: Session, year_month: str) -> None:
+    locked = db.query(MonthlySalaryCalculation).filter(
+        MonthlySalaryCalculation.year_month == year_month,
+        MonthlySalaryCalculation.status.in_(["finalized", "paid"])
+    ).first()
+    if locked:
+        raise ValueError(f"{year_month} oyi allaqachon yopilgan va qulflangan!")
+
+
+def set_daily_hours(db: Session, entry_date: date, items: List[Dict[str, Any]], current_user: str = "Admin") -> int:
+    """Soatbay work: the hours each person worked that day at a soatbay job.
+    The person and job get one naryad entry of hours x the hourly rate (what
+    was there that day is replaced); 0 hours removes it."""
+    year_month = entry_date.strftime("%Y-%m")
+    _assert_payroll_open(db, year_month)
+
+    rows = []
+    for item in items:
+        emp = db.query(Employee).filter(Employee.id == item["employee_id"]).first()
+        if not emp:
+            raise ValueError("Xodim topilmadi")
+        jt = db.query(JobType).filter(JobType.id == item["job_type_id"]).first()
+        if not jt or (jt.pay_type or "ishbay") != "soatbay":
+            raise ValueError(f"{emp.full_name}: soatbay ish turi tanlanmagan")
+        hours = round(float(item.get("hours") or 0.0), 2)
+        if hours < 0 or hours > 24:
+            raise ValueError(f"{emp.full_name}: soat 0 dan 24 gacha bo'lishi kerak")
+        rows.append((emp, jt, hours))
+
+    for emp, jt, hours in rows:
+        db.query(WorkEntry).filter(
+            WorkEntry.employee_id == emp.id,
+            WorkEntry.job_type_id == jt.id,
+            WorkEntry.date == entry_date,
+        ).delete(synchronize_session=False)
+        if hours > 0:
+            price = float(jt.price_per_unit or 0.0)
+            db.add(WorkEntry(employee_id=emp.id, job_type_id=jt.id, date=entry_date, quantity=hours,
+                             unit_price_snapshot=price, total_amount=round(hours * price, 2),
+                             entered_by=current_user))
+    db.commit()
+
+    employee_ids = {emp.id for emp, _, _ in rows}
+    for emp_id in employee_ids:
+        calculate_employee_salary(db, emp_id, year_month, current_user=current_user)
+    if employee_ids:
+        db.add(AuditLog(
+            username=current_user,
+            action="UPDATE",
+            module="Ish haqi / Soatbay",
+            entity_id=str(entry_date),
+            details=f"{entry_date}: {len(employee_ids)} ta soatbay xodimning ishlagan soatlari saqlandi"
+        ))
+        db.commit()
+    return len(employee_ids)
+
+
+def _adjustment_dict(a: SalaryAdjustment) -> Dict[str, Any]:
+    tx = a.cash_transaction
+    return {
+        "id": a.id,
+        "employee_id": a.employee_id,
+        "full_name": a.employee.full_name if a.employee else "-",
+        "department": (a.employee.department if a.employee else None) or "Ma'muriyat",
+        "kind": a.kind,
+        "year_month": a.year_month,
+        "date": a.date.isoformat() if a.date else None,
+        "amount": a.amount,
+        "reason": a.reason or "",
+        "cash_transaction_id": a.cash_transaction_id,
+        "register_name": tx.register.name if tx and tx.register else None,
+        "entered_by": a.entered_by,
+    }
+
+
+def list_salary_adjustments(db: Session, year_month: str) -> Dict[str, Any]:
+    rows = db.query(SalaryAdjustment).filter(SalaryAdjustment.year_month == year_month).order_by(
+        SalaryAdjustment.date.desc(), SalaryAdjustment.id.desc()).all()
+    try:
+        _assert_payroll_open(db, year_month)
+        is_locked = False
+    except ValueError:
+        is_locked = True
+    return {"year_month": year_month, "is_locked": is_locked, "items": [_adjustment_dict(a) for a in rows]}
+
+
+def add_salary_adjustment(
+    db: Session,
+    employee_id: int,
+    kind: str,
+    amount: float,
+    year_month: str,
+    entry_date: date,
+    reason: Optional[str] = None,
+    register_id: Optional[int] = None,
+    current_user: str = "Admin",
+) -> SalaryAdjustment:
+    """Avans, shtraf or premiya for one month's pay. An avans is money paid
+    out now, so it leaves a so'm Kassa as a chiqim linked to it."""
+    kind = (kind or "").strip().lower()
+    if kind not in ADJUSTMENT_KINDS:
+        raise ValueError("Turi avans, shtraf yoki premiya bo'lishi kerak")
+    try:
+        get_month_date_range(year_month)
+    except (ValueError, IndexError):
+        raise ValueError("Oy formati noto'g'ri (YYYY-MM)")
+    emp = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not emp:
+        raise ValueError("Xodim topilmadi")
+    amount = round(float(amount or 0.0), 2)
+    if amount <= 0:
+        raise ValueError("Summa musbat bo'lishi kerak")
+    _assert_payroll_open(db, year_month)
+
+    reason = (reason or "").strip() or None
+    adj = SalaryAdjustment(employee_id=emp.id, kind=kind, year_month=year_month, date=entry_date,
+                           amount=amount, reason=reason, entered_by=current_user)
+    if kind == "avans":
+        reg = db.query(CashRegister).filter(CashRegister.id == register_id).first() if register_id else None
+        if not reg:
+            raise ValueError("Avans qaysi kassadan berilishini tanlang")
+        if (reg.currency or "UZS") != "UZS":
+            raise ValueError(f"Avans so'mda beriladi: {reg.name} emas, so'mli kassani tanlang (Kassa UZS yoki Karta UZS).")
+        if round(reg.balance or 0.0, 2) < amount:
+            raise ValueError(f"Kassada yetarli mablag' yo'q: {reg.name} da {reg.balance:,.0f} so'm, kerak {amount:,.0f} so'm.")
+        from backend.services.month_close_service import is_month_closed
+        if is_month_closed(db, entry_date):
+            raise ValueError(f"{entry_date:%Y-%m} oyi yopilgan - kassaga yozib bo'lmaydi.")
+        tx = CashTransaction(
+            register_id=reg.id,
+            type="chiqim",
+            source_type="other",
+            amount=amount,
+            currency="UZS",
+            category=SALARY_CATEGORY,
+            date=entry_date,
+            description=f"Avans ({year_month}): {emp.full_name}" + (f" ({reason})" if reason else ""),
+            status="Tasdiqlandi",
+        )
+        db.add(tx)
+        reg.balance = round((reg.balance or 0.0) - amount, 4)
+        db.flush()
+        adj.cash_transaction_id = tx.id
+
+    db.add(adj)
+    db.commit()
+    db.refresh(adj)
+    calculate_employee_salary(db, emp.id, year_month, current_user=current_user)
+
+    db.add(AuditLog(
+        username=current_user,
+        action="CREATE",
+        module="Ish haqi / " + kind.capitalize(),
+        entity_id=str(adj.id),
+        details=f"{kind.capitalize()} ({year_month}): {emp.full_name} - {amount:,.0f} so'm" + (f" ({reason})" if reason else "")
+    ))
+    db.commit()
+    return adj
+
+
+def delete_salary_adjustment(db: Session, adjustment_id: int, current_user: str = "Admin") -> bool:
+    """Remove an avans, shtraf or premiya. An avans's Kassa entry goes too and
+    its money returns to that Kassa."""
+    adj = db.query(SalaryAdjustment).filter(SalaryAdjustment.id == adjustment_id).first()
+    if not adj:
+        raise ValueError("Yozuv topilmadi")
+    _assert_payroll_open(db, adj.year_month)
+
+    if adj.cash_transaction_id:
+        tx = db.query(CashTransaction).filter(CashTransaction.id == adj.cash_transaction_id).first()
+        if tx:
+            from backend.services.month_close_service import is_month_closed
+            if is_month_closed(db, tx.date):
+                raise ValueError(f"{tx.date:%Y-%m} oyi yopilgan - kassadagi avansni o'chirib bo'lmaydi.")
+            reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
+            if reg:
+                reg.balance = round((reg.balance or 0.0) + tx.amount, 4)
+            adj.cash_transaction_id = None
+            db.flush()
+            db.delete(tx)
+
+    emp_id, year_month, kind, amount = adj.employee_id, adj.year_month, adj.kind, adj.amount
+    db.delete(adj)
+    db.commit()
+    calculate_employee_salary(db, emp_id, year_month, current_user=current_user)
+
+    db.add(AuditLog(
+        username=current_user,
+        action="DELETE",
+        module="Ish haqi / " + kind.capitalize(),
+        entity_id=str(adjustment_id),
+        details=f"{kind.capitalize()} ({year_month}) o'chirildi: xodim #{emp_id}, {amount:,.0f} so'm"
+    ))
+    db.commit()
+    return True
+
+
+def release_transaction_adjustments(db: Session, transaction_id: int) -> List[tuple]:
+    """Kassa is deleting this entry: an avans paid through it is removed too.
+    Returns (employee, month) pairs whose pay must be worked out again."""
+    adjs = db.query(SalaryAdjustment).filter(SalaryAdjustment.cash_transaction_id == transaction_id).all()
+    for a in adjs:
+        _assert_payroll_open(db, a.year_month)
+    affected = [(a.employee_id, a.year_month) for a in adjs]
+    for a in adjs:
+        db.delete(a)
+    return affected
+
+
 def finalize_month_payroll(db: Session, year_month: str, current_user: str = "Admin"):
     """Lock all calculations for a month."""
     calcs = recalculate_all_salaries(db, year_month, current_user=current_user)
@@ -464,7 +693,7 @@ def pay_employee_salary(
         source_type="other",
         amount=payment_amount,
         currency=cash_reg.currency,
-        category="Ishchilar oyligi / Avans",
+        category=SALARY_CATEGORY,
         date=pay_date,
         description=desc,
         status="Tasdiqlandi"
@@ -538,7 +767,7 @@ def generate_payroll_excel(db: Session, year_month: str) -> io.BytesIO:
     headers = [
         "№", "F.I.SH. (Xodim)", "Lavozimi", "Turi", 
         "Fiks oylik (UZS)", "Ish kuni", "Kelmadi", "Ushlanma (UZS)",
-        "Ishbay jami (UZS)", "Qo'shimcha / Avans", "Jami to'lov (UZS)", "Holati"
+        "Ishbay jami (UZS)", "Premiya / Shtraf / Avans", "Jami to'lov (UZS)", "Holati"
     ]
     
     ws.row_dimensions[4].height = 24
@@ -554,7 +783,8 @@ def generate_payroll_excel(db: Session, year_month: str) -> io.BytesIO:
     for idx, c in enumerate(summary["calculations"], start=1):
         emp_type_label = "Fiksalangan" if c["employee_type"] == "fixed" else "Ishbay"
         status_label = "To'langan" if c["status"] == "paid" else ("Tasdiqlangan" if c["status"] == "finalized" else "Qoralama")
-        bonus_adv_str = f"+{c['bonus_amount']:,.0f} / -{c['advance_paid']:,.0f}" if (c['bonus_amount'] or c['advance_paid']) else "0"
+        bonus_adv_str = (f"+{c['bonus_amount']:,.0f} / -{c['penalty_amount']:,.0f} / -{c['advance_paid']:,.0f}"
+                         if (c['bonus_amount'] or c['penalty_amount'] or c['advance_paid']) else "0")
 
         row_vals = [
             idx,

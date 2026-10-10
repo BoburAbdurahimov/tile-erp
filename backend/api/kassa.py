@@ -18,6 +18,7 @@ from backend.services.currency_service import (
 )
 from backend.services.month_close_service import assert_month_open
 from backend.services.counterparty_service import move_cash
+from backend.services.salary_service import calculate_employee_salary, release_transaction_adjustments
 from backend.services.order_service import ensure_card_register
 
 router = APIRouter(prefix="/kassa", tags=["MODUL 3: KASSA (Treasury & Cash)"])
@@ -227,10 +228,18 @@ def delete_cash_transaction(
     for exp in db.query(OtherExpense).filter(OtherExpense.cash_transaction_id == tx.id).all():
         exp.status = "Bekor"
         exp.cash_transaction_id = None
+    # An avans paid through it is no longer paid: it goes from Ish haqi too.
+    try:
+        avans_paid_to = release_transaction_adjustments(db, tx.id)
+    except ValueError as ve:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Bu avans Ish haqida: {ve} Avval oyni qayta oching.")
     db.flush()
 
     db.delete(tx)
     db.commit()
+    for employee_id, year_month in avans_paid_to:
+        calculate_employee_salary(db, employee_id, year_month)
     return {"success": True, "message": "Kassa tranzaksiyasi muvaffaqiyatli o'chirildi.", "id": transaction_id}
 
 # ----------------- EXCHANGE RATES -----------------

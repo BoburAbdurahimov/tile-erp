@@ -9,7 +9,7 @@ from backend.models import (
     User, TelegramUser, LoginChallenge, MDMMaterial, MDMCounterparty, StockItem,
     ProductionConsumedMaterial, ProductionOrder, SaleItem, Sale,
     PurchaseItem, Purchase, CashTransaction, CashRegister,
-    AttendanceEntry, WorkEntry, MonthlySalaryCalculation, SKLAD_CONFIG
+    AttendanceEntry, WorkEntry, MonthlySalaryCalculation, SalaryAdjustment, SKLAD_CONFIG
 )
 from backend.auth_utils import (
     hash_password, verify_password, create_token, decode_token,
@@ -475,6 +475,7 @@ def clean_demo_data(
         db.query(PurchaseItem).delete()
         db.query(Purchase).delete()
         db.query(StockItem).delete()
+        db.query(SalaryAdjustment).delete()
         db.query(CashTransaction).delete()
         for cr in db.query(CashRegister).all():
             cr.balance = 0.0

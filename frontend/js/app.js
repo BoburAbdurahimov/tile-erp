@@ -680,18 +680,27 @@ const TableFilterSort = {
     rows.forEach(r => tbody.appendChild(r));
   },
 
+  // The column a filter input belongs to: its data-col-idx, or else the
+  // header cell it sits in (Ish haqi tables put the input under the title).
+  filterColumn(inputEl) {
+    const idx = parseInt(inputEl.getAttribute("data-col-idx"), 10);
+    if (!isNaN(idx)) return idx;
+    const th = inputEl.closest("th");
+    return th ? th.cellIndex : NaN;
+  },
+
   filterTable(inputEl) {
     const table = inputEl.closest("table");
     if (!table) return;
     const tbody = table.querySelector("tbody");
     if (!tbody) return;
 
-    const filterInputs = table.querySelectorAll("thead tr.filter-row .table-col-filter");
+    const filterInputs = table.querySelectorAll("thead .table-col-filter");
     const filters = [];
     filterInputs.forEach(input => {
-      const col = parseInt(input.getAttribute("data-col-idx"), 10);
+      const col = this.filterColumn(input);
       const val = input.value.trim().toLowerCase();
-      if (val) {
+      if (val && !isNaN(col)) {
         filters.push({ col, val });
       }
     });
@@ -720,7 +729,7 @@ const TableFilterSort = {
     const tbody = table.querySelector("tbody");
     if (!tbody) return;
 
-    const colIdx = parseInt(inputEl.getAttribute("data-col-idx"), 10);
+    const colIdx = this.filterColumn(inputEl);
     if (isNaN(colIdx)) return;
 
     // Collect distinct values

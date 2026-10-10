@@ -431,6 +431,7 @@ class Employee(Base):
     attendances = relationship("AttendanceEntry", back_populates="employee", cascade="all, delete-orphan")
     work_entries = relationship("WorkEntry", back_populates="employee", cascade="all, delete-orphan")
     salary_calculations = relationship("MonthlySalaryCalculation", back_populates="employee", cascade="all, delete-orphan")
+    salary_adjustments = relationship("SalaryAdjustment", back_populates="employee", cascade="all, delete-orphan")
 
 class JobType(Base):
     __tablename__ = "job_types"
@@ -502,8 +503,9 @@ class MonthlySalaryCalculation(Base):
     # Calculation breakdown for Piecework:
     piecework_total = Column(Float, default=0.0)
     
-    # Final amounts:
+    # Final amounts (premiya, shtraf and avans are summed from SalaryAdjustment):
     bonus_amount = Column(Float, default=0.0)
+    penalty_amount = Column(Float, default=0.0)
     advance_paid = Column(Float, default=0.0)
     final_amount = Column(Float, nullable=False, default=0.0) # Net payable
     
@@ -523,6 +525,27 @@ class MonthlySalaryCalculation(Base):
     )
     
     employee = relationship("Employee", back_populates="salary_calculations")
+    cash_transaction = relationship("CashTransaction")
+
+
+class SalaryAdjustment(Base):
+    """Avans (paid ahead of the salary from a so'm Kassa), shtraf (a fine) or
+    premiya (a bonus) for an employee, counted in one month's pay:
+    to pay = earned + premiya - shtraf - avans."""
+    __tablename__ = "salary_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    kind = Column(String(20), nullable=False)                      # "avans" | "shtraf" | "premiya"
+    year_month = Column(String(7), nullable=False, index=True)     # the month's pay it counts in
+    date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)                         # so'm
+    reason = Column(Text, nullable=True)
+    cash_transaction_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)  # avans only
+    entered_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    employee = relationship("Employee", back_populates="salary_adjustments")
     cash_transaction = relationship("CashTransaction")
 
 

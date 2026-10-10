@@ -18,7 +18,7 @@ from backend.models import (
     LineExpenseItem, LineExpense,
     PurchaseItem, Purchase, SaleItem, Sale,
     StockTransfer, StockItem, OtherExpense,
-    MonthlySalaryCalculation, WorkEntry, AttendanceEntry,
+    MonthlySalaryCalculation, SalaryAdjustment, WorkEntry, AttendanceEntry,
     AutoSarfRule, CashTransaction, CashRegister, MonthClosing, MDMCounterparty,
 )
 
@@ -57,6 +57,7 @@ def reset_operational_data(db: Session, keep_norms: bool = False) -> dict:
     wipe(StockItem, "stock_rows")
     wipe(OtherExpense, "other_expenses")
 
+    wipe(SalaryAdjustment, "salary_adjustments")
     wipe(MonthlySalaryCalculation, "salary_calculations")
     wipe(WorkEntry, "work_entries")
     wipe(AttendanceEntry, "attendance_entries")

@@ -66,6 +66,7 @@ _ADDED_COLUMNS = [
     ("sklad_orders", "counterparty_id", "INTEGER"),
     ("job_types", "pay_type", "VARCHAR(20)"),
     ("employees", "job_type_id", "INTEGER"),
+    ("monthly_salary_calculations", "penalty_amount", "FLOAT"),
 ]
 
 

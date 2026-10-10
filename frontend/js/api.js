@@ -278,6 +278,10 @@ const API = {
   saveDailyAttendance: (data) => apiRequest("/salary/daily-attendance", "POST", data),
   addDailyWork: (data) => apiRequest("/salary/daily-work", "POST", data),
   deleteDailyWork: (id) => apiRequest(`/salary/daily-work/${id}`, "DELETE"),
+  saveDailyHours: (data) => apiRequest("/salary/daily-hours", "POST", data),
+  getSalaryAdjustments: (yearMonth) => apiRequest(`/salary/adjustments?year_month=${yearMonth}`),
+  addSalaryAdjustment: (data) => apiRequest("/salary/adjustments", "POST", data),
+  deleteSalaryAdjustment: (id) => apiRequest(`/salary/adjustments/${id}`, "DELETE"),
 
   getPayroll: (yearMonth, recalculate = false) => apiRequest(`/salary/payroll/${yearMonth}?recalculate=${recalculate}`),
   calculatePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/calculate`, "POST"),
