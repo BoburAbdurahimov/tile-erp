@@ -26,7 +26,6 @@ from backend.models import (
 )
 from backend.services import sklad_service as sklad
 from backend.services.sklad_service import SkladError
-from backend.services.month_close_service import is_month_closed
 from backend.services.counterparty_service import charge_delivery, client_for, credit_payment
 
 ORDER_CURRENCY = "UZS"
@@ -570,8 +569,6 @@ def pay_order(db: Session, order_id: int, amount: Optional[float], method: str,
         raise SkladError(f"Ortiqcha to'lov: qolgan qarz {remaining:,.0f} {o.currency}.")
 
     paid_date = paid_date or local_now().date()
-    if is_month_closed(db, paid_date):
-        raise SkladError(f"{paid_date:%Y-%m} oyi yopilgan - to'lov kiritib bo'lmaydi.")
 
     reg = _register(db, method)
     received = amount_usd if method == PAY_USD else amount       # in the register's currency
@@ -616,8 +613,6 @@ def cancel_payment(db: Session, order_id: int, payment_id: int) -> SkladOrder:
     if not p or p.id not in {pid for pid, _, _ in _standing_payments(db, [o.id])}:
         raise SkladError("Bu to'lov topilmadi yoki allaqachon bekor qilingan.")
     tx = db.query(CashTransaction).filter(CashTransaction.id == p.cash_transaction_id).first()
-    if is_month_closed(db, tx.date):
-        raise SkladError(f"{tx.date:%Y-%m} oyi yopilgan - to'lovni bekor qilib bo'lmaydi.")
     reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
     if reg and round(reg.balance or 0.0, 2) < round(tx.amount, 2):
         raise SkladError(

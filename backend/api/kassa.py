@@ -17,7 +17,6 @@ from backend.services.currency_service import (
     get_exchange_rate_for_date, set_manual_exchange_rate,
     fetch_cbu_rate_today, convert_amount
 )
-from backend.services.month_close_service import assert_month_open
 from backend.services.counterparty_service import move_cash
 from backend.services.salary_service import calculate_employee_salary, release_transaction_adjustments
 from backend.services.cash_exchange_service import (
@@ -115,8 +114,6 @@ def create_cash_transaction(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("kassa", role)
-    # Check if month is closed
-    assert_month_open(db, payload.date)
     
     reg = db.query(CashRegister).filter(CashRegister.id == payload.register_id).first()
     if not reg:

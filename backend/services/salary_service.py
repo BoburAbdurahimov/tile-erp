@@ -510,9 +510,6 @@ def add_salary_adjustment(
             raise ValueError(f"Avans so'mda beriladi: {reg.name} emas, so'mli kassani tanlang (Kassa UZS yoki Karta UZS).")
         if round(reg.balance or 0.0, 2) < amount:
             raise ValueError(f"Kassada yetarli mablag' yo'q: {reg.name} da {reg.balance:,.0f} so'm, kerak {amount:,.0f} so'm.")
-        from backend.services.month_close_service import is_month_closed
-        if is_month_closed(db, entry_date):
-            raise ValueError(f"{entry_date:%Y-%m} oyi yopilgan - kassaga yozib bo'lmaydi.")
         tx = CashTransaction(
             register_id=reg.id,
             type="chiqim",
@@ -556,9 +553,6 @@ def delete_salary_adjustment(db: Session, adjustment_id: int, current_user: str 
     if adj.cash_transaction_id:
         tx = db.query(CashTransaction).filter(CashTransaction.id == adj.cash_transaction_id).first()
         if tx:
-            from backend.services.month_close_service import is_month_closed
-            if is_month_closed(db, tx.date):
-                raise ValueError(f"{tx.date:%Y-%m} oyi yopilgan - kassadagi avansni o'chirib bo'lmaydi.")
             reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
             if reg:
                 reg.balance = round((reg.balance or 0.0) + tx.amount, 4)
@@ -677,10 +671,8 @@ def pay_employee_salary(
         raise ValueError(f"Kassada yetarli mablag' yo'q: {cash_reg.name} da {cash_reg.balance:,.0f} so'm, "
                          f"kerak {payment_amount:,.0f} so'm.")
 
-    from backend.services.month_close_service import is_month_closed, local_today
+    from backend.services.dates import local_today
     pay_date = local_today()
-    if is_month_closed(db, pay_date):
-        raise ValueError(f"{pay_date:%Y-%m} oyi yopilgan - to'lov kiritib bo'lmaydi.")
 
     # Generate Cash Transaction (Chiqim)
     desc = f"Ish haqi to'lovi ({calc.year_month}): {emp.full_name}"
@@ -733,9 +725,6 @@ def storno_salary_payment(db: Session, calculation_id: int, current_user: str = 
         raise ValueError("Bu ish haqi to'lanmagan - storno qilinadigan to'lov yo'q.")
     tx = db.query(CashTransaction).filter(CashTransaction.id == calc.cash_transaction_id).first()
     if tx:
-        from backend.services.month_close_service import is_month_closed
-        if is_month_closed(db, tx.date):
-            raise ValueError(f"{tx.date:%Y-%m} oyi yopilgan - to'lovni storno qilib bo'lmaydi.")
         reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
         if reg:
             reg.balance = round((reg.balance or 0.0) + tx.amount, 4)

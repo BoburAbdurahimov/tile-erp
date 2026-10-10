@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.api.auth import get_current_username, get_current_user_role, check_permission
 from backend.models import OtherExpense, CashRegister, CashTransaction, MDMCounterparty
-from backend.services.month_close_service import assert_month_open
 from backend.services.numbering import next_number
 
 router = APIRouter(prefix="/expenses", tags=["MODUL: BOSHQA XARAJATLAR (Prochie rasxodlar)"])
@@ -104,7 +103,6 @@ def create_expense(
     role: str = Depends(get_current_user_role),
 ):
     check_permission("kassa", role)
-    assert_month_open(db, payload.date)
     category = (payload.category or "").strip()
     if not category:
         raise HTTPException(status_code=400, detail="Xarajat turini tanlang.")
@@ -161,7 +159,6 @@ def cancel_expense(expense_id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Xarajat topilmadi.")
     if exp.status == STATUS_CANCELLED:
         raise HTTPException(status_code=400, detail="Bu xarajat allaqachon bekor qilingan.")
-    assert_month_open(db, exp.date)
 
     tx = db.query(CashTransaction).filter(CashTransaction.id == exp.cash_transaction_id).first() \
         if exp.cash_transaction_id else None

@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 
 from backend.models import AuditLog, CashExchange, CashRegister, CashTransaction
 from backend.services.currency_service import get_exchange_rate_for_date
-from backend.services.month_close_service import is_month_closed
 
 EXCHANGE_CATEGORY = "Konvertatsiya"
 
@@ -52,8 +51,6 @@ def exchange_between_registers(
     if round(src.balance or 0.0, 2) < amount:
         raise ValueError(f"{src.name} da yetarli mablag' yo'q: {_money(src.balance or 0.0, src.currency)} bor, "
                          f"kerak {_money(amount, src.currency)}.")
-    if is_month_closed(db, entry_date):
-        raise ValueError(f"{entry_date:%Y-%m} oyi yopilgan - kassaga yozib bo'lmaydi.")
 
     note = (note or "").strip() or None
     if src.currency == dst.currency:
@@ -105,8 +102,6 @@ def exchange_of_transaction(db: Session, tx_id: int) -> Optional[CashExchange]:
 def undo_exchange(db: Session, ex: CashExchange, current_user: str = "Admin") -> None:
     """Both entries go and both registers get their money back. Refused when
     the received money has already been spent. Does not commit."""
-    if is_month_closed(db, ex.date):
-        raise ValueError(f"{ex.date:%Y-%m} oyi yopilgan - konvertatsiyani bekor qilib bo'lmaydi.")
     out_tx = db.query(CashTransaction).filter(CashTransaction.id == ex.out_tx_id).first() if ex.out_tx_id else None
     in_tx = db.query(CashTransaction).filter(CashTransaction.id == ex.in_tx_id).first() if ex.in_tx_id else None
     src = db.query(CashRegister).filter(CashRegister.id == ex.from_register_id).first()

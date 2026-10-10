@@ -19,7 +19,6 @@ from backend.services.inventory_service import (
     add_stock_with_avg_valuation, deduct_stock
 )
 from backend.services.currency_service import get_exchange_rate_for_date
-from backend.services.month_close_service import assert_month_open
 from backend.services.numbering import next_number
 
 router = APIRouter(prefix="/savdo", tags=["MODUL 6 & 7: SOTIB OLISH VA SOTISH (Trade)"])
@@ -95,7 +94,6 @@ def create_purchase(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("zakup", role)
-    assert_month_open(db, payload.date)
     
     supplier = db.query(MDMCounterparty).filter(MDMCounterparty.id == payload.supplier_id).first()
     if not supplier or supplier.type != "supplier":
@@ -210,7 +208,6 @@ def storno_purchase(
     if purchase.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu xarid allaqachon storno qilingan.")
         
-    assert_month_open(db, purchase.date)
 
     # 1. Deduct stock from warehouse
     for it in purchase.items:
@@ -340,7 +337,6 @@ def create_sale(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("sotish", role)
-    assert_month_open(db, payload.date)
     
     client = db.query(MDMCounterparty).filter(MDMCounterparty.id == payload.client_id).first()
     if not client or client.type != "client":
@@ -410,7 +406,6 @@ def storno_sale(
     if sale.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu sotuv allaqachon storno qilingan.")
         
-    assert_month_open(db, sale.date)
 
     # 1. Return goods back to warehouse
     for it in sale.items:

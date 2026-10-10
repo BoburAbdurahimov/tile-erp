@@ -242,7 +242,6 @@ function onLanguageChange(lang) {
   setLanguage(lang);
   applyTranslations();
   updateUserDisplay();
-  updateMonthStatusBadge(false);
   navigateTo(currentModule);
 }
 
@@ -505,18 +504,6 @@ async function updateHeaderFxRate() {
   } catch (e) {
     // No made-up rate: show that it is unknown rather than a stale number.
     badge.textContent = "1$ = — UZS";
-  }
-}
-
-function updateMonthStatusBadge(isClosed) {
-  const pill = document.getElementById("header-month-status");
-  if (!pill) return;
-  if (isClosed) {
-    pill.className = "month-status-pill closed";
-    pill.textContent = t('month_closed');
-  } else {
-    pill.className = "month-status-pill open";
-    pill.textContent = t('month_open');
   }
 }
 

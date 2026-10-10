@@ -6,7 +6,7 @@ from tests_support import use_header_roles
 from backend.database import SessionLocal
 from backend.models import (
     MDMMaterial, MDMCounterparty, Warehouse, StockItem,
-    ProductionOrder, CashRegister, MonthClosing
+    ProductionOrder, CashRegister
 )
 
 use_header_roles()
@@ -226,40 +226,23 @@ class TestTileERP(unittest.TestCase):
         ids = [o["sklad_id"] for o in pnl["ombor_breakdown"]]
         self.assertEqual(ids[:8], [1, 2, 3, 4, 5, 6, 7, 8])  # every Ombor (+ an "other" bucket for old orders)
 
-    def test_08_month_end_closing_and_admin_reopen(self):
-        ym = "2026-07" # Test previous month
-        # Non-admin cannot close month
-        res_fail = client.post("/api/moliya/month-closing/close", json={
-            "year_month": ym, "notes": "Test close"
-        }, headers={"x-user-role": "Ish boshqaruvchi"})
-        self.assertEqual(res_fail.status_code, 403)
-
-        # Admin closes month
-        res_close = client.post("/api/moliya/month-closing/close", json={
-            "year_month": ym, "notes": "Admin yopdi"
-        }, headers={"x-user-role": "Admin"})
-        self.assertEqual(res_close.status_code, 200)
-        self.assertTrue(res_close.json()["is_closed"])
-
-        # Try to post transaction in closed month -> must be blocked
-        tx_block = client.post("/api/kassa/transactions", json={
+    def test_08_months_are_never_closed(self):
+        # There is no month closing: a past month (long after its 10th) still
+        # takes Kassa entries, and the closing endpoints are gone.
+        tx = client.post("/api/kassa/transactions", json={
             "register_id": 1,
             "type": "kirim",
             "amount": 100.0,
             "currency": "USD",
             "category": "boshqa",
             "date": "2026-07-15",
-            "description": "Yopiq oyga operatsiya"
+            "description": "O'tgan oyga operatsiya"
         }, headers={"x-user-role": "Admin"})
-        self.assertEqual(tx_block.status_code, 400)
-        self.assertIn("yopilgan", tx_block.json()["detail"])
-
-        # Admin re-opens month
-        res_reopen = client.post("/api/moliya/month-closing/reopen", json={
-            "year_month": ym
-        }, headers={"x-user-role": "Admin"})
-        self.assertEqual(res_reopen.status_code, 200)
-        self.assertFalse(res_reopen.json()["is_closed"])
+        self.assertEqual(tx.status_code, 200)
+        client.delete(f"/api/kassa/transactions/{tx.json()['id']}", headers={"x-user-role": "Admin"})
+        for path in ("/api/moliya/month-closing/close", "/api/moliya/month-closing/reopen"):
+            self.assertEqual(client.post(path, json={"year_month": "2026-07"},
+                                         headers={"x-user-role": "Admin"}).status_code, 404)
 
     def test_09_excel_export(self):
         res = client.get("/api/ombor/export/excel", headers={"x-user-role": "Admin"})

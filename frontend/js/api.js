@@ -230,7 +230,7 @@ const API = {
   stornoSale: (id) => apiRequest(`/savdo/sales/${id}/storno`, "POST"),
   deleteSale: (id) => apiRequest(`/savdo/sales/${id}`, "DELETE"),
   
-  // Finance & Month Closing
+  // Finance
   getPnL: (yearMonth) => {
     let url = `/moliya/pnl`;
     if (yearMonth) url += `?year_month=${yearMonth}`;
@@ -241,13 +241,6 @@ const API = {
     if (yearMonth) url += `?year_month=${yearMonth}`;
     return apiRequest(url);
   },
-  getMonthStatus: (yearMonth) => {
-    let url = `/moliya/month-closing/status`;
-    if (yearMonth) url += `?year_month=${yearMonth}`;
-    return apiRequest(url);
-  },
-  closeMonth: (data) => apiRequest("/moliya/month-closing/close", "POST", data),
-  reopenMonth: (data) => apiRequest("/moliya/month-closing/reopen", "POST", data),
 
   // Salary & HR Management Module
   getEmployees: (type = null, activeOnly = null, search = "", department = "") => {

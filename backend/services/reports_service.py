@@ -7,7 +7,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from backend.models import (
-    Sale, Purchase, ProductionOrder, CashTransaction, MonthClosing,
+    Sale, Purchase, ProductionOrder, CashTransaction,
     StockItem, MDMMaterial, MDMCounterparty, Warehouse, SkladMovement, SKLAD_OP_OUT
 )
 from backend.services.currency_service import convert_amount
@@ -52,10 +52,6 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     admin_expenses_usd = alloc["total_admin_expenses_usd"]
     net_profit_usd = gross_profit_usd - admin_expenses_usd
 
-    # Check if month is closed
-    from backend.services.month_close_service import is_month_closed
-    is_closed = is_month_closed(db, date(year, month, 1))
-
     return {
         "year_month": year_month,
         "currency": "USD",
@@ -71,7 +67,6 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "admin_expenses_usd": round(admin_expenses_usd, 2),
         "admin_salary_usd": alloc["admin_salary_usd"],      # Ma'muriyat salaries, within admin
         "net_profit_usd": round(net_profit_usd, 2),
-        "is_closed": is_closed,
         "total_factory_volume_m2": alloc["total_factory_volume"],
         "ombor_breakdown": alloc["ombors"]
     }

@@ -13,7 +13,7 @@ from backend.main import app
 from backend.models import CashTransaction, SalaryAdjustment, WorkEntry
 from backend.services.cost_allocation_service import calculate_monthly_production_cost_allocation
 from backend.services.currency_service import convert_amount
-from backend.services.month_close_service import local_today
+from backend.services.dates import local_today
 from tests_support import use_header_roles
 
 use_header_roles()

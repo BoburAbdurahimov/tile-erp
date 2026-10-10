@@ -19,7 +19,6 @@ from backend.services.numbering import next_number
 from backend.services.inventory_service import (
     get_or_create_stock_item, deduct_stock, add_stock_with_avg_valuation
 )
-from backend.services.month_close_service import assert_month_open
 
 router = APIRouter(prefix="/ishlab-chiqarish", tags=["MODUL 4: ISHLAB CHIQARISH (Production)"])
 
@@ -157,7 +156,6 @@ def create_production_order(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("ishlab_chiqarish", role)
-    assert_month_open(db, payload.date)
     
     if payload.quantity <= 0:
         raise HTTPException(status_code=400, detail="Ishlab chiqarish hajmi musbat bo'lishi shart.")
@@ -367,7 +365,6 @@ def create_line_expense(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("ishlab_chiqarish", role)
-    assert_month_open(db, payload.date)
 
     if not payload.items or len(payload.items) == 0:
         raise HTTPException(status_code=400, detail="Kamida bitta sarf materialini kiritishingiz shart.")
@@ -452,7 +449,6 @@ def storno_line_expense(
     if expense.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu hujjat allaqachon storno qilingan.")
 
-    assert_month_open(db, expense.date)
 
     # Return materials back to Warehouse 3
     for it in expense.items:
@@ -484,7 +480,6 @@ def storno_production_order(
     if order.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu buyurtma allaqachon STORNO qilingan.")
         
-    assert_month_open(db, order.date)
 
     # 1. Take the finished goods back out of stock
     if order.out_sklad_id and order.out_length is not None:

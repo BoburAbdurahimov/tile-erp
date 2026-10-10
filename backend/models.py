@@ -331,24 +331,6 @@ class SaleItem(Base):
     sale = relationship("Sale", back_populates="items")
     material = relationship("MDMMaterial")
 
-class MonthClosing(Base):
-    __tablename__ = "month_closings"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    year_month = Column(String(7), unique=True, index=True, nullable=False) # e.g. "2026-08"
-    is_closed = Column(Boolean, default=True)
-    closed_at = Column(DateTime, default=datetime.utcnow)
-    closed_by_username = Column(String(50), default="admin")
-    
-    # Financial snapshot
-    pnl_revenue_usd = Column(Float, default=0.0)
-    pnl_cogs_usd = Column(Float, default=0.0) # Direct materials
-    pnl_indirect_usd = Column(Float, default=0.0) # Allocated indirect costs
-    pnl_admin_usd = Column(Float, default=0.0) # Admin & other costs
-    pnl_net_profit_usd = Column(Float, default=0.0)
-    total_production_volume = Column(Float, default=0.0)
-    notes = Column(Text, nullable=True)
-
 class TelegramUser(Base):
     __tablename__ = "telegram_users"
     
