@@ -481,7 +481,7 @@ const IshHaqiModule = (function () {
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: ${emp.is_absent ? '#ef4444' : '#10b981'};">
-                <input type="checkbox" class="att-checkbox" data-empid="${emp.id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.id})">
+                <input type="checkbox" class="att-checkbox" data-empid="${emp.employee_id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.employee_id})">
                 <span>${emp.is_absent ? (isUz ? 'Kelmadi' : 'Не вышел') : (isUz ? 'Ishda' : 'На работе')}</span>
               </label>
             </div>
@@ -593,6 +593,8 @@ const IshHaqiModule = (function () {
   }
 
   async function saveAttendance() {
+    // The daily list gives each person as employee_id (it used to be read as
+    // emp.id, so every "Kelmadi" went out without an id and saving failed).
     const checkboxes = document.querySelectorAll(".att-checkbox");
     const absentRecords = [];
     checkboxes.forEach(chk => {
