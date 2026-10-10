@@ -36,20 +36,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to fetch initial CBU rate: {e}")
 
-    # Months past their 10th-of-next-month get their closing record, in case
-    # the daily cron has not run yet.
-    try:
-        from backend.services.month_close_service import auto_close_due_months
-        db = SessionLocal()
-        try:
-            closed = auto_close_due_months(db)
-            if closed:
-                logger.info(f"Auto-closed months: {closed}")
-        finally:
-            db.close()
-    except Exception as e:
-        logger.warning(f"Auto month closing skipped: {e}")
-
     # Orders taken before clients were tied to Kontragentlar: link them.
     try:
         from backend.services.counterparty_service import link_order_clients

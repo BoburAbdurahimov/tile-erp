@@ -135,6 +135,25 @@ class CashTransaction(Base):
     counterparty = relationship("MDMCounterparty")
     register = relationship("CashRegister")
 
+class CashExchange(Base):
+    """Konvertatsiya: money moved from one Kassa to another - dollars into so'm
+    or back at a rate, or between two registers of one currency. A chiqim from
+    one register and a kirim into the other; neither is income or an expense."""
+    __tablename__ = "cash_exchanges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False)
+    from_register_id = Column(Integer, ForeignKey("cash_registers.id"), nullable=False)
+    to_register_id = Column(Integer, ForeignKey("cash_registers.id"), nullable=False)
+    from_amount = Column(Float, nullable=False)       # in the from register's currency
+    to_amount = Column(Float, nullable=False)         # in the to register's currency
+    rate = Column(Float, nullable=True)               # so'm per dollar; none between same currencies
+    out_tx_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
+    in_tx_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
+    note = Column(Text, nullable=True)
+    entered_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class ExchangeRate(Base):
     __tablename__ = "exchange_rates"
     
@@ -312,24 +331,6 @@ class SaleItem(Base):
     sale = relationship("Sale", back_populates="items")
     material = relationship("MDMMaterial")
 
-class MonthClosing(Base):
-    __tablename__ = "month_closings"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    year_month = Column(String(7), unique=True, index=True, nullable=False) # e.g. "2026-08"
-    is_closed = Column(Boolean, default=True)
-    closed_at = Column(DateTime, default=datetime.utcnow)
-    closed_by_username = Column(String(50), default="admin")
-    
-    # Financial snapshot
-    pnl_revenue_usd = Column(Float, default=0.0)
-    pnl_cogs_usd = Column(Float, default=0.0) # Direct materials
-    pnl_indirect_usd = Column(Float, default=0.0) # Allocated indirect costs
-    pnl_admin_usd = Column(Float, default=0.0) # Admin & other costs
-    pnl_net_profit_usd = Column(Float, default=0.0)
-    total_production_volume = Column(Float, default=0.0)
-    notes = Column(Text, nullable=True)
-
 class TelegramUser(Base):
     __tablename__ = "telegram_users"
     
@@ -431,6 +432,7 @@ class Employee(Base):
     attendances = relationship("AttendanceEntry", back_populates="employee", cascade="all, delete-orphan")
     work_entries = relationship("WorkEntry", back_populates="employee", cascade="all, delete-orphan")
     salary_calculations = relationship("MonthlySalaryCalculation", back_populates="employee", cascade="all, delete-orphan")
+    salary_adjustments = relationship("SalaryAdjustment", back_populates="employee", cascade="all, delete-orphan")
 
 class JobType(Base):
     __tablename__ = "job_types"
@@ -502,8 +504,9 @@ class MonthlySalaryCalculation(Base):
     # Calculation breakdown for Piecework:
     piecework_total = Column(Float, default=0.0)
     
-    # Final amounts:
+    # Final amounts (premiya, shtraf and avans are summed from SalaryAdjustment):
     bonus_amount = Column(Float, default=0.0)
+    penalty_amount = Column(Float, default=0.0)
     advance_paid = Column(Float, default=0.0)
     final_amount = Column(Float, nullable=False, default=0.0) # Net payable
     
@@ -523,6 +526,27 @@ class MonthlySalaryCalculation(Base):
     )
     
     employee = relationship("Employee", back_populates="salary_calculations")
+    cash_transaction = relationship("CashTransaction")
+
+
+class SalaryAdjustment(Base):
+    """Avans (paid ahead of the salary from a so'm Kassa), shtraf (a fine) or
+    premiya (a bonus) for an employee, counted in one month's pay:
+    to pay = earned + premiya - shtraf - avans."""
+    __tablename__ = "salary_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    kind = Column(String(20), nullable=False)                      # "avans" | "shtraf" | "premiya"
+    year_month = Column(String(7), nullable=False, index=True)     # the month's pay it counts in
+    date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)                         # so'm
+    reason = Column(Text, nullable=True)
+    cash_transaction_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)  # avans only
+    entered_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    employee = relationship("Employee", back_populates="salary_adjustments")
     cash_transaction = relationship("CashTransaction")
 
 

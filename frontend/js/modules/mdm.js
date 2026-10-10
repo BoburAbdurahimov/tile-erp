@@ -401,7 +401,7 @@ const MdmModule = {
               </div>
               <div>
                 <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_init_bal')} ($)</label>
-                <input type="number" step="any" id="cp-init-bal" class="form-control" value="0" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;" />
+                <input type="number" step="any" data-signed id="cp-init-bal" class="form-control" value="0" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;" />
               </div>
             </div>
           </form>

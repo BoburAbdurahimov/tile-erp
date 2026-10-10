@@ -43,8 +43,6 @@ const I18N = {
     // Header
     rate_title: "CBU Kursi:",
     rate_edit: "Kursni o'zgartirish",
-    month_open: "Davr: Ochiq",
-    month_closed: "Davr: Yopilgan (Bloklangan)",
     role_label: "Foydalanuvchi roli:",
     user_default: "Foydalanuvchi",
     user_admin: "Admin",
@@ -60,8 +58,6 @@ const I18N = {
     btn_storno: "Storno qilish",
     btn_export_pdf: "PDF yuklash",
     btn_add_item: "+ Qator qo'shish",
-    btn_close_month: "Oyni yopish (Month Closing)",
-    btn_reopen_month: "Oyni qayta ochish (Re-open)",
     btn_adjust_stock: "Qoldiqni qo'lda to'g'rilash (Admin)",
     btn_refresh: "Yangilash",
     btn_filter: "Filtrlash",
@@ -114,7 +110,7 @@ const I18N = {
     mod_zakup_sub: "Xomashyo va materiallar xaridi hisobi",
     mod_sotish_title: "Sotish va Realizatsiya",
     mod_sotish_sub: "Tayyor mahsulotni mijozlarga sotish hisobi",
-    mod_finance_title: "Moliya, PnL hisoboti va Oyni yopish",
+    mod_finance_title: "Moliya va PnL hisoboti",
     mod_finance_sub: "Foyda va zararlar (PnL), bilvosita xarajatlar taqsimoti",
     
     // Kassa specifics
@@ -138,7 +134,6 @@ const I18N = {
     msg_saved: "Muvaffaqiyatli saqlash amalga oshirildi!",
     msg_storno_ok: "Operatsiya muvaffaqiyatli storno qilindi!",
     msg_error: "Xatolik yuz berdi:",
-    msg_month_closed_block: "Ushbu oy yopilgan! O'zgartirish yoki storno qilish taqiqlanadi.",
     msg_admin_only: "Ushbu amal faqat Admin roli uchun ruxsat etilgan!",
     msg_loading: "Yuklanmoqda..."
   },
@@ -186,8 +181,6 @@ const I18N = {
     // Header
     rate_title: "Курс ЦБ РУз:",
     rate_edit: "Изменить курс",
-    month_open: "Период: Открыт",
-    month_closed: "Период: Закрыт (Заблокирован)",
     role_label: "Роль пользователя:",
     user_default: "Пользователь",
     user_admin: "Admin",
@@ -203,8 +196,6 @@ const I18N = {
     btn_storno: "Сторнировать",
     btn_export_pdf: "Скачать PDF",
     btn_add_item: "+ Добавить позицию",
-    btn_close_month: "Закрыть месяц",
-    btn_reopen_month: "Повторно открыть месяц",
     btn_adjust_stock: "Корректировка остатков (Admin)",
     btn_refresh: "Обновить",
     btn_filter: "Фильтр",
@@ -257,7 +248,7 @@ const I18N = {
     mod_zakup_sub: "Учет поступления сырья и вспомогательных материалов",
     mod_sotish_title: "Продажи и Реализация",
     mod_sotish_sub: "Реализация готовой плитки покупателям",
-    mod_finance_title: "Финансы, PnL отчет и Закрытие месяца",
+    mod_finance_title: "Финансы и PnL отчет",
     mod_finance_sub: "Отчет о прибылях и убытках (PnL), распределение косвенных расходов",
 
     // Kassa specifics
@@ -281,7 +272,6 @@ const I18N = {
     msg_saved: "Данные успешно сохранены!",
     msg_storno_ok: "Операция успешно сторнирована!",
     msg_error: "Произошла ошибка:",
-    msg_month_closed_block: "Месяц закрыт! Изменение, удаление и сторнирование заблокированы.",
     msg_admin_only: "Данное действие доступно только роли Admin!",
     msg_loading: "Загрузка..."
   }

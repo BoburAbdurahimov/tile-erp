@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 from typing import List, Optional, Any, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -5,13 +6,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation, AuditLog, SKLAD_CONFIG
+from backend.api.auth import check_permission, get_current_user_role, get_current_username
+from backend.models import (Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation,
+                            SalaryAdjustment, AuditLog, SKLAD_CONFIG)
 from backend.services.salary_service import (
     calculate_employee_salary, recalculate_all_salaries, get_payroll_summary,
     record_daily_attendance, record_daily_work_entry, delete_daily_work_entry,
-    finalize_month_payroll, reopen_month_payroll, pay_employee_salary, generate_payroll_excel
+    finalize_month_payroll, reopen_month_payroll, pay_employee_salary, storno_salary_payment, generate_payroll_excel,
+    set_daily_hours, list_salary_adjustments, add_salary_adjustment, delete_salary_adjustment
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/salary", tags=["Salary & HR Management"])
 
 # Where an employee works: the office, or one of the 4 Omborlar (Toxir,
@@ -123,6 +128,24 @@ class DailyWorkEntrySchema(BaseModel):
     quantity: float
     notes: Optional[str] = None
     current_user: Optional[str] = "Admin"
+
+class DailyHoursItem(BaseModel):
+    employee_id: int
+    job_type_id: int          # a soatbay Ish turi
+    hours: float = 0.0        # 0 removes the day's hours
+
+class DailyHoursSchema(BaseModel):
+    date: date
+    items: List[DailyHoursItem]
+
+class SalaryAdjustmentSchema(BaseModel):
+    employee_id: int
+    kind: str                           # avans | shtraf | premiya
+    amount: float                       # so'm
+    year_month: str                     # the month's pay it counts in
+    date: date
+    reason: Optional[str] = None
+    register_id: Optional[int] = None   # avans: the so'm Kassa it is paid from
 
 class PaySalarySchema(BaseModel):
     register_id: int
@@ -309,6 +332,7 @@ def delete_employee(id: int, current_user: str = Query("Admin"), db: Session = D
     db.query(AttendanceEntry).filter(AttendanceEntry.employee_id == id).delete()
     db.query(WorkEntry).filter(WorkEntry.employee_id == id).delete()
     db.query(MonthlySalaryCalculation).filter(MonthlySalaryCalculation.employee_id == id).delete()
+    db.query(SalaryAdjustment).filter(SalaryAdjustment.employee_id == id).delete()
 
     db.delete(emp)
     db.add(AuditLog(
@@ -541,6 +565,49 @@ def delete_work_entry_endpoint(id: int, current_user: str = Query("Admin"), db: 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/daily-hours")
+def save_daily_hours(data: DailyHoursSchema, db: Session = Depends(get_db),
+                     username: str = Depends(get_current_username)):
+    """Soatbay xodimlar: the hours each worked that day (hours x the hourly rate)."""
+    try:
+        saved = set_daily_hours(db, data.date, [i.model_dump() for i in data.items], current_user=username)
+        return {"status": "success", "saved": saved}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
+# ==============================================================================
+# AVANS / SHTRAF / PREMIYA
+# ==============================================================================
+
+@router.get("/adjustments")
+def get_adjustments(year_month: str = Query(..., description="YYYY-MM"), db: Session = Depends(get_db),
+                    username: str = Depends(get_current_username)):
+    return list_salary_adjustments(db, year_month)
+
+@router.post("/adjustments")
+def create_adjustment(data: SalaryAdjustmentSchema, db: Session = Depends(get_db),
+                      role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+    if (data.kind or "").strip().lower() == "avans":
+        check_permission("kassa", role)          # an avans is paid out of a Kassa
+    try:
+        adj = add_salary_adjustment(db, data.employee_id, data.kind, data.amount, data.year_month, data.date,
+                                    reason=data.reason, register_id=data.register_id, current_user=username)
+        return {"status": "success", "id": adj.id, "cash_transaction_id": adj.cash_transaction_id}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
+@router.delete("/adjustments/{id}")
+def remove_adjustment(id: int, db: Session = Depends(get_db),
+                      role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+    adj = db.query(SalaryAdjustment).filter(SalaryAdjustment.id == id).first()
+    if adj and adj.cash_transaction_id:
+        check_permission("kassa", role)
+    try:
+        delete_salary_adjustment(db, id, current_user=username)
+        return {"status": "success", "id": id}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
 # ==============================================================================
 # MONTHLY PAYROLL & PAYOUT ENDPOINTS
 # ==============================================================================
@@ -601,6 +668,17 @@ def pay_salary_endpoint(id: int, data: PaySalarySchema, db: Session = Depends(ge
     except Exception as e:
         logger.error(f"Salary payment failed: {e}")
         raise HTTPException(status_code=500, detail=f"To'lovni amalga oshirishda xatolik: {e}")
+
+@router.post("/payroll/{id}/storno")
+def storno_salary_endpoint(id: int, db: Session = Depends(get_db),
+                           role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+    """Take a salary payment back: the money returns to its Kassa."""
+    check_permission("kassa", role)
+    try:
+        calc = storno_salary_payment(db, id, current_user=username)
+        return {"status": "success", "calculation_id": calc.id, "salary_status": calc.status}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
 
 @router.get("/payroll/{year_month}/export-excel")
 def export_payroll_excel(year_month: str, db: Session = Depends(get_db)):

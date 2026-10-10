@@ -18,8 +18,8 @@ from backend.models import (
     LineExpenseItem, LineExpense,
     PurchaseItem, Purchase, SaleItem, Sale,
     StockTransfer, StockItem, OtherExpense,
-    MonthlySalaryCalculation, WorkEntry, AttendanceEntry,
-    AutoSarfRule, CashTransaction, CashRegister, MonthClosing, MDMCounterparty,
+    MonthlySalaryCalculation, SalaryAdjustment, WorkEntry, AttendanceEntry,
+    AutoSarfRule, CashExchange, CashTransaction, CashRegister, MDMCounterparty,
 )
 
 OPENING_NOTE = "Boshlang'ich qoldiq (0 dan boshlash)"
@@ -57,15 +57,16 @@ def reset_operational_data(db: Session, keep_norms: bool = False) -> dict:
     wipe(StockItem, "stock_rows")
     wipe(OtherExpense, "other_expenses")
 
+    wipe(SalaryAdjustment, "salary_adjustments")
     wipe(MonthlySalaryCalculation, "salary_calculations")
     wipe(WorkEntry, "work_entries")
     wipe(AttendanceEntry, "attendance_entries")
     if not keep_norms:
         wipe(AutoSarfRule, "auto_sarf_norms")
 
+    wipe(CashExchange, "kassa_exchanges")
     db.query(CashTransaction).update({CashTransaction.storno_ref_id: None}, synchronize_session=False)
     wipe(CashTransaction, "kassa_transactions")
-    wipe(MonthClosing, "month_closings")
 
     # Back to the opening balance entered with the counterparty (usually 0), which
     # is where the Akt-sverka starts.

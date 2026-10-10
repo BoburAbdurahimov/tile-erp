@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from backend.database import SessionLocal
 from backend.main import app
 from backend.models import MDMCounterparty, MonthlySalaryCalculation
-from backend.services.month_close_service import local_today
+from backend.services.dates import local_today
 from tests_support import use_header_roles
 
 use_header_roles()

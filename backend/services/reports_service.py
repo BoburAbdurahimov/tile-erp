@@ -7,11 +7,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from backend.models import (
-    Sale, Purchase, ProductionOrder, CashTransaction, MonthClosing,
+    Sale, Purchase, ProductionOrder, CashTransaction,
     StockItem, MDMMaterial, MDMCounterparty, Warehouse, SkladMovement, SKLAD_OP_OUT
 )
 from backend.services.currency_service import convert_amount
 from backend.services.cost_allocation_service import calculate_monthly_production_cost_allocation
+from backend.services.cash_exchange_service import exchange_transaction_ids
 
 def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     year, month = map(int, year_month.split("-"))
@@ -51,10 +52,6 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     admin_expenses_usd = alloc["total_admin_expenses_usd"]
     net_profit_usd = gross_profit_usd - admin_expenses_usd
 
-    # Check if month is closed
-    from backend.services.month_close_service import is_month_closed
-    is_closed = is_month_closed(db, date(year, month, 1))
-
     return {
         "year_month": year_month,
         "currency": "USD",
@@ -70,7 +67,6 @@ def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
         "admin_expenses_usd": round(admin_expenses_usd, 2),
         "admin_salary_usd": alloc["admin_salary_usd"],      # Ma'muriyat salaries, within admin
         "net_profit_usd": round(net_profit_usd, 2),
-        "is_closed": is_closed,
         "total_factory_volume_m2": alloc["total_factory_volume"],
         "ombor_breakdown": alloc["ombors"]
     }
@@ -98,6 +94,9 @@ def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:
         extract('year', CashTransaction.date) == year,
         extract('month', CashTransaction.date) == month
     ).order_by(CashTransaction.date, CashTransaction.id).all()
+    # Konvertatsiya only moves money between registers: neither in nor out.
+    moved = exchange_transaction_ids(db, year, month)
+    txs = [tx for tx in txs if tx.id not in moved]
 
     zero = lambda: {"in_usd": 0.0, "out_usd": 0.0, "in_uzs": 0.0, "out_uzs": 0.0, "in_usd_cash": 0.0, "out_usd_cash": 0.0}
     totals = zero()

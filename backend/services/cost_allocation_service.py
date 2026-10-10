@@ -2,7 +2,7 @@ from typing import Dict, Any
 from sqlalchemy import extract
 from sqlalchemy.orm import Session
 from backend.models import (ProductionOrder, CashTransaction, LineExpense, SKLAD_CONFIG,
-                            MonthlySalaryCalculation, Employee)
+                            MonthlySalaryCalculation, SalaryAdjustment, Employee)
 from backend.services.currency_service import convert_amount
 
 # Production goes into a yo'nalish (an Ombor's eni: "Kodir 120") instead of
@@ -18,7 +18,7 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
     1. Pieces produced.
     2. Direct raw materials cost (consumed from Warehouse 2).
     3. Spare parts & consumables issued from Warehouse 3 (LineExpense), spread by volume.
-    4. Salaries paid through Ish haqi, where the person works: an Ombor's people
+    4. Salaries and avans paid through Ish haqi, where the person works: an Ombor's people
        go to that Ombor's two yo'nalish by their volume (half each if it made
        nothing), Ma'muriyat to admin costs. People with no Ombor, and wages paid
        straight from the Kassa, count as general indirect costs.
@@ -82,15 +82,17 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         "Uskunalar ta'miri va ehtiyot qismlar", "Sex ijarasi va xizmatlar", "Transport va yoqilg'i",
         "Ishchilar oyligi / Avans", "Boshqa sex xarajatlari"
     ]
-    # Salaries paid through Ish haqi this month, by where the person works.
+    # Salaries and avans paid through Ish haqi this month, by where the person works.
     owners = {s["name"] for s in SKLAD_CONFIG}
-    paid_salaries = db.query(CashTransaction, Employee.department).join(
-        MonthlySalaryCalculation, MonthlySalaryCalculation.cash_transaction_id == CashTransaction.id
-    ).join(Employee, Employee.id == MonthlySalaryCalculation.employee_id).filter(
-        extract('year', CashTransaction.date) == year,
-        extract('month', CashTransaction.date) == month,
-        CashTransaction.type == "chiqim",
-    ).all()
+    paid_salaries = []
+    for paid_by in (MonthlySalaryCalculation, SalaryAdjustment):
+        paid_salaries += db.query(CashTransaction, Employee.department).join(
+            paid_by, paid_by.cash_transaction_id == CashTransaction.id
+        ).join(Employee, Employee.id == paid_by.employee_id).filter(
+            extract('year', CashTransaction.date) == year,
+            extract('month', CashTransaction.date) == month,
+            CashTransaction.type == "chiqim",
+        ).all()
     salary_tx_ids = set()
     owner_salary: Dict[str, float] = {}
     admin_salary = 0.0

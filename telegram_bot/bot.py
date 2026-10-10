@@ -22,7 +22,6 @@ from backend.models import (
 )
 from backend.services.currency_service import get_exchange_rate_for_date, convert_amount
 from backend.services.inventory_service import deduct_stock, add_stock_with_avg_valuation
-from backend.services.month_close_service import is_month_closed
 from backend.services.reports_service import get_pnl_report
 from telegram_bot.table_renderer import render_excel_table_image
 from telegram_bot import sklad_handlers
@@ -41,7 +40,7 @@ def _webapp_url() -> str:
 WEBAPP_HTTPS_URL = _webapp_url()
 
 # The bot only shows reports unless BOT_READ_ONLY=0: records are entered in the
-# web app, whose rules (Ombor, month closing, balances) the old bot wizards
+# web app, whose rules (Ombor, balances) the old bot wizards
 # do not follow.
 BOT_READ_ONLY = os.getenv("BOT_READ_ONLY", "1") != "0"
 # Every button that starts or continues an entry: Kassa (cash_/ckr_/cch_/ctx_),
@@ -504,10 +503,6 @@ async def execute_cash_transaction_db(target_message, context: ContextTypes.DEFA
             return
 
         today = date.today()
-        if is_month_closed(db, today):
-            await target_message.reply_text("❌ Ushbu oy yopilgan! Operatsiya bajarilmadi.")
-            return
-
         if action == "chiqim" and round(reg.balance, 4) < round(amt, 4):
             await target_message.reply_text(
                 f"❌ **Kassada yetarli mablag' mavjud emas!**\n"
@@ -895,10 +890,6 @@ async def cash_ops_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             today = date.today()
-            if is_month_closed(db, today):
-                await query.message.reply_text("❌ Ushbu oy yopilgan! Operatsiya bajarilmadi.")
-                return
-
             today_rate = get_exchange_rate_for_date(db, today)
             reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
             if tx.type == "kirim":
@@ -1155,10 +1146,6 @@ async def production_wizard_callback(update: Update, context: ContextTypes.DEFAU
             custom_mats = state.get("custom_materials", {})
 
             today = date.today()
-            if is_month_closed(db, today):
-                await query.message.reply_text("❌ Ushbu oy yopilgan! Operatsiya bajarilmadi.")
-                return
-
             line = db.query(ProductionLine).filter(ProductionLine.id == line_id).first()
             output_mat = db.query(MDMMaterial).filter(MDMMaterial.id == mat_id).first()
             dst_wh = db.query(Warehouse).filter(Warehouse.id == dst_wh_id).first()

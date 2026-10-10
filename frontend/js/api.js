@@ -165,6 +165,7 @@ const API = {
   },
   createCashTransaction: (data) => apiRequest("/kassa/transactions", "POST", data),
   deleteCashTransaction: (id) => apiRequest(`/kassa/transactions/${id}`, "DELETE"),
+  exchangeCash: (data) => apiRequest("/kassa/exchange", "POST", data),
   getExchangeRates: () => apiRequest("/kassa/exchange-rates"),
   setExchangeRate: (data) => apiRequest("/kassa/exchange-rates", "POST", data),
   syncCbuRate: () => apiRequest("/kassa/exchange-rates/fetch-cbu", "POST"),
@@ -229,7 +230,7 @@ const API = {
   stornoSale: (id) => apiRequest(`/savdo/sales/${id}/storno`, "POST"),
   deleteSale: (id) => apiRequest(`/savdo/sales/${id}`, "DELETE"),
   
-  // Finance & Month Closing
+  // Finance
   getPnL: (yearMonth) => {
     let url = `/moliya/pnl`;
     if (yearMonth) url += `?year_month=${yearMonth}`;
@@ -240,13 +241,6 @@ const API = {
     if (yearMonth) url += `?year_month=${yearMonth}`;
     return apiRequest(url);
   },
-  getMonthStatus: (yearMonth) => {
-    let url = `/moliya/month-closing/status`;
-    if (yearMonth) url += `?year_month=${yearMonth}`;
-    return apiRequest(url);
-  },
-  closeMonth: (data) => apiRequest("/moliya/month-closing/close", "POST", data),
-  reopenMonth: (data) => apiRequest("/moliya/month-closing/reopen", "POST", data),
 
   // Salary & HR Management Module
   getEmployees: (type = null, activeOnly = null, search = "", department = "") => {
@@ -278,12 +272,17 @@ const API = {
   saveDailyAttendance: (data) => apiRequest("/salary/daily-attendance", "POST", data),
   addDailyWork: (data) => apiRequest("/salary/daily-work", "POST", data),
   deleteDailyWork: (id) => apiRequest(`/salary/daily-work/${id}`, "DELETE"),
+  saveDailyHours: (data) => apiRequest("/salary/daily-hours", "POST", data),
+  getSalaryAdjustments: (yearMonth) => apiRequest(`/salary/adjustments?year_month=${yearMonth}`),
+  addSalaryAdjustment: (data) => apiRequest("/salary/adjustments", "POST", data),
+  deleteSalaryAdjustment: (id) => apiRequest(`/salary/adjustments/${id}`, "DELETE"),
 
   getPayroll: (yearMonth, recalculate = false) => apiRequest(`/salary/payroll/${yearMonth}?recalculate=${recalculate}`),
   calculatePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/calculate`, "POST"),
   finalizePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/finalize`, "POST"),
   reopenPayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/reopen`, "POST"),
   paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data),
+  stornoSalary: (id) => apiRequest(`/salary/payroll/${id}/storno`, "POST"),
 
   // ---- Dimensional warehouse (Sklad): length x width matrix, metr / m.kv sales ----
   getSkladConfig: () => apiRequest("/sklad/config"),

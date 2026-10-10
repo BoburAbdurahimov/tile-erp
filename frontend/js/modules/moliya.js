@@ -29,9 +29,6 @@ const FinanceModule = {
             <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('moliya-lines-table', 'pnl_tannarx_taqsimoti')" style="display: flex; align-items: center; gap: 6px;">
 <span>${t('btn_export_pdf')}</span>
             </button>
-            <div id="month-action-buttons">
-              <!-- Rendered dynamically (Close / Reopen) -->
-            </div>
           </div>
         </div>
 
@@ -77,41 +74,12 @@ const FinanceModule = {
     const kpiGrid = document.getElementById("pnl-kpi-grid");
     const linesTable = document.getElementById("lines-allocation-table-container");
     const cfTable = document.getElementById("cf-table-container");
-    const actionBtns = document.getElementById("month-action-buttons");
 
     try {
-      const [pnl, cf, status] = await Promise.all([
+      const [pnl, cf] = await Promise.all([
         API.getPnL(this.currentPeriod),
         API.getCashFlow(this.currentPeriod),
-        API.getMonthStatus(this.currentPeriod).catch(() => null)
       ]);
-      // When the month closes by itself (10th of the next month), or that it did.
-      const autoDate = status && status.auto_close_date ? status.auto_close_date.split("-").reverse().join(".") : "";
-      const autoHint = !status ? "" : status.is_closed
-        ? (status.closed_by && status.closed_by.startsWith("avto") ? `<span style="font-size:12px;color:#64748b;">${isUz ? "Avtomatik yopilgan" : "Закрыт автоматически"} (${autoDate})</span>` : "")
-        : status.reopened
-          ? `<span style="font-size:12px;color:#b45309;">${isUz ? "Admin qayta ochgan - avtomatik yopilmaydi" : "Переоткрыт админом - авто-закрытия не будет"}</span>`
-          : `<span style="font-size:12px;color:#64748b;">${isUz ? "Avtomatik yopiladi" : "Закроется автоматически"}: <b>${autoDate}</b></span>`;
-
-      // Render Month Close / Reopen button
-      if (actionBtns) {
-        if (pnl.is_closed) {
-          actionBtns.innerHTML = `
-            <button class="btn btn-secondary btn-sm" onclick="FinanceModule.reopenMonth()" ${CURRENT_ROLE !== 'Admin' ? 'disabled title="' + (isUz ? 'Faqat Admin uchun' : 'Только для Admin') + '"' : ''}>
-              ${t('btn_reopen_month')} (Admin)
-            </button>
-          `;
-        } else {
-          actionBtns.innerHTML = `
-            <button class="btn btn-danger btn-sm" onclick="FinanceModule.closeMonth()" ${CURRENT_ROLE !== 'Admin' ? 'disabled title="' + (isUz ? 'Faqat Admin uchun' : 'Только для Admin') + '"' : ''}>
-              ${t('btn_close_month')} (Admin)
-            </button>
-          `;
-        }
-        actionBtns.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;gap:3px;";
-        actionBtns.insertAdjacentHTML("beforeend", autoHint);
-      }
-
       // Render KPIs
       if (kpiGrid) {
         kpiGrid.innerHTML = `
@@ -267,56 +235,6 @@ const FinanceModule = {
         `;
       }
 
-      updateMonthStatusBadge(pnl.is_closed);
-
-    } catch (e) {
-      showToast(e.message, "error");
-    }
-  },
-
-  async closeMonth() {
-    const isUz = CURRENT_LANG === 'uz';
-    if (CURRENT_ROLE !== "Admin") {
-      showToast(isUz ? "Oyni yopish faqat Admin roli uchun ruxsat etilgan!" : "Закрытие месяца разрешено только роли Admin!", "error");
-      return;
-    }
-
-    const confirmMsg = isUz
-      ? `${this.currentPeriod} oyini YOPISH (Month-End Closing) ni tasdiqlaysizmi?\n\nDIQQAT: Oy yopilgandan so'ng barcha ishlab chiqarish, kassa, xarid va sotuv operatsiyalari to'liq bloklanadi!`
-      : `Подтверждаете ЗАКРЫТИЕ МЕСЯЦА ${this.currentPeriod}?\n\nВНИМАНИЕ: После закрытия месяца все операции производства, кассы, закупок и продаж будут заблокированы!`;
-
-    if (!confirm(confirmMsg)) {
-      return;
-    }
-
-    try {
-      const res = await API.closeMonth({ year_month: this.currentPeriod, notes: isUz ? "Oylik yakuniy yopish" : "Итоговое закрытие месяца" });
-      showToast(res.message, "success");
-      await this.loadFinanceData();
-    } catch (e) {
-      showToast(e.message, "error");
-    }
-  },
-
-  async reopenMonth() {
-    const isUz = CURRENT_LANG === 'uz';
-    if (CURRENT_ROLE !== "Admin") {
-      showToast(isUz ? "Oyni qayta ochish faqat Admin roli uchun ruxsat etilgan!" : "Повторное открытие месяца разрешено только роли Admin!", "error");
-      return;
-    }
-
-    const confirmMsg = isUz
-      ? `${this.currentPeriod} oyini QAYTA OCHISH (Re-open) ni tasdiqlaysizmi?`
-      : `Подтверждаете ПОВТОРНОЕ ОТКРЫТИЕ МЕСЯЦА ${this.currentPeriod}?`;
-
-    if (!confirm(confirmMsg)) {
-      return;
-    }
-
-    try {
-      const res = await API.reopenMonth({ year_month: this.currentPeriod });
-      showToast(res.message, "success");
-      await this.loadFinanceData();
     } catch (e) {
       showToast(e.message, "error");
     }

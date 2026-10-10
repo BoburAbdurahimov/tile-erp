@@ -378,14 +378,7 @@ class SaleResponse(BaseModel):
     items: List[SaleItemResponse] = []
     created_at: dt_datetime
 
-# Month Closing & PnL
-class MonthCloseRequest(BaseModel):
-    year_month: str # "YYYY-MM"
-    notes: Optional[str] = None
-
-class MonthReopenRequest(BaseModel):
-    year_month: str # "YYYY-MM"
-
+# PnL
 class OmborCostSummary(BaseModel):
     sklad_id: int                 # 0 = production with no Ombor (old orders)
     label: str                    # "Kodir 100"
@@ -415,7 +408,6 @@ class PnLReportResponse(BaseModel):
     admin_expenses_usd: float
     admin_salary_usd: float = 0.0       # Ma'muriyat salaries (part of admin_expenses_usd)
     net_profit_usd: float
-    is_closed: bool
     total_factory_volume_m2: float = 0.0
     ombor_breakdown: List[OmborCostSummary] = []
 

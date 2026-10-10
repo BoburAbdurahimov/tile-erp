@@ -4,11 +4,5 @@
     "backend/main.py": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/moliya/auto-close",
-      "schedule": "5 19 * * *"
-    }
-  ]
+  }
 }
