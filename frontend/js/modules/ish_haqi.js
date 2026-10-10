@@ -1693,7 +1693,7 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}" data-job="${e.job_type_id || ""}">[${escapeHtml(deptLabel(deptKey(e.department)))}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
+    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}" data-job="${assignedJobId(e) || ""}">[${escapeHtml(deptLabel(deptKey(e.department)))}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
     let jobOptions = jobTypesList.filter(j => j.is_active !== false && payTypeOf(j) !== "fiks").map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${escapeHtml(unitText(j))}" data-paytype="${payTypeOf(j)}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${escapeHtml(unitText(j))} (${payTypeText(payTypeOf(j)).name})</option>`).join("");
 
     const modalHost = document.getElementById("salary-modals-host");
@@ -1718,6 +1718,7 @@ const IshHaqiModule = (function () {
                 <select id="work-jobid" class="form-control" required onchange="IshHaqiModule.onWorkJobChange()">
                   ${jobOptions}
                 </select>
+                <div id="work-job-hint" style="margin-top: 6px; font-size: 12px; color: #64748b;"></div>
               </div>
 
               <div class="form-row">
@@ -1747,15 +1748,40 @@ const IshHaqiModule = (function () {
     onWorkEmployeeChange();
   }
 
-  // The employee's own position is the job they are paid for by default.
-  function onWorkEmployeeChange() {
+  // The Ish turi an employee is paid for: their position, or - for people
+  // added before positions came from Ish turlari - the job of that name.
+  function assignedJobId(e) {
+    if (e.job_type_id) return e.job_type_id;
+    const name = (e.position || "").trim().toLowerCase();
+    const job = name && jobTypesList.find(j => (j.name || "").trim().toLowerCase() === name && payTypeOf(j) !== "fiks");
+    return job ? job.id : null;
+  }
+
+  // Choosing the employee fills in the job they are assigned and fixes it;
+  // "Boshqa ish turi" (freeChoice) frees it for other work done that day.
+  function onWorkEmployeeChange(freeChoice = false) {
+    const isUz = isUzbek();
     const empSelect = document.getElementById("work-empid");
     const jobSelect = document.getElementById("work-jobid");
     if (!empSelect || !jobSelect) return;
     const opt = empSelect.options[empSelect.selectedIndex];
     const jobId = opt && opt.getAttribute("data-job");
-    if (jobId && [...jobSelect.options].some(o => o.value === jobId)) jobSelect.value = jobId;
-    onWorkJobChange();
+    const assigned = !!jobId && [...jobSelect.options].some(o => o.value === jobId);
+    if (assigned && !freeChoice) jobSelect.value = jobId;
+    jobSelect.disabled = assigned && !freeChoice;
+    jobSelect.style.background = jobSelect.disabled ? "#f1f5f9" : "";
+    jobSelect.style.cursor = jobSelect.disabled ? "not-allowed" : "";
+    const hint = document.getElementById("work-job-hint");
+    if (hint) {
+      hint.innerHTML = !assigned
+        ? (isUz ? "Xodimga ish turi biriktirilmagan - ro'yxatdan tanlang. Xodimlar ro'yxatida lavozimini belgilasangiz, keyingi safar o'zi chiqadi."
+                : "У сотрудника нет вида работ - выберите из списка. Укажите должность в списке сотрудников, и он будет подставляться сам.")
+        : freeChoice
+          ? (isUz ? "Boshqa ish turi tanlanmoqda." : "Выбирается другой вид работ.")
+          : `${isUz ? "Xodimga biriktirilgan ish turi." : "Вид работ сотрудника."}
+             <a href="#" onclick="IshHaqiModule.onWorkEmployeeChange(true); return false;" style="font-weight: 600;">${isUz ? "Boshqa ish turi" : "Другой вид работ"}</a>`;
+    }
+    if (!freeChoice) onWorkJobChange();       // the job only changes with the employee
   }
 
   // The quantity is hours for soatbay work and a count for fiks work.
@@ -1767,7 +1793,8 @@ const IshHaqiModule = (function () {
     const opt = jobSelect.options[jobSelect.selectedIndex];
     const pt = (opt && opt.getAttribute("data-paytype")) || "ishbay";
     const label = document.getElementById("work-qty-label");
-    if (label) label.textContent = `${payTypeText(pt).qty} *`;
+    const unit = opt && opt.getAttribute("data-unit");
+    if (label) label.textContent = `${payTypeText(pt).qty}${pt === "ishbay" && unit ? ` (${unit})` : ""} *`;
     qtyInput.value = DEFAULT_QTY[pt];
     updateWorkTotalCalc();
   }
