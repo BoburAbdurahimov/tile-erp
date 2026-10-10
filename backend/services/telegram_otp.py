@@ -33,10 +33,10 @@ def can_send() -> bool:
 def send_code(telegram_id: int, code: str, language: str = "uz") -> bool:
     """True if Telegram accepted the message."""
     if language == "ru":
-        text = (f"Код входа в Kafel Zavodi ERP: {code}\n\n"
+        text = (f"Код входа в Tile ERP: {code}\n\n"
                 f"Действует 5 минут. Никому не сообщайте этот код.")
     else:
-        text = (f"Kafel Zavodi ERP ga kirish kodi: {code}\n\n"
+        text = (f"Tile ERP ga kirish kodi: {code}\n\n"
                 f"5 daqiqa amal qiladi. Bu kodni hech kimga bermang.")
     try:
         res = httpx.post(

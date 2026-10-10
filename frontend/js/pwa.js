@@ -65,7 +65,7 @@ const PWA = (() => {
           <img src="/static/icons/icon-192.png" alt="" width="48" height="48" />
           <div>
             <div class="pwa-ios-title" id="pwa-ios-title">${t("pwa_ios_title")}</div>
-            <div class="pwa-ios-sub">Kafel Zavodi ERP</div>
+            <div class="pwa-ios-sub">Tile ERP</div>
           </div>
         </div>
         <ol class="pwa-ios-steps">

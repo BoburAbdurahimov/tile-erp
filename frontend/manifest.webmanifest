@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Kafel Zavodi ERP",
-  "short_name": "Kafel ERP",
-  "description": "Kafel zavodi boshqaruv tizimi: ombor, kassa, ishlab chiqarish, savdo, moliya va ish haqi.",
+  "name": "Tile ERP",
+  "short_name": "Tile ERP",
+  "description": "Tile ERP - kafel zavodi boshqaruv tizimi: ombor, kassa, ishlab chiqarish, savdo, moliya va ish haqi.",
   "lang": "uz",
   "dir": "ltr",
   "start_url": "/",

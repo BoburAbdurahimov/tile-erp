@@ -394,7 +394,7 @@ const SkladModule = {
        </div>
        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
          <strong style="font-size:13px;">${isUz ? "O'lchamlar" : "Размеры"}</strong>
-         <button type="button" class="btn btn-sm btn-secondary" onclick="SkladModule.addReceiveLine()">+ ${isUz ? "Qator" : "Строка"}</button>
+         <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="SkladModule.addReceiveLine()" title="${isUz ? "Qator qo\'shish" : "Добавить строку"}" aria-label="${isUz ? "Qator qo\'shish" : "Добавить строку"}">${uiIcon("plus")}</button>
        </div>
        <div id="rcv-lines"></div>
        <div style="margin-top:8px;font-size:11.5px;color:#94a3b8;">
@@ -499,7 +499,7 @@ const SkladModule = {
 
        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
          <strong style="font-size:13px;">${isUz ? "Tovarlar" : "Товары"}</strong>
-         <button type="button" class="btn btn-sm btn-secondary" onclick="SkladModule.addSellLine()">+ ${isUz ? "Qator" : "Строка"}</button>
+         <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="SkladModule.addSellLine()" title="${isUz ? "Qator qo\'shish" : "Добавить строку"}" aria-label="${isUz ? "Qator qo\'shish" : "Добавить строку"}">${uiIcon("plus")}</button>
        </div>
        <div id="sell-lines"></div>
 

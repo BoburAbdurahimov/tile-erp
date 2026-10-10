@@ -46,9 +46,7 @@ const KassaModule = {
       <div class="card" style="margin-top: 20px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div class="card-title" style="font-size: 18px; font-weight: 700;">${t('kassa_history_title')}</div>
-          <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('kassa-transactions-table', 'kassa_operatsiyalari')" style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; padding: 6px 14px; border-radius: 8px;">
-<span>${t('btn_export_pdf')}</span>
-          </button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf('kassa-transactions-table', 'kassa_operatsiyalari')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
         </div>
         <div class="table-container" id="kassa-tx-table-container">
           <!-- Rendered dynamically -->

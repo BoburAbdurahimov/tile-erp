@@ -4,7 +4,7 @@ const DashboardModule = {
       <div class="card">
         <div class="card-header">
           <div class="card-title">${CURRENT_LANG === 'uz' ? 'Zavodning umumiy holati' : 'Общее состояние завода'}</div>
-          <button class="btn btn-secondary btn-sm" onclick="DashboardModule.refresh()">${CURRENT_LANG === 'uz' ? 'Yangilash' : 'Обновить'}</button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="DashboardModule.refresh()" title="${CURRENT_LANG === 'uz' ? 'Yangilash' : 'Обновить'}" aria-label="${CURRENT_LANG === 'uz' ? 'Yangilash' : 'Обновить'}">${uiIcon("refresh")}</button>
         </div>
         <div class="grid-4" id="kpi-grid">
           <div class="kpi-card"><div class="kpi-title">${CURRENT_LANG === 'uz' ? 'Yuklanmoqda...' : 'Загрузка...'}</div></div>

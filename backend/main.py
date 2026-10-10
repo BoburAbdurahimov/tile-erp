@@ -22,6 +22,18 @@ async def lifespan(app: FastAPI):
     # Initialize DB tables
     logger.info("Initializing database tables...")
     create_tables()
+
+    # The live site starts clean once: test and demo data go (logins stay).
+    try:
+        from backend.services.fresh_start import due_here, run_fresh_start
+        if due_here():
+            db = SessionLocal()
+            try:
+                run_fresh_start(db)
+            finally:
+                db.close()
+    except Exception as e:
+        logger.warning(f"Fresh start skipped: {e}")
     
     # Try syncing daily CBU rate on startup
     try:

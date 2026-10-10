@@ -15,12 +15,8 @@ const PurchasesModule = {
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('purchases-main-table', 'xaridlar_zakup')" style="display: flex; align-items: center; gap: 6px;">
-<span>${t('btn_export_pdf')}</span>
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="PurchasesModule.openNewPurchaseModal()" style="display: flex; align-items: center; gap: 6px;">
-<span>${CURRENT_LANG === 'uz' ? 'Yangi xarid' : 'Новая закупка'}</span>
-            </button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf('purchases-main-table', 'xaridlar_zakup')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
+            <button class="btn btn-primary btn-sm btn-icon" onclick="PurchasesModule.openNewPurchaseModal()" title="${CURRENT_LANG === 'uz' ? 'Yangi xarid' : 'Новая закупка'}" aria-label="${CURRENT_LANG === 'uz' ? 'Yangi xarid' : 'Новая закупка'}">${uiIcon("plus")}</button>
           </div>
         </div>
 
@@ -222,9 +218,7 @@ const PurchasesModule = {
             <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
               ${isUz ? 'Xarid qilinayotgan tovarlar ro\'yxati:' : 'Список закупаемых товаров:'}
             </label>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="PurchasesModule.addPurchaseItemRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
-              ${isUz ? '+ Tovar qo\'shish' : '+ Добавить товар'}
-            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="PurchasesModule.addPurchaseItemRow()" title="${isUz ? 'Tovar qo\'shish' : 'Добавить товар'}" aria-label="${isUz ? 'Tovar qo\'shish' : 'Добавить товар'}">${uiIcon("plus")}</button>
           </div>
 
           <table class="basket-table" id="pur-basket-table" style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">

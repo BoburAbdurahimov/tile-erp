@@ -62,7 +62,7 @@ async def read_only_notice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 BOT_TEXTS = {
     "uz": {
-        "welcome": "👋 **Assalomu alaykum!**\nKafel zavodi ERP tizimiga xush kelibsiz.\n\n👇 **🚀 ERP Mini App** orqali to'liq tizimni ochishingiz yoki quyidagi menyudan foydalanishingiz mumkin:",
+        "welcome": "👋 **Assalomu alaykum!**\nTile ERP tizimiga xush kelibsiz.\n\n👇 **🚀 ERP Mini App** orqali to'liq tizimni ochishingiz yoki quyidagi menyudan foydalanishingiz mumkin:",
         "choose_lang": "🌐 Iltimos, tilni tanlang / Пожалуйста, выберите язык:",
         "lang_set": "✅ Til o'zbek tiliga o'rnatildi!",
         "btn_webapp": "🚀 ERP Mini Appni ochish",

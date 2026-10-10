@@ -14,12 +14,8 @@ const MdmModule = {
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="MdmModule.exportPdf()" style="display: flex; align-items: center; gap: 6px;">
-<span>${t('btn_export_pdf')}</span>
-            </button>
-            <button class="btn btn-primary btn-sm" onclick="MdmModule.openCreateModal()" style="display: flex; align-items: center; gap: 6px;">
-<span>${t('btn_create')}</span>
-            </button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="MdmModule.exportPdf()" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
+            <button class="btn btn-primary btn-sm btn-icon" onclick="MdmModule.openCreateModal()" title="${t('btn_create')}" aria-label="${t('btn_create')}">${uiIcon("plus")}</button>
           </div>
         </div>
 

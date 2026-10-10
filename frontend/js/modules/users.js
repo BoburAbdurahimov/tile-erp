@@ -153,21 +153,9 @@ const UsersModule = (() => {
           </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" onclick="exportTableToPdf(null, 'foydalanuvchilar_royxati')" style="display: flex; align-items: center; gap: 6px;">
-<span>${t('btn_export_pdf')}</span>
-          </button>
-          <button class="btn btn-primary" id="btn-create-user" onclick="UsersModule.openCreateUserModal()" style="display: flex; align-items: center; gap: 8px;">
-<span>${isUz ? "Yangi foydalanuvchi yaratish" : "Создать пользователя"}</span>
-          </button>
-          <button class="btn btn-secondary" onclick="UsersModule.seedDemo()" style="display: flex; align-items: center; gap: 6px; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
-<span>${isUz ? "Demo ma'lumot qo'shish" : "Добавить демо-данные"}</span>
-          </button>
-          <button class="btn btn-secondary" onclick="UsersModule.openReset()" style="display: flex; align-items: center; gap: 6px; border: 1.5px solid #fca5a5; color: #b91c1c; background: #fff;">
-<span>${isUz ? "0 dan boshlash" : "Начать с нуля"}</span>
-          </button>
-          <button class="btn btn-secondary" onclick="UsersModule.loadData()" style="display: flex; align-items: center; gap: 6px;">
-<span>${isUz ? "Yangilash" : "Обновить"}</span>
-          </button>
+          <button class="btn btn-secondary btn-icon" onclick="exportTableToPdf(null, 'foydalanuvchilar_royxati')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
+          <button class="btn btn-primary btn-icon" id="btn-create-user" onclick="UsersModule.openCreateUserModal()" title="${isUz ? "Yangi foydalanuvchi yaratish" : "Создать пользователя"}" aria-label="${isUz ? "Yangi foydalanuvchi yaratish" : "Создать пользователя"}">${uiIcon("plus")}</button>
+          <button class="btn btn-secondary btn-icon" onclick="UsersModule.loadData()" title="${isUz ? "Yangilash" : "Обновить"}" aria-label="${isUz ? "Yangilash" : "Обновить"}">${uiIcon("refresh")}</button>
         </div>
       </div>
 
@@ -302,7 +290,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
 
           <h3 style="color: #334155; margin: 0 0 8px 0;">${isUz ? "Hozircha foydalanuvchilar yo'q" : "Пользователи еще не созданы"}</h3>
           <p style="color: #64748b; margin: 0 0 16px 0;">${isUz ? "Yangi xodimlarni ERP tizimiga qo'shish uchun tugmani bosing" : "Нажмите кнопку, чтобы добавить новых сотрудников в ERP"}</p>
-          <button class="btn btn-primary" onclick="UsersModule.openCreateUserModal()">${isUz ? "Foydalanuvchi qo'shish" : "Добавить пользователя"}</button>
+          <button class="btn btn-primary btn-icon" onclick="UsersModule.openCreateUserModal()" style="margin: 0 auto;" title="${isUz ? "Foydalanuvchi qo\'shish" : "Добавить пользователя"}" aria-label="${isUz ? "Foydalanuvchi qo\'shish" : "Добавить пользователя"}">${uiIcon("plus")}</button>
         </div>
       `;
       return;
@@ -789,79 +777,8 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
     if (modal) modal.remove();
   }
 
-  async function seedDemo() {
-    const isUz = CURRENT_LANG === "uz";
-    if (!confirm(isUz
-      ? "Test uchun demo ma'lumotlar qo'shilsinmi? (kassaga pul, yetkazib beruvchilar, xaridlar, ombor qoldiqlari, ishlab chiqarish, buyurtmalar). Bu haqiqiy hujjatlar sifatida yoziladi."
-      : "Добавить демо-данные для теста? (деньги в кассу, поставщики, закупки, остатки, производство, заказы). Они запишутся как настоящие документы.")) return;
-    showToast(isUz ? "Demo ma'lumotlar qo'shilmoqda, kuting..." : "Добавляем демо-данные, подождите...", "info");
-    try {
-      const res = await API.seedDemoData(false);
-      showToast(res.updated
-        ? (isUz ? "Demo ma'lumotlar yangilandi: avto sarf me'yorlari (100 lik omborlar ham) va xomashyo qo'shildi"
-                : "Демо-данные обновлены: нормы авто расхода (и для складов 100) и сырьё добавлены")
-        : (isUz ? "Demo ma'lumotlar qo'shildi" : "Демо-данные добавлены"), "success");
-    } catch (e) {
-      showToast(e.message, "error");
-    }
-  }
-
-  // Delete every document and start from zero; the Kassa money and the
-  // counterparties stay. Typing TOZALASH guards against a stray click.
-  function openReset() {
-    const isUz = CURRENT_LANG === "uz";
-    const li = s => `<li style="margin:2px 0;">${s}</li>`;
-    showModal(isUz ? "Hammasini tozalash - 0 dan boshlash" : "Очистить всё - начать с нуля", `
-      <div style="display:flex;flex-direction:column;gap:12px;font-size:13.5px;color:#334155;">
-        <div style="padding:10px 12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;">
-          <b style="color:#b91c1c;">${isUz ? "O'chiriladi (qaytarib bo'lmaydi):" : "Будет удалено (без возврата):"}</b>
-          <ul style="margin:6px 0 0 18px;padding:0;">
-            ${li(isUz ? "Xaridlar, sotuvlar, buyurtmalar va ularning to'lovlari" : "Закупки, продажи, заказы и их оплаты")}
-            ${li(isUz ? "Ishlab chiqarish, sarf materiallari, boshqa xarajatlar" : "Производство, расход материалов, прочие расходы")}
-            ${li(isUz ? "Ombor va xomashyo omborlaridagi barcha qoldiqlar" : "Все остатки на складах")}
-            ${li(isUz ? "Kassa operatsiyalari tarixi, ish haqi hisoblari" : "История кассы, расчёты зарплаты")}
-            ${li(isUz ? "Kontragentlar balansi (qarzlar) boshlang'ich qoldig'iga qaytadi (odatda 0)" : "Балансы контрагентов (долги) возвращаются к начальному остатку (обычно 0)")}
-          </ul>
-        </div>
-        <div style="padding:10px 12px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;">
-          <b style="color:#15803d;">${isUz ? "Qoladi:" : "Останется:"}</b>
-          <ul style="margin:6px 0 0 18px;padding:0;">
-            ${li(isUz ? "Kassalardagi pul (har bir kassaga bitta 'Boshlang'ich qoldiq' yozuvi bilan)" : "Деньги в кассах (одной записью «Начальный остаток» в каждой)")}
-            ${li(isUz ? "Kontragentlar, MDM materiallari, foydalanuvchilar, xodimlar, valyuta kurslari" : "Контрагенты, материалы MDM, пользователи, сотрудники, курсы валют")}
-          </ul>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="reset-keep-norms" style="width:16px;height:16px;">
-          ${isUz ? "Avto sarf me'yorlari saqlansin" : "Сохранить нормы авто расхода"}
-        </label>
-        <div>
-          <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;">
-            ${isUz ? "Tasdiqlash uchun TOZALASH deb yozing" : "Для подтверждения введите TOZALASH"}</label>
-          <input id="reset-confirm" autocomplete="off" placeholder="TOZALASH"
-            style="width:100%;padding:9px 11px;border:1.5px solid #fca5a5;border-radius:8px;font-size:14px;box-sizing:border-box;">
-        </div>
-      </div>`, async () => {
-        const confirmText = (document.getElementById("reset-confirm").value || "").trim();
-        if (confirmText.toUpperCase() !== "TOZALASH") {
-          showToast(isUz ? "Tasdiqlash uchun TOZALASH deb yozing" : "Введите TOZALASH для подтверждения", "error");
-          return false;
-        }
-        try {
-          const res = await API.resetAllData({ confirm: confirmText, keep_norms: document.getElementById("reset-keep-norms").checked });
-          const kassa = Object.entries(res.kassa || {}).map(([n, b]) => `${n}: ${formatNumber(b, 0, 2)}`).join(" · ");
-          showToast(`${isUz ? "Tozalandi. Kassada qoldi" : "Очищено. В кассах осталось"}: ${kassa}`, "success");
-          return true;
-        } catch (e) {
-          showToast(e.message, "error");
-          return false;
-        }
-      });
-  }
-
   return {
     render,
-    seedDemo,
-    openReset,
     connectBot,
     loadData,
     switchTab,

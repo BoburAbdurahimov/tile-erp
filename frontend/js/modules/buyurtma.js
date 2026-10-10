@@ -115,13 +115,7 @@ const OrdersModule = {
               </p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              ${this.isAdmin() ? `
-              <button class="btn btn-secondary btn-sm" onclick="OrdersModule.loadDemo()"
-                style="padding:8px 12px;border-radius:8px;font-weight:600;font-size:12.5px;">${isUz ? "Demo yuklash" : "Загрузить демо"}</button>` : ""}
-              <button class="btn btn-primary btn-sm" onclick="OrdersModule.openNewOrder()"
-                style="padding:9px 16px;border-radius:8px;font-weight:700;">
-                + ${isUz ? "Yangi buyurtma" : "Новый заказ"}
-              </button>
+              <button class="btn btn-primary btn-icon" onclick="OrdersModule.openNewOrder()" title="${isUz ? "Yangi buyurtma" : "Новый заказ"}" aria-label="${isUz ? "Yangi buyurtma" : "Новый заказ"}">${uiIcon("plus")}</button>
             </div>
           </div>
           <div id="orders-alert" style="margin-top:14px;"></div>
@@ -597,7 +591,7 @@ const OrdersModule = {
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <label style="${label}margin:0;">${isUz ? "Mahsulotlar (Ombordan)" : "Товары (со склада)"} *</label>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="OrdersModule.addLine()" style="padding:5px 10px;border-radius:7px;font-weight:600;">+ ${isUz ? "Qator" : "Строка"}</button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="OrdersModule.addLine()" title="${isUz ? "Qator qo\'shish" : "Добавить строку"}" aria-label="${isUz ? "Qator qo\'shish" : "Добавить строку"}">${uiIcon("plus")}</button>
           </div>
           <div id="ord-lines" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>

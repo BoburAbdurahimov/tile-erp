@@ -692,7 +692,7 @@ def generate_payroll_excel(db: Session, year_month: str) -> io.BytesIO:
 
     # Title Block
     ws.merge_cells("A1:K1")
-    ws["A1"] = f"KAFEL ZAVODI — OYLIK ISH HAQI VEDOMOSTI ({year_month})"
+    ws["A1"] = f"TILE ERP — OYLIK ISH HAQI VEDOMOSTI ({year_month})"
     ws["A1"].font = font_title
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 30

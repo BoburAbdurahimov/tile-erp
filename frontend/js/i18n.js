@@ -1,6 +1,6 @@
 const I18N = {
   uz: {
-    app_title: "Kafel Zavodi ERP",
+    app_title: "Tile ERP",
     app_subtitle: "Ishlab chiqarish & Boshqaruv",
     
     // Nav
@@ -138,7 +138,7 @@ const I18N = {
     msg_loading: "Yuklanmoqda..."
   },
   ru: {
-    app_title: "ERP Завода Плитки",
+    app_title: "Tile ERP",
     app_subtitle: "Производство и Учет",
     
     // Nav
