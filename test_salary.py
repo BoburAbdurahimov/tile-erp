@@ -4,8 +4,7 @@ from backend.database import SessionLocal, init_engine, create_tables
 from backend.models import Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation, CashRegister, CashTransaction
 from backend.services.salary_service import (
     calculate_employee_salary, recalculate_all_salaries, get_payroll_summary,
-    record_daily_attendance, record_daily_work_entry, finalize_month_payroll,
-    reopen_month_payroll, pay_employee_salary
+    record_daily_attendance, record_daily_work_entry, pay_employee_salary
 )
 
 class TestSalaryModule(unittest.TestCase):
@@ -81,32 +80,41 @@ class TestSalaryModule(unittest.TestCase):
         self.assertEqual(calc.piecework_total, expected_total)
         self.assertEqual(calc.final_amount, expected_total)
 
-    def test_salary_finalization_and_payout(self):
-        """Test: Finalizing locks calculation and payout creates CashTransaction."""
-        recalculate_all_salaries(self.db, self.test_month, current_user="Test")
-        finalize_month_payroll(self.db, self.test_month, current_user="Test")
+    def test_payout_and_the_month_stays_open(self):
+        """Test: payout creates a CashTransaction, and paying never locks the
+        month - entries still go in and the paid salary is worked out again."""
+        emp = Employee(full_name="Test No-Lock Emp", employee_type="piecework", hire_date=date(2026, 1, 1))
+        jt = JobType(name="Test No-Lock Job", unit_of_measure="m2", price_per_unit=1000.0)
+        self.db.add_all([emp, jt])
+        self.db.commit()
+        try:
+            record_daily_work_entry(self.db, emp.id, jt.id, date(2026, 9, 3), quantity=150.0, current_user="Test")
+            recalculate_all_salaries(self.db, self.test_month, current_user="Test")
+            summary = get_payroll_summary(self.db, self.test_month)
+            calc = next(c for c in summary["calculations"] if c["employee_id"] == emp.id)
+            self.assertEqual(calc["final_amount"], 150000.0)
 
-        summary = get_payroll_summary(self.db, self.test_month)
-        self.assertTrue(summary["is_all_finalized"])
-
-        # Pay a calculation that has something to pay, from a so'm register
-        first_calc_id = next(c["id"] for c in summary["calculations"] if c["final_amount"] >= 100000)
-        reg = self.db.query(CashRegister).filter(CashRegister.currency == "UZS").first()
-        self.assertIsNotNone(reg)
-        if (reg.balance or 0) < 100000:
-            reg.balance = 100000.0
+            reg = self.db.query(CashRegister).filter(CashRegister.currency == "UZS").first()
+            reg.balance = (reg.balance or 0.0) + 150000.0
             self.db.commit()
+            calc_res = pay_employee_salary(self.db, calc["id"], reg.id, 150000.0, current_user="Test", notes="Test payout")
+            self.assertEqual(calc_res.status, "paid")
+            tx = self.db.query(CashTransaction).filter(CashTransaction.id == calc_res.cash_transaction_id).first()
+            self.assertEqual((tx.category, tx.type), ("Ishchilar oyligi / Avans", "chiqim"))
 
-        initial_bal = reg.balance
-        calc_res = pay_employee_salary(self.db, first_calc_id, reg.id, 100000.0, current_user="Test", notes="Test payout")
-        
-        self.assertEqual(calc_res.status, "paid")
-        self.assertIsNotNone(calc_res.cash_transaction_id)
-        
-        tx = self.db.query(CashTransaction).filter(CashTransaction.id == calc_res.cash_transaction_id).first()
-        self.assertIsNotNone(tx)
-        self.assertEqual(tx.category, "Ishchilar oyligi / Avans")
-        self.assertEqual(tx.type, "chiqim")
+            # Paid, and the month is still open: a new naryad goes in and the pay follows it
+            record_daily_work_entry(self.db, emp.id, jt.id, date(2026, 9, 20), quantity=50.0, current_user="Test")
+            record_daily_attendance(self.db, date(2026, 9, 20), [], current_user="Test")
+            summary = get_payroll_summary(self.db, self.test_month)
+            row = next(c for c in summary["calculations"] if c["employee_id"] == emp.id)
+            self.assertEqual((row["status"], row["final_amount"], row["paid_amount"]), ("paid", 200000.0, 150000.0))
+            self.assertNotIn("is_all_finalized", summary)
+        finally:
+            self.db.query(WorkEntry).filter(WorkEntry.employee_id == emp.id).delete()
+            self.db.query(MonthlySalaryCalculation).filter(MonthlySalaryCalculation.employee_id == emp.id).delete()
+            self.db.query(Employee).filter(Employee.id == emp.id).delete()
+            self.db.query(JobType).filter(JobType.id == jt.id).delete()
+            self.db.commit()
 
 if __name__ == "__main__":
     unittest.main()

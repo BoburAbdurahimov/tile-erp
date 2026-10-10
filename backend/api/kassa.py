@@ -236,7 +236,7 @@ def delete_cash_transaction(
     for calc in db.query(MonthlySalaryCalculation).filter(
             MonthlySalaryCalculation.cash_transaction_id == tx.id).all():
         calc.cash_transaction_id = None
-        calc.status = "finalized" if calc.finalized_at else "draft"
+        calc.status = "draft"
         calc.paid_at = None
         calc.paid_by = None
     for exp in db.query(OtherExpense).filter(OtherExpense.cash_transaction_id == tx.id).all():

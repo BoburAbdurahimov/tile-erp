@@ -59,14 +59,12 @@ def calculate_employee_salary(
 
     start_date, end_date, _ = get_month_date_range(year_month)
 
-    # Check if existing calculation is locked/paid
+    # Always worked out again from what is entered - a paid salary too (its
+    # payment stays; the payroll shows what is left to pay or was overpaid).
     calc = db.query(MonthlySalaryCalculation).filter(
         MonthlySalaryCalculation.employee_id == employee_id,
         MonthlySalaryCalculation.year_month == year_month
     ).first()
-
-    if calc and calc.status in ("finalized", "paid"):
-        return calc
 
     if not calc:
         calc = MonthlySalaryCalculation(
@@ -168,11 +166,15 @@ def get_payroll_summary(db: Session, year_month: str) -> Dict[str, Any]:
         MonthlySalaryCalculation.year_month == year_month
     ).join(Employee).order_by(Employee.employee_type.asc(), Employee.full_name.asc()).all()
 
+    def paid(c):
+        return float(c.cash_transaction.amount) if c.status == "paid" and c.cash_transaction else 0.0
+
     total_payroll = sum(c.final_amount for c in calcs)
     total_fixed = sum(c.final_amount for c in calcs if c.employee_type == "fixed")
     total_piecework = sum(c.final_amount for c in calcs if c.employee_type == "piecework")
-    total_paid = sum(c.final_amount for c in calcs if c.status == "paid")
-    total_unpaid = total_payroll - total_paid
+    total_paid = sum(paid(c) for c in calcs)
+    # A paid salary worked out again after new entries can still owe something.
+    total_unpaid = sum(max(0.0, c.final_amount - paid(c)) for c in calcs)
 
     items = []
     for c in calcs:
@@ -195,19 +197,16 @@ def get_payroll_summary(db: Session, year_month: str) -> Dict[str, Any]:
             "penalty_amount": c.penalty_amount or 0.0,
             "advance_paid": c.advance_paid or 0.0,
             "final_amount": c.final_amount,
+            "paid_amount": round(paid(c), 2),
             "status": c.status,
             "cash_transaction_id": c.cash_transaction_id,
-            "finalized_at": c.finalized_at.isoformat() if c.finalized_at else None,
             "paid_at": c.paid_at.isoformat() if c.paid_at else None,
             "paid_by": c.paid_by,
             "notes": c.notes
         })
 
-    is_all_finalized = len(calcs) > 0 and all(c.status in ("finalized", "paid") for c in calcs)
-
     return {
         "year_month": year_month,
-        "is_all_finalized": is_all_finalized,
         "total_employees": len(calcs),
         "total_payroll": round(total_payroll, 2),
         "total_fixed": round(total_fixed, 2),
@@ -225,14 +224,6 @@ def record_daily_attendance(
 ):
     """Save attendance entries for a date and update monthly salary."""
     year_month = entry_date.strftime("%Y-%m")
-    
-    # Check if month is finalized
-    locked = db.query(MonthlySalaryCalculation).filter(
-        MonthlySalaryCalculation.year_month == year_month,
-        MonthlySalaryCalculation.status.in_(["finalized", "paid"])
-    ).first()
-    if locked:
-        raise ValueError(f"{year_month} oyi allaqachon yopilgan va qulflangan!")
 
     absent_emp_ids = {r["employee_id"] for r in absent_records}
 
@@ -298,14 +289,6 @@ def record_daily_work_entry(
 ) -> WorkEntry:
     """Record or update a piecework job entry with price snapshot."""
     year_month = entry_date.strftime("%Y-%m")
-    
-    # Check if month is finalized
-    locked = db.query(MonthlySalaryCalculation).filter(
-        MonthlySalaryCalculation.year_month == year_month,
-        MonthlySalaryCalculation.status.in_(["finalized", "paid"])
-    ).first()
-    if locked:
-        raise ValueError(f"{year_month} oyi allaqachon yopilgan va qulflangan!")
 
     job_type = db.query(JobType).filter(JobType.id == job_type_id).first()
     if not job_type:
@@ -362,12 +345,6 @@ def delete_daily_work_entry(db: Session, entry_id: int, current_user: str = "Adm
         raise ValueError("Yozuv topilmadi")
 
     year_month = work_entry.date.strftime("%Y-%m")
-    locked = db.query(MonthlySalaryCalculation).filter(
-        MonthlySalaryCalculation.year_month == year_month,
-        MonthlySalaryCalculation.status.in_(["finalized", "paid"])
-    ).first()
-    if locked:
-        raise ValueError(f"{year_month} oyi allaqachon yopilgan va qulflangan!")
 
     emp_id = work_entry.employee_id
     db.delete(work_entry)
@@ -385,21 +362,11 @@ def delete_daily_work_entry(db: Session, entry_id: int, current_user: str = "Adm
     db.commit()
     return True
 
-def _assert_payroll_open(db: Session, year_month: str) -> None:
-    locked = db.query(MonthlySalaryCalculation).filter(
-        MonthlySalaryCalculation.year_month == year_month,
-        MonthlySalaryCalculation.status.in_(["finalized", "paid"])
-    ).first()
-    if locked:
-        raise ValueError(f"{year_month} oyi allaqachon yopilgan va qulflangan!")
-
-
 def set_daily_hours(db: Session, entry_date: date, items: List[Dict[str, Any]], current_user: str = "Admin") -> int:
     """Soatbay work: the hours each person worked that day at a soatbay job.
     The person and job get one naryad entry of hours x the hourly rate (what
     was there that day is replaced); 0 hours removes it."""
     year_month = entry_date.strftime("%Y-%m")
-    _assert_payroll_open(db, year_month)
 
     rows = []
     for item in items:
@@ -463,12 +430,7 @@ def _adjustment_dict(a: SalaryAdjustment) -> Dict[str, Any]:
 def list_salary_adjustments(db: Session, year_month: str) -> Dict[str, Any]:
     rows = db.query(SalaryAdjustment).filter(SalaryAdjustment.year_month == year_month).order_by(
         SalaryAdjustment.date.desc(), SalaryAdjustment.id.desc()).all()
-    try:
-        _assert_payroll_open(db, year_month)
-        is_locked = False
-    except ValueError:
-        is_locked = True
-    return {"year_month": year_month, "is_locked": is_locked, "items": [_adjustment_dict(a) for a in rows]}
+    return {"year_month": year_month, "items": [_adjustment_dict(a) for a in rows]}
 
 
 def add_salary_adjustment(
@@ -497,7 +459,6 @@ def add_salary_adjustment(
     amount = round(float(amount or 0.0), 2)
     if amount <= 0:
         raise ValueError("Summa musbat bo'lishi kerak")
-    _assert_payroll_open(db, year_month)
 
     reason = (reason or "").strip() or None
     adj = SalaryAdjustment(employee_id=emp.id, kind=kind, year_month=year_month, date=entry_date,
@@ -548,7 +509,6 @@ def delete_salary_adjustment(db: Session, adjustment_id: int, current_user: str 
     adj = db.query(SalaryAdjustment).filter(SalaryAdjustment.id == adjustment_id).first()
     if not adj:
         raise ValueError("Yozuv topilmadi")
-    _assert_payroll_open(db, adj.year_month)
 
     if adj.cash_transaction_id:
         tx = db.query(CashTransaction).filter(CashTransaction.id == adj.cash_transaction_id).first()
@@ -580,60 +540,11 @@ def release_transaction_adjustments(db: Session, transaction_id: int) -> List[tu
     """Kassa is deleting this entry: an avans paid through it is removed too.
     Returns (employee, month) pairs whose pay must be worked out again."""
     adjs = db.query(SalaryAdjustment).filter(SalaryAdjustment.cash_transaction_id == transaction_id).all()
-    for a in adjs:
-        _assert_payroll_open(db, a.year_month)
     affected = [(a.employee_id, a.year_month) for a in adjs]
     for a in adjs:
         db.delete(a)
     return affected
 
-
-def finalize_month_payroll(db: Session, year_month: str, current_user: str = "Admin"):
-    """Lock all calculations for a month."""
-    calcs = recalculate_all_salaries(db, year_month, current_user=current_user)
-    now = datetime.utcnow()
-    for c in calcs:
-        if c.status == "draft":
-            c.status = "finalized"
-            c.finalized_at = now
-            c.finalized_by = current_user
-    db.commit()
-
-    db.add(AuditLog(
-        username=current_user,
-        action="FINALIZE",
-        module="Ish haqi",
-        entity_id=year_month,
-        details=f"{year_month} oylik ish haqi hisob-kitobi tasdiqlandi va qulflandi"
-    ))
-    db.commit()
-    return True
-
-def reopen_month_payroll(db: Session, year_month: str, current_user: str = "Admin"):
-    """Reopen a finalized month if no salary has been marked as paid."""
-    calcs = db.query(MonthlySalaryCalculation).filter(
-        MonthlySalaryCalculation.year_month == year_month
-    ).all()
-    
-    paid_count = sum(1 for c in calcs if c.status == "paid")
-    if paid_count > 0:
-        raise ValueError(f"Ushbu oyda {paid_count} ta xodimga to'lov amalga oshirilgan! Qayta ochish mumkin emas.")
-
-    for c in calcs:
-        c.status = "draft"
-        c.finalized_at = None
-        c.finalized_by = None
-    db.commit()
-
-    db.add(AuditLog(
-        username=current_user,
-        action="REOPEN",
-        module="Ish haqi",
-        entity_id=year_month,
-        details=f"{year_month} oylik ish haqi hisob-kitobi qayta tahrirlash uchun ochildi"
-    ))
-    db.commit()
-    return True
 
 def pay_employee_salary(
     db: Session,
@@ -732,7 +643,7 @@ def storno_salary_payment(db: Session, calculation_id: int, current_user: str = 
     register_name = tx.register.name if tx and tx.register else "-"
 
     calc.cash_transaction_id = None
-    calc.status = "finalized" if calc.finalized_at else "draft"
+    calc.status = "draft"
     calc.paid_at = None
     calc.paid_by = None
     db.flush()
@@ -811,7 +722,7 @@ def generate_payroll_excel(db: Session, year_month: str) -> io.BytesIO:
     current_row = 5
     for idx, c in enumerate(summary["calculations"], start=1):
         emp_type_label = "Fiksalangan" if c["employee_type"] == "fixed" else "Ishbay"
-        status_label = "To'langan" if c["status"] == "paid" else ("Tasdiqlangan" if c["status"] == "finalized" else "Qoralama")
+        status_label = "To'langan" if c["status"] == "paid" else "To'lanmagan"
         bonus_adv_str = (f"+{c['bonus_amount']:,.0f} / -{c['penalty_amount']:,.0f} / -{c['advance_paid']:,.0f}"
                          if (c['bonus_amount'] or c['penalty_amount'] or c['advance_paid']) else "0")
 
