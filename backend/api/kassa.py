@@ -1,6 +1,7 @@
 from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -11,7 +12,7 @@ from backend.schemas import (
     CashRegisterResponse, CashTransactionCreate, CashTransactionResponse,
     ExchangeRateCreate, ExchangeRateResponse
 )
-from backend.api.auth import get_current_user_role, check_permission, is_admin
+from backend.api.auth import get_current_user_role, get_current_username, check_permission, is_admin
 from backend.services.currency_service import (
     get_exchange_rate_for_date, set_manual_exchange_rate,
     fetch_cbu_rate_today, convert_amount
@@ -19,6 +20,9 @@ from backend.services.currency_service import (
 from backend.services.month_close_service import assert_month_open
 from backend.services.counterparty_service import move_cash
 from backend.services.salary_service import calculate_employee_salary, release_transaction_adjustments
+from backend.services.cash_exchange_service import (
+    exchange_between_registers, exchange_of_transaction, undo_exchange
+)
 from backend.services.order_service import ensure_card_register
 
 router = APIRouter(prefix="/kassa", tags=["MODUL 3: KASSA (Treasury & Cash)"])
@@ -192,7 +196,8 @@ def create_cash_transaction(
 def delete_cash_transaction(
     transaction_id: int,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    username: str = Depends(get_current_username),
 ):
     check_permission("admin_tools" if is_admin(role) else "kassa", role)
     if not is_admin(role):
@@ -200,7 +205,19 @@ def delete_cash_transaction(
     tx = db.query(CashTransaction).filter(CashTransaction.id == transaction_id).first()
     if not tx:
         raise HTTPException(status_code=404, detail="Tranzaksiya topilmadi.")
-    
+
+    # One side of a konvertatsiya: both sides go and both registers get their money back.
+    exchange = exchange_of_transaction(db, tx.id)
+    if exchange:
+        try:
+            undo_exchange(db, exchange, current_user=username)
+        except ValueError as ve:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(ve))
+        db.commit()
+        return {"success": True, "message": "Konvertatsiya bekor qilindi: ikkala kassadagi yozuv ham o'chirildi.",
+                "id": transaction_id}
+
     # Reverse register balance
     reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
     if reg:
@@ -241,6 +258,34 @@ def delete_cash_transaction(
     for employee_id, year_month in avans_paid_to:
         calculate_employee_salary(db, employee_id, year_month)
     return {"success": True, "message": "Kassa tranzaksiyasi muvaffaqiyatli o'chirildi.", "id": transaction_id}
+
+# ----------------- KONVERTATSIYA (USD <-> UZS, kassadan kassaga) -----------------
+
+class CashExchangeCreate(BaseModel):
+    from_register_id: int
+    to_register_id: int
+    amount: float                   # in the from register's currency
+    rate: Optional[float] = None    # so'm per dollar; the day's rate when not given
+    date: date
+    note: Optional[str] = None
+
+@router.post("/exchange")
+def exchange_money(
+    payload: CashExchangeCreate,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role),
+    username: str = Depends(get_current_username),
+):
+    check_permission("kassa", role)
+    try:
+        ex = exchange_between_registers(db, payload.from_register_id, payload.to_register_id, payload.amount,
+                                        payload.date, rate=payload.rate, note=payload.note, current_user=username)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    return {
+        "status": "success", "id": ex.id, "from_amount": ex.from_amount, "to_amount": ex.to_amount,
+        "rate": ex.rate, "out_tx_id": ex.out_tx_id, "in_tx_id": ex.in_tx_id,
+    }
 
 # ----------------- EXCHANGE RATES -----------------
 

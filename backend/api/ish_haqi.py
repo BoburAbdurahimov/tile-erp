@@ -12,7 +12,7 @@ from backend.models import (Employee, JobType, AttendanceEntry, WorkEntry, Month
 from backend.services.salary_service import (
     calculate_employee_salary, recalculate_all_salaries, get_payroll_summary,
     record_daily_attendance, record_daily_work_entry, delete_daily_work_entry,
-    finalize_month_payroll, reopen_month_payroll, pay_employee_salary, generate_payroll_excel,
+    finalize_month_payroll, reopen_month_payroll, pay_employee_salary, storno_salary_payment, generate_payroll_excel,
     set_daily_hours, list_salary_adjustments, add_salary_adjustment, delete_salary_adjustment
 )
 
@@ -668,6 +668,17 @@ def pay_salary_endpoint(id: int, data: PaySalarySchema, db: Session = Depends(ge
     except Exception as e:
         logger.error(f"Salary payment failed: {e}")
         raise HTTPException(status_code=500, detail=f"To'lovni amalga oshirishda xatolik: {e}")
+
+@router.post("/payroll/{id}/storno")
+def storno_salary_endpoint(id: int, db: Session = Depends(get_db),
+                           role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+    """Take a salary payment back: the money returns to its Kassa."""
+    check_permission("kassa", role)
+    try:
+        calc = storno_salary_payment(db, id, current_user=username)
+        return {"status": "success", "calculation_id": calc.id, "salary_status": calc.status}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
 
 @router.get("/payroll/{year_month}/export-excel")
 def export_payroll_excel(year_month: str, db: Session = Depends(get_db)):

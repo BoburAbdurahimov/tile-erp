@@ -135,6 +135,25 @@ class CashTransaction(Base):
     counterparty = relationship("MDMCounterparty")
     register = relationship("CashRegister")
 
+class CashExchange(Base):
+    """Konvertatsiya: money moved from one Kassa to another - dollars into so'm
+    or back at a rate, or between two registers of one currency. A chiqim from
+    one register and a kirim into the other; neither is income or an expense."""
+    __tablename__ = "cash_exchanges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(Date, nullable=False)
+    from_register_id = Column(Integer, ForeignKey("cash_registers.id"), nullable=False)
+    to_register_id = Column(Integer, ForeignKey("cash_registers.id"), nullable=False)
+    from_amount = Column(Float, nullable=False)       # in the from register's currency
+    to_amount = Column(Float, nullable=False)         # in the to register's currency
+    rate = Column(Float, nullable=True)               # so'm per dollar; none between same currencies
+    out_tx_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
+    in_tx_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
+    note = Column(Text, nullable=True)
+    entered_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class ExchangeRate(Base):
     __tablename__ = "exchange_rates"
     

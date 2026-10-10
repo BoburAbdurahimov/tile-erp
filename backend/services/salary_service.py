@@ -723,6 +723,46 @@ def pay_employee_salary(
     db.refresh(calc)
     return calc
 
+def storno_salary_payment(db: Session, calculation_id: int, current_user: str = "Admin") -> MonthlySalaryCalculation:
+    """Take a salary payment back (storno): its Kassa chiqim is removed and the
+    money returns to that Kassa; the salary is unpaid again."""
+    calc = db.query(MonthlySalaryCalculation).filter(MonthlySalaryCalculation.id == calculation_id).first()
+    if not calc:
+        raise ValueError("Hisob-kitob topilmadi")
+    if calc.status != "paid" or not calc.cash_transaction_id:
+        raise ValueError("Bu ish haqi to'lanmagan - storno qilinadigan to'lov yo'q.")
+    tx = db.query(CashTransaction).filter(CashTransaction.id == calc.cash_transaction_id).first()
+    if tx:
+        from backend.services.month_close_service import is_month_closed
+        if is_month_closed(db, tx.date):
+            raise ValueError(f"{tx.date:%Y-%m} oyi yopilgan - to'lovni storno qilib bo'lmaydi.")
+        reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
+        if reg:
+            reg.balance = round((reg.balance or 0.0) + tx.amount, 4)
+    amount = tx.amount if tx else 0.0
+    register_name = tx.register.name if tx and tx.register else "-"
+
+    calc.cash_transaction_id = None
+    calc.status = "finalized" if calc.finalized_at else "draft"
+    calc.paid_at = None
+    calc.paid_by = None
+    db.flush()
+    if tx:
+        db.delete(tx)
+    emp = calc.employee
+    db.add(AuditLog(
+        username=current_user,
+        action="STORNO",
+        module="Ish haqi / Kassa",
+        entity_id=str(calc.id),
+        details=f"Ish haqi to'lovi storno: {emp.full_name if emp else '-'} ({calc.year_month}) - "
+                f"{amount:,.0f} so'm {register_name} ga qaytdi"
+    ))
+    db.commit()
+    db.refresh(calc)
+    return calc
+
+
 def generate_payroll_excel(db: Session, year_month: str) -> io.BytesIO:
     """Export monthly payroll table to a beautifully formatted Excel sheet."""
     summary = get_payroll_summary(db, year_month)

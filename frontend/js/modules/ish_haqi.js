@@ -273,7 +273,7 @@ const IshHaqiModule = (function () {
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openDetailsModal(${c.id})" title="${isUz ? "Batafsil hisob-kitob" : "Детали начисления"}">${CURRENT_LANG === 'uz' ? "Batafsil" : "Подробнее"}</button>
               ${c.status !== "paid" 
                 ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, ${jsArg(c.full_name)}, ${c.final_amount})" style="margin-left: 4px;">${isUz ? "To'lash" : "Выплатить"}</button>`
-                : `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 4px;">✓ ${isUz ? "To'langan" : "Оплачено"}</span>`
+                : `<button class="btn btn-storno btn-sm" onclick="IshHaqiModule.stornoSalary(${c.id}, ${jsArg(c.full_name)})" style="margin-left: 4px;" title="${isUz ? "To'lovni bekor qilish, pul kassaga qaytadi" : "Отменить выплату, деньги вернутся в кассу"}">${isUz ? "Storno" : "Сторно"}</button>`
               }
             </td>
           </tr>
@@ -1918,6 +1918,20 @@ const IshHaqiModule = (function () {
     }
   }
 
+  async function stornoSalary(calcId, empName) {
+    const isUz = isUzbek();
+    if (!confirm(isUz
+      ? `${empName}: ish haqi to'lovini storno qilasizmi?\nKassadagi chiqim o'chiriladi, pul kassaga qaytadi va oylik qayta "to'lanmagan" bo'ladi.`
+      : `${empName}: отменить выплату (сторно)?\nРасход в кассе удалится, деньги вернутся в кассу.`)) return;
+    try {
+      await API.stornoSalary(calcId);
+      showToast(isUz ? "To'lov storno qilindi, pul kassaga qaytdi" : "Выплата отменена, деньги вернулись в кассу", "success");
+      await loadActiveTabContent();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
   // Employee Calculation Breakdown Modal
   function openDetailsModal(calcId) {
     const isUz = isUzbek();
@@ -2047,6 +2061,7 @@ const IshHaqiModule = (function () {
     handleCreateWorkEntry,
     openPayModal,
     handlePaySalary,
+    stornoSalary,
     openDetailsModal,
     closeModal
   };

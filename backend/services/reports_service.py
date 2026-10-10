@@ -12,6 +12,7 @@ from backend.models import (
 )
 from backend.services.currency_service import convert_amount
 from backend.services.cost_allocation_service import calculate_monthly_production_cost_allocation
+from backend.services.cash_exchange_service import exchange_transaction_ids
 
 def get_pnl_report(db: Session, year_month: str) -> Dict[str, Any]:
     year, month = map(int, year_month.split("-"))
@@ -98,6 +99,9 @@ def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:
         extract('year', CashTransaction.date) == year,
         extract('month', CashTransaction.date) == month
     ).order_by(CashTransaction.date, CashTransaction.id).all()
+    # Konvertatsiya only moves money between registers: neither in nor out.
+    moved = exchange_transaction_ids(db, year, month)
+    txs = [tx for tx in txs if tx.id not in moved]
 
     zero = lambda: {"in_usd": 0.0, "out_usd": 0.0, "in_uzs": 0.0, "out_uzs": 0.0, "in_usd_cash": 0.0, "out_usd_cash": 0.0}
     totals = zero()

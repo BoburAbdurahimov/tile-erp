@@ -19,7 +19,7 @@ from backend.models import (
     PurchaseItem, Purchase, SaleItem, Sale,
     StockTransfer, StockItem, OtherExpense,
     MonthlySalaryCalculation, SalaryAdjustment, WorkEntry, AttendanceEntry,
-    AutoSarfRule, CashTransaction, CashRegister, MonthClosing, MDMCounterparty,
+    AutoSarfRule, CashExchange, CashTransaction, CashRegister, MonthClosing, MDMCounterparty,
 )
 
 OPENING_NOTE = "Boshlang'ich qoldiq (0 dan boshlash)"
@@ -64,6 +64,7 @@ def reset_operational_data(db: Session, keep_norms: bool = False) -> dict:
     if not keep_norms:
         wipe(AutoSarfRule, "auto_sarf_norms")
 
+    wipe(CashExchange, "kassa_exchanges")
     db.query(CashTransaction).update({CashTransaction.storno_ref_id: None}, synchronize_session=False)
     wipe(CashTransaction, "kassa_transactions")
     wipe(MonthClosing, "month_closings")

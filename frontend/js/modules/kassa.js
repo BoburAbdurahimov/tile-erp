@@ -13,6 +13,9 @@ const KassaModule = {
               <button class="btn btn-danger" onclick="KassaModule.openTransactionModal('chiqim')" style="font-weight: 700; font-size: 15px; padding: 9px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer;">
                 ${t('kassa_expense_btn')}
               </button>
+              <button class="btn btn-primary" onclick="KassaModule.openExchangeModal()" style="font-weight: 700; font-size: 15px; padding: 9px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(37, 99, 235, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                ${CURRENT_LANG === 'uz' ? 'Konvertatsiya' : 'Конвертация'}
+              </button>
             </div>
           </div>
           <div id="kassa-registers-container" style="display: flex; flex-direction: column; gap: 14px;">
@@ -88,6 +91,7 @@ const KassaModule = {
     if (!div) return;
     try {
       const rates = await API.getExchangeRates();
+      this.rates = rates || [];
       const latest = rates[0];
       if (!latest) {
         div.innerHTML = `<div style="padding: 14px 18px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-weight: 600; margin-bottom: 16px;">${CURRENT_LANG === 'uz' ? "Valyuta kursi hali kiritilmagan." : "Курс валюты ещё не задан."}</div>`;
@@ -179,7 +183,7 @@ const KassaModule = {
                   </td>
                   <td data-sort-value="${tx.description || ''}">${tr(tx.description) || '-'}</td>
                   <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-                    ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
+                    ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id}, ${jsArg(tx.category)})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                   </td>
                 </tr>
               `;
@@ -250,6 +254,148 @@ const KassaModule = {
         }
       }
     );
+  },
+
+  // Konvertatsiya: dollars into so'm or back at a rate (the day's rate, which
+  // can be changed), or money between two registers of one currency.
+  rateFor(dateStr) {
+    const r = (this.rates || []).find(x => String(x.date).slice(0, 10) <= dateStr);
+    return r ? r.rate_usd_uzs : ((this.rates || [])[0] || {}).rate_usd_uzs || "";
+  },
+
+  async openExchangeModal() {
+    const isUz = CURRENT_LANG === 'uz';
+    try {
+      this.registers = await API.getCashRegisters();
+      if (!this.rates) this.rates = await API.getExchangeRates();
+    } catch (e) {
+      showToast(e.message, "error");
+      return;
+    }
+    const regs = this.registers || [];
+    if (regs.length < 2) {
+      showToast(isUz ? "Kamida ikkita kassa kerak" : "Нужно минимум две кассы", "warning");
+      return;
+    }
+    const todayStr = new Date().toISOString().split("T")[0];
+    const from = regs.find(r => r.currency === "USD") || regs[0];
+    const to = regs.find(r => r.id !== from.id && r.currency !== from.currency) || regs.find(r => r.id !== from.id);
+    const options = (selected) => regs.map(r => `<option value="${r.id}" ${r.id === selected.id ? "selected" : ""}>${tr(r.name)} (${r.currency === 'USD' ? '$' + formatNumber(r.balance, 2, 2) : formatNumber(r.balance, 0, 2) + ' UZS'})</option>`).join("");
+    const field = "width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;";
+    const label = "display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;";
+
+    showModal(
+      isUz ? "Konvertatsiya (kassadan kassaga)" : "Конвертация (из кассы в кассу)",
+      `
+        <form id="exchange-form" onsubmit="return false;">
+          <div class="form-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 14px;">
+              <label style="${label}">${isUz ? "Qaysi kassadan" : "Из кассы"} *</label>
+              <select id="ex-from" class="form-control" style="${field}" onchange="KassaModule.updateExchange()">${options(from)}</select>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 14px;">
+              <label style="${label}">${isUz ? "Qaysi kassaga" : "В кассу"} *</label>
+              <select id="ex-to" class="form-control" style="${field}" onchange="KassaModule.updateExchange()">${options(to)}</select>
+            </div>
+          </div>
+          <div class="form-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 14px;">
+              <label style="${label}" id="ex-amount-label">${isUz ? "Summa" : "Сумма"} *</label>
+              <input type="number" id="ex-amount" class="form-control" step="any" min="0.01" placeholder="0" style="${field} font-weight: 700;" oninput="KassaModule.updateExchange()">
+            </div>
+            <div class="form-group" id="ex-rate-group" style="flex: 1; min-width: 180px; margin-bottom: 14px;">
+              <label style="${label}">${isUz ? "Kurs: 1 USD = ? UZS" : "Курс: 1 USD = ? UZS"} *</label>
+              <input type="number" id="ex-rate" class="form-control" step="any" min="0.01" value="${this.rateFor(todayStr)}" style="${field}"
+                oninput="this.dataset.touched = '1'; KassaModule.updateExchange()">
+              <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">${isUz ? "Belgilangan kurs qo'yildi - kerak bo'lsa o'zgartiring." : "Подставлен установленный курс - при необходимости измените."}</div>
+            </div>
+          </div>
+          <div class="form-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 14px;">
+              <label style="${label}">${t('th_date')} *</label>
+              <input type="date" id="ex-date" class="form-control" value="${todayStr}" style="${field}" onchange="KassaModule.onExchangeDate()">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 14px;">
+              <label style="${label}">${isUz ? "Izoh" : "Примечание"}</label>
+              <input type="text" id="ex-note" class="form-control" style="${field}" placeholder="${isUz ? "Masalan: bozorda sotildi" : "Например: продано на рынке"}">
+            </div>
+          </div>
+          <div id="ex-result" style="padding: 12px 14px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-weight: 700;"></div>
+        </form>
+      `,
+      async () => {
+        const fromId = parseInt(document.getElementById("ex-from").value);
+        const toId = parseInt(document.getElementById("ex-to").value);
+        const amount = parseFloat(document.getElementById("ex-amount").value);
+        const rate = parseFloat(document.getElementById("ex-rate").value);
+        if (fromId === toId) {
+          showToast(isUz ? "Ikki xil kassani tanlang" : "Выберите две разные кассы", "warning");
+          return false;
+        }
+        if (!(amount > 0)) {
+          showToast(isUz ? "Summani kiriting" : "Введите сумму", "warning");
+          return false;
+        }
+        try {
+          const res = await API.exchangeCash({
+            from_register_id: fromId, to_register_id: toId, amount,
+            rate: this.exchangeNeedsRate() ? rate : null,
+            date: document.getElementById("ex-date").value,
+            note: document.getElementById("ex-note").value,
+          });
+          const dst = (this.registers || []).find(r => r.id === toId);
+          showToast(`${isUz ? "Konvertatsiya bajarildi" : "Конвертация выполнена"}: ${tr(dst ? dst.name : "")} +${formatNumber(res.to_amount, 0, 2)} ${dst ? dst.currency : ""}`, "success");
+          await this.loadRegisters();
+          await this.loadTransactions();
+          return true;
+        } catch (err) {
+          showToast(err.message, "error");
+          return false;
+        }
+      }
+    );
+    this.updateExchange();
+  },
+
+  exchangeNeedsRate() {
+    const regs = this.registers || [];
+    const from = regs.find(r => r.id === parseInt(document.getElementById("ex-from").value));
+    const to = regs.find(r => r.id === parseInt(document.getElementById("ex-to").value));
+    return !!(from && to && from.currency !== to.currency);
+  },
+
+  onExchangeDate() {
+    const rate = document.getElementById("ex-rate");
+    if (rate && !rate.dataset.touched) rate.value = this.rateFor(document.getElementById("ex-date").value);
+    this.updateExchange();
+  },
+
+  updateExchange() {
+    const isUz = CURRENT_LANG === 'uz';
+    const regs = this.registers || [];
+    const from = regs.find(r => r.id === parseInt(document.getElementById("ex-from").value));
+    const to = regs.find(r => r.id === parseInt(document.getElementById("ex-to").value));
+    const out = document.getElementById("ex-result");
+    if (!from || !to || !out) return;
+    const needsRate = from.currency !== to.currency;
+    document.getElementById("ex-rate-group").style.display = needsRate ? "" : "none";
+    document.getElementById("ex-amount-label").textContent = `${isUz ? "Summa" : "Сумма"} (${from.currency}) *`;
+    const money = (v, cur) => cur === "USD" ? `$${formatNumber(v, 2, 2)}` : `${formatNumber(v, 0, 0)} UZS`;
+    if (from.id === to.id) {
+      out.textContent = isUz ? "Ikki xil kassani tanlang" : "Выберите две разные кассы";
+      return;
+    }
+    const amount = parseFloat(document.getElementById("ex-amount").value) || 0;
+    const rate = parseFloat(document.getElementById("ex-rate").value) || 0;
+    let received = amount;
+    if (needsRate) received = rate > 0 ? (from.currency === "USD" ? amount * rate : amount / rate) : 0;
+    const short = amount > (from.balance || 0);
+    out.style.background = short ? "#fef2f2" : "#eff6ff";
+    out.style.borderColor = short ? "#fecaca" : "#bfdbfe";
+    out.style.color = short ? "#b91c1c" : "#1e3a8a";
+    out.innerHTML = short
+      ? `${tr(from.name)}: ${isUz ? "yetarli mablag' yo'q" : "недостаточно средств"} (${money(from.balance || 0, from.currency)})`
+      : `${tr(from.name)} −${money(amount, from.currency)} → ${tr(to.name)} <span style="color:#059669;">+${money(received, to.currency)}</span>`;
   },
 
   openTransactionModal(type) {
@@ -594,9 +740,13 @@ const KassaModule = {
     }
   },
 
-  async deleteTransaction(id) {
+  async deleteTransaction(id, category) {
     const isUz = CURRENT_LANG === 'uz';
-    if (!confirm(isUz ? "Ushbu kassa tranzaksiyasini o'chirishni tasdiqlaysizmi?" : "Удалить эту кассовую транзакцию?")) return;
+    const question = category === "Konvertatsiya"
+      ? (isUz ? "Konvertatsiyani bekor qilasizmi? Ikkala kassadagi yozuv ham o'chadi va pul joyiga qaytadi."
+              : "Отменить конвертацию? Удалятся обе записи, деньги вернутся на место.")
+      : (isUz ? "Ushbu kassa tranzaksiyasini o'chirishni tasdiqlaysizmi?" : "Удалить эту кассовую транзакцию?");
+    if (!confirm(question)) return;
     try {
       await API.deleteCashTransaction(id);
       showToast(isUz ? "Tranzaksiya o'chirildi" : "Транзакция удалена", "success");

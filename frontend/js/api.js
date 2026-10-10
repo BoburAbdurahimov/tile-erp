@@ -165,6 +165,7 @@ const API = {
   },
   createCashTransaction: (data) => apiRequest("/kassa/transactions", "POST", data),
   deleteCashTransaction: (id) => apiRequest(`/kassa/transactions/${id}`, "DELETE"),
+  exchangeCash: (data) => apiRequest("/kassa/exchange", "POST", data),
   getExchangeRates: () => apiRequest("/kassa/exchange-rates"),
   setExchangeRate: (data) => apiRequest("/kassa/exchange-rates", "POST", data),
   syncCbuRate: () => apiRequest("/kassa/exchange-rates/fetch-cbu", "POST"),
@@ -288,6 +289,7 @@ const API = {
   finalizePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/finalize`, "POST"),
   reopenPayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/reopen`, "POST"),
   paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data),
+  stornoSalary: (id) => apiRequest(`/salary/payroll/${id}/storno`, "POST"),
 
   // ---- Dimensional warehouse (Sklad): length x width matrix, metr / m.kv sales ----
   getSkladConfig: () => apiRequest("/sklad/config"),
