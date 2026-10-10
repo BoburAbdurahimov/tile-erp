@@ -128,9 +128,9 @@ const HistoryModule = {
           </p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="HistoryModule.load()">${isUz ? "Yangilash" : "Обновить"}</button>
-          <button class="btn btn-secondary btn-sm" onclick="HistoryModule.resetFilters()">${isUz ? "Filtrlarni tozalash" : "Сбросить фильтры"}</button>
-          <button class="btn btn-primary btn-sm" onclick="exportTableToPdf('history-table', 'tarix_' + HistoryModule.section)">${t('btn_export_pdf')}</button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="HistoryModule.load()" title="${isUz ? "Yangilash" : "Обновить"}" aria-label="${isUz ? "Yangilash" : "Обновить"}">${uiIcon("refresh")}</button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="HistoryModule.resetFilters()" title="${isUz ? "Filtrlarni tozalash" : "Сбросить фильтры"}" aria-label="${isUz ? "Filtrlarni tozalash" : "Сбросить фильтры"}">${uiIcon("filterClear")}</button>
+          <button class="btn btn-primary btn-sm btn-icon" onclick="exportTableToPdf('history-table', 'tarix_' + HistoryModule.section)" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
         </div>
       </div>`;
   },

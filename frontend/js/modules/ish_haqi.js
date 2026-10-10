@@ -151,7 +151,7 @@ const IshHaqiModule = (function () {
             ${[["payroll", t.tab_payroll], ["daily", t.tab_daily], ["adjustments", t.tab_adjustments],
                ["employees", t.tab_employees], ["job_types", t.tab_job_types]].map(([id, label]) =>
               `<button class="tab-btn ${activeTab === id ? 'active' : ''}" data-tab="${id}" onclick="IshHaqiModule.switchTab('${id}')">${label}</button>`).join("")}
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px; padding: 6px 12px; font-weight: 600;">${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}</button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px;" title="${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}" aria-label="${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}">${uiIcon("pdf")}</button>
           </div>
         </div>
       </div>
@@ -300,7 +300,7 @@ const IshHaqiModule = (function () {
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.recalculatePayroll()">${t.btn_recalc}</button>
-            <button class="btn btn-success btn-sm" onclick="IshHaqiModule.exportPdf()">${t.btn_pdf}</button>
+            <button class="btn btn-success btn-sm btn-icon" onclick="IshHaqiModule.exportPdf()" title="${t.btn_pdf}" aria-label="${t.btn_pdf}">${uiIcon("pdf")}</button>
           </div>
         </div>
       </div>
@@ -563,7 +563,7 @@ const IshHaqiModule = (function () {
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Ishbay xodimlar naryadlari" : "Сдельные наряды"}</div>
-            <button class="btn btn-warning btn-sm" onclick="IshHaqiModule.openAddWorkModal()">${t.btn_add_work}</button>
+            <button class="btn btn-warning btn-sm btn-icon" onclick="IshHaqiModule.openAddWorkModal()" title="${t.btn_add_work}" aria-label="${t.btn_add_work}">${uiIcon("plus")}</button>
           </div>
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
             ${isUz ? "Bajarilgan ishlar hajmini kiriting. Oylik hisob-kitob avtomatik yangilanadi." : "Внесите объем работ за день. Сумма сразу отобразится в ведомости."}
@@ -1028,7 +1028,7 @@ const IshHaqiModule = (function () {
               <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Fabrika xodimlari ro'yxati (Ma'muriyat va omborlar bo'yicha)" : "Штатное расписание (администрация и склады)"}</div>
               <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${filteredList.length} ${isUz ? "nafar xodim" : "сотрудников"}</p>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddEmployeeModal()">${t.btn_add_emp}</button>
+            <button class="btn btn-primary btn-sm btn-icon" onclick="IshHaqiModule.openAddEmployeeModal()" title="${t.btn_add_emp}" aria-label="${t.btn_add_emp}">${uiIcon("plus")}</button>
           </div>
           ${renderDeptFilterBar()}
         </div>
@@ -1238,7 +1238,7 @@ const IshHaqiModule = (function () {
             <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Ish turlari va narxlar (ishbay, soatbay, fiks)" : "Виды работ и расценки (сдельно, почасово, фикс)"}</div>
             <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${jobTypesList.length} ${isUz ? "ta ish turi" : "видов работ"}</p>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddJobTypeModal()">${t.btn_add_job}</button>
+          <button class="btn btn-primary btn-sm btn-icon" onclick="IshHaqiModule.openAddJobTypeModal()" title="${t.btn_add_job}" aria-label="${t.btn_add_job}">${uiIcon("plus")}</button>
         </div>
         <div class="table-container">
           <table class="data-table" id="job-types-data-table">

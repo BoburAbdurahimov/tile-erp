@@ -390,6 +390,14 @@ class LoginChallenge(Base):
     used = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class AppFlag(Base):
+    """One-off jobs that must run only once on a database (e.g. a fresh start)."""
+    __tablename__ = "app_flags"
+
+    key = Column(String(64), primary_key=True)
+    value = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     

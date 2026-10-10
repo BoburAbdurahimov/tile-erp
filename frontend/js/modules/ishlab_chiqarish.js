@@ -12,9 +12,7 @@ const ProductionModule = {
             <button class="btn btn-secondary" onclick="ProductionModule.openAutoSarfSettings()" style="font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px; cursor: pointer; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
               ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
             </button>
-            <button class="btn btn-secondary" onclick="ProductionModule.exportPdf()" style="font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-<span>${t('btn_export_pdf')}</span>
-            </button>
+            <button class="btn btn-secondary btn-icon" onclick="ProductionModule.exportPdf()" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
             <button class="btn btn-warning" onclick="ProductionModule.openLineExpenseModal()" style="font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 5px rgba(234, 179, 8, 0.25); display: flex; align-items: center; gap: 6px; cursor: pointer; background: #eab308; color: #ffffff; border: none;">
 <span>${CURRENT_LANG === 'uz' ? '+ Sarf materiallari (Aralash ombor)' : '+ Расход материалов (Оборудование)'}</span>
             </button>
@@ -279,9 +277,7 @@ const ProductionModule = {
                 ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
               </label>
             </div>
-            <button type="button" id="po-add-row-btn" class="btn btn-secondary btn-sm" onclick="ProductionModule.addConsumedRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
-              ${CURRENT_LANG === 'uz' ? '+ Xomashyo qo\'shish' : '+ Добавить сырье'}
-            </button>
+            <button type="button" id="po-add-row-btn" class="btn btn-secondary btn-sm btn-icon" onclick="ProductionModule.addConsumedRow()" title="${CURRENT_LANG === 'uz' ? 'Xomashyo qo\'shish' : 'Добавить сырье'}" aria-label="${CURRENT_LANG === 'uz' ? 'Xomashyo qo\'shish' : 'Добавить сырье'}">${uiIcon("plus")}</button>
           </div>
 
           <table class="basket-table" id="consumed-basket-table" style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">
@@ -482,7 +478,7 @@ const ProductionModule = {
             </select></div>
           <div><label style="${l}">${isUz ? "1 dona uchun miqdor" : "Расход на 1 шт"}</label>
             <input id="as-qty" type="number" min="0" step="any" placeholder="0.25" style="${f}"></div>
-          <div><button type="button" class="btn btn-primary btn-sm" onclick="ProductionModule.saveAutoSarfRule()" style="width:100%;padding:9px 12px;">${isUz ? "+ Qo'shish" : "+ Добавить"}</button></div>
+          <div><button type="button" class="btn btn-primary btn-icon" onclick="ProductionModule.saveAutoSarfRule()" title="${isUz ? "Qo\'shish" : "Добавить"}" aria-label="${isUz ? "Qo\'shish" : "Добавить"}">${uiIcon("plus")}</button></div>
         </div>
         <div id="as-rules"><div style="padding:16px;text-align:center;color:#94a3b8;">${isUz ? "Yuklanmoqda..." : "Загрузка..."}</div></div>
       </div>`, null, "modal-lg");
@@ -607,9 +603,7 @@ const ProductionModule = {
             <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
               ${CURRENT_LANG === 'uz' ? '3-Aralash ombordan sarflangan zapchast / materiallar:' : 'Списанные материалы со Склада 3:'}
             </label>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="ProductionModule.addLineExpenseRow()" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; cursor: pointer;">
-              ${CURRENT_LANG === 'uz' ? '+ Material qo\'shish' : '+ Добавить материал'}
-            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="ProductionModule.addLineExpenseRow()" title="${CURRENT_LANG === 'uz' ? 'Material qo\'shish' : 'Добавить материал'}" aria-label="${CURRENT_LANG === 'uz' ? 'Material qo\'shish' : 'Добавить материал'}">${uiIcon("plus")}</button>
           </div>
 
           <table class="basket-table" style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">

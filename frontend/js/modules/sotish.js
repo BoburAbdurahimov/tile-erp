@@ -25,9 +25,7 @@ const SalesModule = {
             </div>
 
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('sales-main-table', 'sotuvlar_realizatsiya')" style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-weight: 600;">
-<span>${t('btn_export_pdf')}</span>
-              </button>
+              <button class="btn btn-secondary btn-icon" onclick="exportTableToPdf('sales-main-table', 'sotuvlar_realizatsiya')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
               <button class="btn btn-primary btn-sm" onclick="SalesModule.openNewSaleModal()" style="display: flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
 <span>${isUz ? 'Yangi sotuv hujjatini rasmiylashtirish' : 'Новая продажа'}</span>
               </button>
@@ -321,9 +319,7 @@ const SalesModule = {
             <label class="form-label" style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 0;">
               ${isUz ? 'Sotilayotgan mahsulotlar (Kafel) ro\'yxati:' : 'Список реализуемой продукции:'}
             </label>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="SalesModule.addSaleItemRow()" style="font-size: 12.5px; padding: 6px 14px; border-radius: 8px; cursor: pointer; background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; font-weight: 700;">
-              ${isUz ? '+ Yangi pozitsiya qo\'shish' : '+ Добавить позицию'}
-            </button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="SalesModule.addSaleItemRow()" style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd;" title="${isUz ? 'Yangi pozitsiya qo\'shish' : 'Добавить позицию'}" aria-label="${isUz ? 'Yangi pozitsiya qo\'shish' : 'Добавить позицию'}">${uiIcon("plus")}</button>
           </div>
 
           <table class="basket-table" id="sale-basket-table" style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">
@@ -583,7 +579,7 @@ const SalesModule = {
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
 
-                  <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0284c7;">KAFEL ZAVODI ERP</h2>
+                  <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0284c7;">TILE ERP</h2>
                 </div>
                 <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Toshkent v., Zangiota t., Sanoat zonasi #4</div>
                 <div style="font-size: 12px; color: #64748b;">Tel: +998 (71) 200-00-00 | Web: tile-erp.uz</div>

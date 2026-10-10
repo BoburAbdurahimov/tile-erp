@@ -75,6 +75,19 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+// Line icons for the icon-only buttons (refresh, add, PDF, clear filters) -
+// drawn, not emoji. Such a button keeps its words in title and aria-label.
+const UI_ICON_PATHS = {
+  refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  pdf: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+  filterClear: '<path d="M13.013 3H2l8 9.46V19l4 2v-8.54l.9-1.055"/><path d="m22 3-5 5"/><path d="m17 3 5 5"/>',
+};
+
+function uiIcon(name) {
+  return `<svg class="btn-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI_ICON_PATHS[name] || ""}</svg>`;
+}
+
 // A value as an argument of an inline handler: onclick="f(${jsArg(name)})".
 // Written as f('${name}'), names with an apostrophe - Farg'ona, Ma'muriyat,
 // G'ofurov - broke the handler ("missing ) after argument list") and the
@@ -286,13 +299,6 @@ function updateUserDisplay() {
     roleBadge.style.border = isAdmin ? "1px solid #fecaca" : "1px solid #bfdbfe";
   }
 
-  const headerRole = document.getElementById("header-role-name");
-  if (headerRole) {
-    headerRole.textContent = displayRoleHeader;
-    headerRole.style.background = isAdmin ? "#fef2f2" : "#f1f5f9";
-    headerRole.style.color = isAdmin ? "#dc2626" : "#334155";
-  }
-
   const userNameEl = document.getElementById("current-user-name");
   if (userNameEl && CURRENT_USER) {
     userNameEl.textContent = CURRENT_USER.full_name || CURRENT_USER.username;
@@ -304,11 +310,11 @@ function updateUserDisplay() {
     if (el && CURRENT_USER) el.textContent = initials;
   });
 
-  const displayName = CURRENT_USER ? (CURRENT_USER.full_name || CURRENT_USER.username) : "";
-  ["header-user-name", "header-menu-user-name"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && CURRENT_USER) el.textContent = displayName;
-  });
+  // The header button shows just the login; the menu has the full name.
+  const headerName = document.getElementById("header-user-name");
+  if (headerName && CURRENT_USER) headerName.textContent = CURRENT_USER.username || CURRENT_USER.full_name;
+  const menuName = document.getElementById("header-menu-user-name");
+  if (menuName && CURRENT_USER) menuName.textContent = CURRENT_USER.full_name || CURRENT_USER.username;
 
   const menuRole = document.getElementById("header-menu-user-role");
   if (menuRole) menuRole.textContent = displayRoleHeader;
@@ -1011,7 +1017,7 @@ function buildPdfReportHtml(title, headers, rows) {
     <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; padding: 4px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #0f2b48; padding-bottom: 8px; margin-bottom: 12px;">
         <div>
-          <div style="font-size: 11px; color: #64748b; font-weight: 600;">Kafel Zavodi ERP</div>
+          <div style="font-size: 11px; color: #64748b; font-weight: 600;">Tile ERP</div>
           <div style="font-size: 18px; font-weight: 800;">${escapeHtml(title)}</div>
         </div>
         <div style="font-size: 10px; color: #64748b; text-align: right;">${escapeHtml(dateStr)}<br>${rows.length} ${CURRENT_LANG === 'uz' ? "ta qator" : "строк"}</div>

@@ -403,15 +403,15 @@ body {
 .header-menu-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   border-radius: var(--radius-full);
-  padding: 3px 12px 3px 3px;
+  padding: 2px 9px 2px 2px;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   transition: var(--transition);
 }
@@ -421,7 +421,6 @@ body {
   background: rgba(255, 255, 255, 0.22);
 }
 
-.header-menu-btn .user-avatar,
 .header-menu-user .user-avatar {
   width: 32px;
   height: 32px;
@@ -431,8 +430,17 @@ body {
   border: none;
 }
 
+.header-menu-btn .user-avatar {
+  width: 24px;
+  height: 24px;
+  background: var(--odoo-teal);
+  color: #ffffff;
+  font-size: 10px;
+  border: none;
+}
+
 .header-menu-name {
-  max-width: 140px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -819,6 +827,26 @@ body {
   padding: 5px 11px;
   font-size: 12px;
   border-radius: var(--radius-sm);
+}
+
+/* Icon-only buttons (refresh, add, PDF, clear filters); the words are in title */
+.btn.btn-icon {
+  width: 38px !important;
+  height: 38px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  flex-shrink: 0;
+}
+
+.btn.btn-icon.btn-sm {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.btn.btn-icon .btn-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .btn-storno {

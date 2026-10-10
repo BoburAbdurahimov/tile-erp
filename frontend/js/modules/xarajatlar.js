@@ -58,10 +58,10 @@ const ExpensesModule = {
               </p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn btn-secondary btn-sm" onclick="ExpensesModule.load()">${isUz ? "Yangilash" : "Обновить"}</button>
-              <button class="btn btn-secondary btn-sm" onclick="ExpensesModule.resetFilters()">${isUz ? "Filtrlarni tozalash" : "Сбросить фильтры"}</button>
-              <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('expenses-table', 'boshqa_xarajatlar')">${t('btn_export_pdf')}</button>
-              <button class="btn btn-primary btn-sm" onclick="ExpensesModule.openCreate()">+ ${isUz ? "Yangi xarajat" : "Новый расход"}</button>
+              <button class="btn btn-secondary btn-sm btn-icon" onclick="ExpensesModule.load()" title="${isUz ? "Yangilash" : "Обновить"}" aria-label="${isUz ? "Yangilash" : "Обновить"}">${uiIcon("refresh")}</button>
+              <button class="btn btn-secondary btn-sm btn-icon" onclick="ExpensesModule.resetFilters()" title="${isUz ? "Filtrlarni tozalash" : "Сбросить фильтры"}" aria-label="${isUz ? "Filtrlarni tozalash" : "Сбросить фильтры"}">${uiIcon("filterClear")}</button>
+              <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf('expenses-table', 'boshqa_xarajatlar')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
+              <button class="btn btn-primary btn-sm btn-icon" onclick="ExpensesModule.openCreate()" title="${isUz ? "Yangi xarajat" : "Новый расход"}" aria-label="${isUz ? "Yangi xarajat" : "Новый расход"}">${uiIcon("plus")}</button>
             </div>
           </div>
           <div id="exp-views" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:16px;padding-bottom:14px;border-bottom:1px solid #e2e8f0;"></div>
@@ -390,7 +390,7 @@ const ExpensesModule = {
               <option value="">${isUz ? "— Tanlanmagan —" : "— Не выбран —"}</option>
               ${this.counterparties.map(c => `<option value="${c.id}">${escapeHtml(c.name)}${c.phone ? " · " + escapeHtml(c.phone) : ""}</option>`).join("")}
             </select>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="ExpensesModule.quickCounterparty()" style="white-space:nowrap;">+ ${isUz ? "Yangi" : "Новый"}</button>
+            <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="ExpensesModule.quickCounterparty()" title="${isUz ? "Yangi kontragent" : "Новый контрагент"}" aria-label="${isUz ? "Yangi kontragent" : "Новый контрагент"}">${uiIcon("plus")}</button>
           </div>
           <p style="margin:4px 0 0;font-size:11.5px;color:#64748b;">${isUz ? "Kontragent balansi o'zgarmaydi - faqat kimga to'langani ko'rinadi." : "Баланс контрагента не меняется — только видно, кому оплачено."}</p>
         </div>

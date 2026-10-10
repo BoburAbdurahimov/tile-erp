@@ -16,7 +16,7 @@ const OmborModule = {
             <button class="btn btn-primary btn-sm" onclick="OmborModule.openTransferModal()" style="background: #2563eb; color: #ffffff; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
               ${CURRENT_LANG === 'uz' ? "Ombordan Omborga O'tkazish" : "Перемещение между складами"}
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="OmborModule.exportPdf()">${t('btn_export_pdf')}</button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="OmborModule.exportPdf()" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
             <button class="btn btn-warning btn-sm" onclick="OmborModule.openAdjustModal()">${t('btn_adjust_stock')}</button>
           </div>
         </div>

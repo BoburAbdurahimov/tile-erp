@@ -15,9 +15,7 @@ const BalancesModule = {
                 <button class="btn ${this.viewCurrency === 'UZS' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="BalancesModule.setCurrency('UZS')">UZS</button>
               </div>
             </div>
-            <button class="btn btn-secondary btn-sm" onclick="exportTableToPdf('balances-main-table', 'kontragentlar_balansi')" style="display: flex; align-items: center; gap: 6px;">
-<span>${t('btn_export_pdf')}</span>
-            </button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf('balances-main-table', 'kontragentlar_balansi')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
           </div>
         </div>
 
