@@ -118,7 +118,7 @@ def run(call: Callable, force: bool = False) -> List[str]:
             return log
 
         today = date.today()
-        # Documents are dated inside the current month (closed months are locked).
+        # Documents are dated inside the current month.
         month_start = today.replace(day=1)
 
         def day(n_ago):

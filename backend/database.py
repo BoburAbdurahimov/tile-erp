@@ -130,6 +130,9 @@ def run_data_migrations():
             for s in SKLAD_CONFIG:
                 conn.execute(text("UPDATE employees SET department = :owner WHERE department = :old"),
                              {"owner": s["name"], "old": f"{s['name']} {s['eni']}"})
+            # Payrolls are no longer finalized (locked): unpaid is just unpaid.
+            if inspect(conn).has_table("monthly_salary_calculations"):
+                conn.execute(text("UPDATE monthly_salary_calculations SET status = 'draft' WHERE status = 'finalized'"))
     except Exception as e:
         logger.warning(f"Data migrations skipped: {e}")
 

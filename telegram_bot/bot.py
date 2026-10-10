@@ -1493,7 +1493,7 @@ async def handle_finance_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         ]
 
         title = f"📊 Foyda va Zarar (PnL: {ym})" if lang == "uz" else f"📊 Отчет о прибылях (PnL: {ym})"
-        subtitle = f"🔒 Holati: {'Yopilgan (Locked)' if pnl['is_closed'] else 'Davr Ochiq'} | Valyuta: USD"
+        subtitle = "Valyuta: USD"
 
         img_buf = render_excel_table_image(
             title=title,
@@ -1519,9 +1519,6 @@ async def handle_salary_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
         summary = get_payroll_summary(db, current_ym)
         
         is_uz = lang == "uz"
-        status_text = "🔒 Yopilgan (Tasdiqlangan)" if summary["is_all_finalized"] else "✏️ Ochiq (Qoralama)"
-        if not is_uz:
-            status_text = "🔒 Зафиксирован" if summary["is_all_finalized"] else "✏️ Открыт (Черновик)"
 
         msg = (
             f"👷 **{current_ym} Oylik ish haqi va Davomat hisobi**\n"
@@ -1532,7 +1529,6 @@ async def handle_salary_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
             f"🔨 **Ishbay to'lovlar hajmi:** `{summary['total_piecework']:,.0f} UZS`\n"
             f"✅ **To'langan ish haqi:** `{summary['total_paid']:,.0f} UZS`\n"
             f"🟡 **To'lanishi kerak qoldiq:** `{summary['total_unpaid']:,.0f} UZS`\n\n"
-            f"📌 **Holat:** `{status_text}`\n\n"
             f"👇 _Kunlik davomat va ishbay hajmlarni kiritish uchun **🚀 ERP Mini App** dan foydalaning._"
             if is_uz else
             f"👷 **Сводка по зарплате за {current_ym}**\n"
@@ -1543,7 +1539,6 @@ async def handle_salary_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
             f"🔨 **Сдельная часть:** `{summary['total_piecework']:,.0f} UZS`\n"
             f"✅ **Выплачено:** `{summary['total_paid']:,.0f} UZS`\n"
             f"🟡 **Остаток к выплате:** `{summary['total_unpaid']:,.0f} UZS`\n\n"
-            f"📌 **Статус:** `{status_text}`\n\n"
             f"👇 _Для внесения ежедневного табеля и нарядов используйте **🚀 ERP Mini App**._"
         )
         

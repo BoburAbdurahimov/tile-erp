@@ -82,8 +82,6 @@ const IshHaqiModule = (function () {
       kpi_paid: isUz ? "To'langan / Qoldiq" : "Выплачено / Остаток",
       
       btn_recalc: isUz ? "Qayta hisoblash" : "Пересчитать",
-      btn_finalize: isUz ? "Oyni tasdiqlash" : "Зафиксировать",
-      btn_reopen: isUz ? "Qayta ochish" : "Открыть для правок",
       btn_pdf: isUz ? "PDF yuklab olish" : "Скачать PDF",
       btn_add_emp: isUz ? "Yangi xodim qo'shish" : "Добавить сотрудника",
       btn_add_job: isUz ? "Yangi ish turi" : "Новый вид работы",
@@ -93,11 +91,8 @@ const IshHaqiModule = (function () {
       type_fixed: isUz ? "Fiksalangan" : "Оклад",
       type_piecework: isUz ? "Ishbay" : "Сдельный",
       
-      status_draft: isUz ? "Qoralama" : "Черновик",
-      status_finalized: isUz ? "Tasdiqlangan" : "Зафиксирован",
-      status_paid: isUz ? "To'langan" : "Выплачено",
-      
-      locked_warning: isUz ? "Ushbu oy qulflangan. Tahrirlash uchun avval 'Qayta ochish' tugmasini bosing." : "Этот месяц зафиксирован. Для внесения изменений сначала откройте период."
+      status_draft: isUz ? "To'lanmagan" : "Не выплачено",
+      status_paid: isUz ? "To'langan" : "Выплачено"
     };
   }
 
@@ -215,7 +210,6 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    const isLocked = payrollData.is_all_finalized;
 
     // Filter calculations by active department
     let calculations = payrollData.calculations || [];
@@ -234,8 +228,14 @@ const IshHaqiModule = (function () {
         let statusBadge = "";
         if (c.status === "paid") {
           statusBadge = `<span class="badge badge-success">${t.status_paid}</span>`;
-        } else if (c.status === "finalized") {
-          statusBadge = `<span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">${t.status_finalized}</span>`;
+          // Worked out again after it was paid (new naryad, premiya...): what is left, or overpaid.
+          const diff = (c.final_amount || 0) - (c.paid_amount || 0);
+          if (Math.abs(diff) >= 1) {
+            statusBadge += `<div style="font-size: 11px; margin-top: 4px; color: ${diff > 0 ? "#b91c1c" : "#b45309"}; white-space: nowrap;">
+              ${isUz ? "To'langan" : "Выплачено"}: ${formatNumber(c.paid_amount)}<br>
+              ${diff > 0 ? (isUz ? "Qoldiq" : "Остаток") : (isUz ? "Ortiqcha" : "Переплата")}: ${formatNumber(Math.abs(diff))}
+            </div>`;
+          }
         } else {
           statusBadge = `<span class="badge badge-warning">${t.status_draft}</span>`;
         }
@@ -285,8 +285,8 @@ const IshHaqiModule = (function () {
     const deptPayroll = calculations.reduce((acc, c) => acc + c.final_amount, 0);
     const deptFixed = calculations.filter(c => c.employee_type === "fixed").reduce((acc, c) => acc + c.final_amount, 0);
     const deptPiecework = calculations.filter(c => c.employee_type === "piecework").reduce((acc, c) => acc + c.final_amount, 0);
-    const deptPaid = calculations.filter(c => c.status === "paid").reduce((acc, c) => acc + c.final_amount, 0);
-    const deptUnpaid = deptPayroll - deptPaid;
+    const deptPaid = calculations.reduce((acc, c) => acc + (c.paid_amount || 0), 0);
+    const deptUnpaid = calculations.reduce((acc, c) => acc + Math.max(0, (c.final_amount || 0) - (c.paid_amount || 0)), 0);
     const deptCount = calculations.length;
 
     container.innerHTML = `
@@ -296,17 +296,10 @@ const IshHaqiModule = (function () {
           <div style="display: flex; align-items: center; gap: 12px;">
             <label style="font-size: 13px; font-weight: 700; color: #0f172a;">${isUz ? "Hisob davri (Oy):" : "Период (Месяц):"}</label>
             <input type="month" id="payroll-month-select" class="form-control" value="${currentYearMonth}" onchange="IshHaqiModule.changePayrollMonth(this.value)" style="width: 170px; padding: 6px 12px; font-weight: 600;">
-            ${isLocked 
-              ? `<span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:6px 12px; font-size:12px;">${isUz ? "Oy qulflangan" : "Период зафиксирован"}</span>` 
-              : `<span class="badge badge-warning" style="padding:6px 12px; font-size:12px;">${isUz ? "Ochiq (Qoralama)" : "Открыт (Черновик)"}</span>`}
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.recalculatePayroll()" ${isLocked ? "disabled" : ""}>${t.btn_recalc}</button>
-            ${!isLocked 
-              ? `<button class="btn btn-warning btn-sm" onclick="IshHaqiModule.finalizePayroll()">${t.btn_finalize}</button>`
-              : `<button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.reopenPayroll()">${t.btn_reopen}</button>`
-            }
+            <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.recalculatePayroll()">${t.btn_recalc}</button>
             <button class="btn btn-success btn-sm" onclick="IshHaqiModule.exportPdf()">${t.btn_pdf}</button>
           </div>
         </div>
@@ -401,38 +394,6 @@ const IshHaqiModule = (function () {
     }
   }
 
-  async function finalizePayroll() {
-    const isUz = isUzbek();
-    const conf = confirm(isUz 
-      ? `${currentYearMonth} oyi ish haqi vedomostini tasdiqlab, tahrirlashdan qulflaysizmi?` 
-      : `Зафиксировать расчетную ведомость за ${currentYearMonth}?`);
-    if (!conf) return;
-
-    try {
-      await API.finalizePayroll(currentYearMonth);
-      showToast(isUz ? "Vedomost tasdiqlandi va qulflandi!" : "Ведомость зафиксирована!", "success");
-      await loadActiveTabContent();
-    } catch (err) {
-      showToast(err.message, "error");
-    }
-  }
-
-  async function reopenPayroll() {
-    const isUz = isUzbek();
-    const conf = confirm(isUz 
-      ? `${currentYearMonth} oyi vedomostini qayta tahrirlash uchun ochmoqchimisiz?` 
-      : `Открыть ведомость за ${currentYearMonth} для редактирования?`);
-    if (!conf) return;
-
-    try {
-      await API.reopenPayroll(currentYearMonth);
-      showToast(isUz ? "Vedomost tahrirlash uchun ochildi!" : "Ведомость открыта для правок!", "success");
-      await loadActiveTabContent();
-    } catch (err) {
-      showToast(err.message, "error");
-    }
-  }
-
   function exportPdf() {
     exportTableToPdf("payroll-data-table", `ish_haqi_vedomost_${currentYearMonth}`);
   }
@@ -454,7 +415,6 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    const isLocked = dailyData.is_locked;
 
     // Filter fixed employees by active department
     let fixedEmps = dailyData.fixed_employees || [];
@@ -497,7 +457,7 @@ const IshHaqiModule = (function () {
             <div style="display: flex; align-items: center; gap: 8px;">
               <input type="number" class="form-control hours-input" data-empid="${e.id}" data-jobid="${e.job_type_id}"
                 data-rate="${job.price_per_unit}" data-was="${hours}" value="${hours || ""}" min="0" max="24" step="any" placeholder="0"
-                ${isLocked ? "disabled" : ""} oninput="IshHaqiModule.updateHoursTotals()" style="width: 72px; text-align: right; font-weight: 700;">
+                oninput="IshHaqiModule.updateHoursTotals()" style="width: 72px; text-align: right; font-weight: 700;">
               <span style="font-size: 12px; color: #64748b;">${isUz ? "soat" : "ч"}</span>
               <span class="hours-sum" style="min-width: 110px; text-align: right; font-family: monospace; font-weight: 700; color: #0369a1;">${formatNumber(hours * job.price_per_unit)} UZS</span>
             </div>
@@ -523,7 +483,7 @@ const IshHaqiModule = (function () {
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: ${emp.is_absent ? '#ef4444' : '#10b981'};">
-                <input type="checkbox" class="att-checkbox" data-empid="${emp.employee_id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.employee_id})">
+                <input type="checkbox" class="att-checkbox" data-empid="${emp.employee_id}" ${emp.is_absent ? 'checked' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.employee_id})">
                 <span>${emp.is_absent ? (isUz ? 'Kelmadi' : 'Не вышел') : (isUz ? 'Ishda' : 'На работе')}</span>
               </label>
             </div>
@@ -548,7 +508,7 @@ const IshHaqiModule = (function () {
             <td style="text-align: right; font-family: monospace; color: #64748b;">${formatNumber(p.unit_price)}</td>
             <td style="text-align: right; font-family: monospace; font-weight: 800; color: #d97706;">${formatNumber(p.total_amount)} <small>UZS</small></td>
             <td style="text-align: center;">
-              ${!isLocked ? `<button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteWorkEntry(${p.id})">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : `<span style="color:#94a3b8;">-</span>`}
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteWorkEntry(${p.id})">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
             </td>
           </tr>
         `;
@@ -563,7 +523,6 @@ const IshHaqiModule = (function () {
             <label style="font-size: 13px; font-weight: 700; color: #0f172a;">${isUz ? "Hisob sanasi:" : "Дата учета:"}</label>
             <input type="date" id="daily-date-select" class="form-control" value="${currentDailyDate}" onchange="IshHaqiModule.changeDailyDate(this.value)" style="width: 170px; padding: 6px 12px; font-weight: 600;">
           </div>
-          ${isLocked ? `<div class="badge badge-danger" style="padding: 6px 14px; font-size: 12px;">${t.locked_warning}</div>` : ''}
         </div>
         ${renderDeptFilterBar()}
       </div>
@@ -573,7 +532,7 @@ const IshHaqiModule = (function () {
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Fiksalangan xodimlar davomati" : "Табель окладных сотрудников"}</div>
-            ${!isLocked ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveAttendance()">${t.btn_save_att}</button>` : ''}
+            <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveAttendance()">${t.btn_save_att}</button>
           </div>
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
             ${isUz ? "Ishga kelmagan bo'lsa, 'Kelmadi' deb belgilang. Kunlik maosh avtomatik chegiriladi." : "Отметьте сотрудников, которые не вышли. Дневная ставка будет удержана."}
@@ -587,7 +546,7 @@ const IshHaqiModule = (function () {
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Soatbay xodimlar (ishlagan soati)" : "Почасовые сотрудники (часы)"}</div>
-            ${!isLocked && soatbayEmps.length ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveHours()">${isUz ? "Soatlarni saqlash" : "Сохранить часы"}</button>` : ''}
+            ${soatbayEmps.length ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveHours()">${isUz ? "Soatlarni saqlash" : "Сохранить часы"}</button>` : ''}
           </div>
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
             ${isUz ? "Har bir xodim bugun necha soat ishlaganini kiriting: soat x soatlik narx oylikka qo'shiladi." : "Укажите, сколько часов отработал каждый: часы x ставка идут в зарплату."}
@@ -604,7 +563,7 @@ const IshHaqiModule = (function () {
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Ishbay xodimlar naryadlari" : "Сдельные наряды"}</div>
-            ${!isLocked ? `<button class="btn btn-warning btn-sm" onclick="IshHaqiModule.openAddWorkModal()">${t.btn_add_work}</button>` : ''}
+            <button class="btn btn-warning btn-sm" onclick="IshHaqiModule.openAddWorkModal()">${t.btn_add_work}</button>
           </div>
           <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
             ${isUz ? "Bajarilgan ishlar hajmini kiriting. Oylik hisob-kitob avtomatik yangilanadi." : "Внесите объем работ за день. Сумма сразу отобразится в ведомости."}
@@ -784,7 +743,6 @@ const IshHaqiModule = (function () {
       return;
     }
 
-    const isLocked = adjustmentsData.is_locked;
     const items = (adjustmentsData.items || []).filter(a => matchesDept(a.department));
     const totals = {};
     ADJ_KINDS.forEach(k => { totals[k] = items.filter(a => a.kind === k).reduce((sum, a) => sum + a.amount, 0); });
@@ -802,7 +760,7 @@ const IshHaqiModule = (function () {
             <td style="color: #475569; font-size: 12.5px;">${escapeHtml(a.reason) || "-"}</td>
             <td style="font-size: 12.5px; color: #475569;">${a.register_name ? escapeHtml(a.register_name) : "-"}</td>
             <td style="text-align: center;">
-              ${!isLocked ? `<button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteAdjustment(${a.id}, ${jsArg(a.kind)})">${isUz ? "O'chirish" : "Удалить"}</button>` : `<span style="color:#94a3b8;">-</span>`}
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteAdjustment(${a.id}, ${jsArg(a.kind)})">${isUz ? "O'chirish" : "Удалить"}</button>
             </td>
           </tr>
         `).join("");
@@ -815,16 +773,14 @@ const IshHaqiModule = (function () {
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <label style="font-size: 13px; font-weight: 700; color: #0f172a;">${isUz ? "Qaysi oy ish haqi:" : "Зарплата за месяц:"}</label>
             <input type="month" id="adj-month-select" class="form-control" value="${currentYearMonth}" onchange="IshHaqiModule.changeAdjustmentsMonth(this.value)" style="width: 170px; padding: 6px 12px; font-weight: 600;">
-            ${isLocked ? `<span class="badge badge-danger" style="padding: 6px 12px; font-size: 12px;">${getI18n().locked_warning}</span>` : ""}
           </div>
-          ${!isLocked ? `
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              ${ADJ_KINDS.map(k => `<button class="btn ${ADJ_STYLE[k].btn} btn-sm" onclick="IshHaqiModule.openAdjustmentModal('${k}')">${{
-                avans: isUz ? "Avans berish" : "Выдать аванс",
-                shtraf: isUz ? "Shtraf yozish" : "Записать штраф",
-                premiya: isUz ? "Premiya yozish" : "Записать премию",
-              }[k]}</button>`).join("")}
-            </div>` : ""}
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            ${ADJ_KINDS.map(k => `<button class="btn ${ADJ_STYLE[k].btn} btn-sm" onclick="IshHaqiModule.openAdjustmentModal('${k}')">${{
+              avans: isUz ? "Avans berish" : "Выдать аванс",
+              shtraf: isUz ? "Shtraf yozish" : "Записать штраф",
+              premiya: isUz ? "Premiya yozish" : "Записать премию",
+            }[k]}</button>`).join("")}
+          </div>
         </div>
       </div>
 
@@ -2028,8 +1984,6 @@ const IshHaqiModule = (function () {
     filterDepartment,
     changePayrollMonth,
     recalculatePayroll,
-    finalizePayroll,
-    reopenPayroll,
     exportPdf,
     changeDailyDate,
     updateHoursTotals,

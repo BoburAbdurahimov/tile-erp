@@ -12,7 +12,7 @@ from backend.models import (Employee, JobType, AttendanceEntry, WorkEntry, Month
 from backend.services.salary_service import (
     calculate_employee_salary, recalculate_all_salaries, get_payroll_summary,
     record_daily_attendance, record_daily_work_entry, delete_daily_work_entry,
-    finalize_month_payroll, reopen_month_payroll, pay_employee_salary, storno_salary_payment, generate_payroll_excel,
+    pay_employee_salary, storno_salary_payment, generate_payroll_excel,
     set_daily_hours, list_salary_adjustments, add_salary_adjustment, delete_salary_adjustment
 )
 
@@ -462,12 +462,6 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
     except Exception:
         raise HTTPException(status_code=400, detail="Sana formati noto'g'ri (YYYY-MM-DD kutilmoqda)")
 
-    year_month = entry_date.strftime("%Y-%m")
-    is_locked = db.query(MonthlySalaryCalculation).filter(
-        MonthlySalaryCalculation.year_month == year_month,
-        MonthlySalaryCalculation.status.in_(["finalized", "paid"])
-    ).first() is not None
-
     # Fixed employees and their attendance on this date
     fixed_employees = db.query(Employee).filter(
         Employee.employee_type == "fixed",
@@ -516,7 +510,6 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
 
     return {
         "date": date_str,
-        "is_locked": is_locked,
         "fixed_employees": fixed_list,
         "piecework_entries": piecework_list
     }
@@ -629,22 +622,6 @@ def get_payroll(year_month: str, recalculate: bool = False, db: Session = Depend
 def trigger_calculate_payroll(year_month: str, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
     recalculate_all_salaries(db, year_month, current_user=current_user)
     return get_payroll_summary(db, year_month)
-
-@router.post("/payroll/{year_month}/finalize")
-def finalize_payroll(year_month: str, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
-    try:
-        finalize_month_payroll(db, year_month, current_user=current_user)
-        return {"status": "success", "message": f"{year_month} oylik ish haqi muvaffaqiyatli tasdiqlandi va qulflandi"}
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-
-@router.post("/payroll/{year_month}/reopen")
-def reopen_payroll(year_month: str, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
-    try:
-        reopen_month_payroll(db, year_month, current_user=current_user)
-        return {"status": "success", "message": f"{year_month} oylik ish haqi qayta tahrirlash uchun ochildi"}
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
 
 @router.post("/payroll/{id}/pay")
 def pay_salary_endpoint(id: int, data: PaySalarySchema, db: Session = Depends(get_db)):

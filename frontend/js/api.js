@@ -279,8 +279,6 @@ const API = {
 
   getPayroll: (yearMonth, recalculate = false) => apiRequest(`/salary/payroll/${yearMonth}?recalculate=${recalculate}`),
   calculatePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/calculate`, "POST"),
-  finalizePayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/finalize`, "POST"),
-  reopenPayroll: (yearMonth) => apiRequest(`/salary/payroll/${yearMonth}/reopen`, "POST"),
   paySalary: (id, data) => apiRequest(`/salary/payroll/${id}/pay`, "POST", data),
   stornoSalary: (id) => apiRequest(`/salary/payroll/${id}/storno`, "POST"),
 
