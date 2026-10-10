@@ -412,6 +412,9 @@ class Employee(Base):
     department = Column(String(50), nullable=False, default="Ma'muriyat") # "Ma'muriyat" or an Ombor, e.g. "Toxir"
     employee_type = Column(String(20), nullable=False, default="fixed") # "fixed" or "piecework"
     position = Column(String(100), nullable=True) # e.g. "Kafel ustalari brigadiri", "Saralovchi"
+    # The position chosen from Ish turlari: it names the position and decides
+    # how pay is worked out (fiks -> monthly salary, ishbay/soatbay -> naryad).
+    job_type_id = Column(Integer, nullable=True, index=True)
     phone_number = Column(String(50), nullable=True)
     
     # For "fixed" type employees:
@@ -437,8 +440,8 @@ class JobType(Base):
     unit_of_measure = Column(String(30), nullable=False, default="dona") # m2, dona, taglik, tonna, quti
     price_per_unit = Column(Float, nullable=False, default=0.0) # Rate in UZS
     # How the work is paid: "ishbay" per unit done (unit_of_measure), "soatbay"
-    # per hour worked, "fiks" a set sum per job. Pay is quantity x rate either
-    # way; the quantity is units, hours or jobs. Empty (older rows) = ishbay.
+    # per hour worked (naryad: quantity x rate), or "fiks" a monthly salary
+    # (price_per_unit is the month's pay). Empty (older rows) = ishbay.
     pay_type = Column(String(20), nullable=True, default="ishbay")
     is_active = Column(Boolean, default=True) # Active for new entries
     created_by = Column(String(50), default="Admin")

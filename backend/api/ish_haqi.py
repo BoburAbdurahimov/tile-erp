@@ -41,6 +41,7 @@ def _check_department(name: Optional[str]) -> str:
 class EmployeeCreateSchema(BaseModel):
     full_name: str
     department: Optional[str] = "Ma'muriyat"  # "Ma'muriyat" or an Ombor, e.g. "Toxir"
+    job_type_id: Optional[int] = None          # the position, from Ish turlari
     employee_type: str = Field(default="fixed", description="'fixed' or 'piecework'")
     position: Optional[str] = None
     phone_number: Optional[str] = None
@@ -51,6 +52,7 @@ class EmployeeCreateSchema(BaseModel):
 class EmployeeUpdateSchema(BaseModel):
     full_name: Optional[str] = None
     department: Optional[str] = None
+    job_type_id: Optional[int] = None
     position: Optional[str] = None
     phone_number: Optional[str] = None
     monthly_salary: Optional[float] = None
@@ -74,7 +76,7 @@ class JobTypeUpdateSchema(BaseModel):
 # How a job is paid. Pay is always quantity x rate; what the quantity counts
 # follows from the type: units done, hours worked, or jobs done.
 PAY_TYPES = ("ishbay", "soatbay", "fiks")
-PAY_TYPE_UNITS = {"soatbay": "soat", "fiks": "ish"}
+PAY_TYPE_UNITS = {"soatbay": "soat", "fiks": "oy"}
 
 
 def _pay_type(value: Optional[str]) -> str:
@@ -86,6 +88,24 @@ def _pay_type(value: Optional[str]) -> str:
 
 def _unit_for(pay_type: str, unit: Optional[str]) -> str:
     return PAY_TYPE_UNITS.get(pay_type) or ((unit or "").strip() or "dona")
+
+
+def _apply_position(db: Session, emp: Employee, job_type_id: int, salary: Optional[float]) -> None:
+    """The position comes from Ish turlari and decides how pay is worked out:
+    a fiks one is a monthly salary (its price, unless one is given), an
+    ishbay or soatbay one is paid from naryad entries."""
+    jt = db.query(JobType).filter(JobType.id == job_type_id).first()
+    if not jt:
+        raise HTTPException(status_code=400, detail="Lavozim (ish turi) topilmadi")
+    if not jt.is_active and emp.job_type_id != jt.id:
+        raise HTTPException(status_code=400, detail="Bu ish turi faol emas")
+    emp.job_type_id = jt.id
+    emp.position = jt.name
+    if (jt.pay_type or "ishbay") == "fiks":
+        emp.employee_type = "fixed"
+        emp.monthly_salary = float(salary) if salary else float(jt.price_per_unit or 0.0)
+    else:
+        emp.employee_type = "piecework"
 
 class DailyAbsenceItem(BaseModel):
     employee_id: int
@@ -161,6 +181,7 @@ def get_employees(
             "full_name": e.full_name,
             "department": e.department or "Ma'muriyat",
             "employee_type": e.employee_type,
+            "job_type_id": e.job_type_id,
             "position": e.position or "-",
             "phone_number": e.phone_number or "-",
             "monthly_salary": e.monthly_salary or 0.0,
@@ -189,6 +210,8 @@ def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin
         hire_date=hire_date,
         is_active=True
     )
+    if data.job_type_id is not None:
+        _apply_position(db, emp, data.job_type_id, data.monthly_salary)
     db.add(emp)
     db.commit()
     db.refresh(emp)
@@ -224,6 +247,8 @@ def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Que
         emp.phone_number = data.phone_number.strip()
     if data.monthly_salary is not None:
         emp.monthly_salary = float(data.monthly_salary)
+    if data.job_type_id is not None:
+        _apply_position(db, emp, data.job_type_id, data.monthly_salary)
     if data.standard_work_days is not None:
         emp.standard_work_days = int(data.standard_work_days)
     if data.hire_date is not None:
@@ -486,6 +511,9 @@ def save_daily_attendance(data: DailyAttendanceBatchSchema, db: Session = Depend
 
 @router.post("/daily-work")
 def add_daily_work_entry(data: DailyWorkEntrySchema, db: Session = Depends(get_db)):
+    jt = db.query(JobType).filter(JobType.id == data.job_type_id).first()
+    if jt and (jt.pay_type or "ishbay") == "fiks":
+        raise HTTPException(status_code=400, detail="Fiks (oylik) ish turi uchun naryad kiritilmaydi - u oylik maosh sifatida hisoblanadi")
     try:
         entry = record_daily_work_entry(
             db=db,
