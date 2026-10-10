@@ -80,6 +80,14 @@ async function apiRequest(endpoint, method = "GET", body = null) {
     }
     return await res.json();
   } catch (error) {
+    // fetch itself failed: no internet, or the server could not be reached.
+    // Say so plainly instead of "Failed to fetch".
+    if (error instanceof TypeError) {
+      console.warn(`API unreachable [${method} ${endpoint}]: ${error.message}`);
+      throw new Error(typeof CURRENT_LANG !== "undefined" && CURRENT_LANG === "ru"
+        ? "Нет связи с сервером. Проверьте интернет."
+        : "Server bilan aloqa yo'q. Internetni tekshiring.");
+    }
     console.error(`API Request Failed [${method} ${endpoint}]:`, error);
     throw error;
   }

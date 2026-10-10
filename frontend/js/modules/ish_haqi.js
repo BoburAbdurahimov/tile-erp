@@ -125,7 +125,7 @@ const IshHaqiModule = (function () {
           const isActive = activeDept === d.id;
           const label = deptLabel(d.id);
           return `
-            <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment('${d.id}')" 
+            <button class="tab-btn ${isActive ? 'active' : ''}" onclick="IshHaqiModule.filterDepartment(${jsArg(d.id)})" 
               style="padding: 6px 12px; font-size: 12.5px; font-weight: ${isActive ? '700' : '600'}; border-radius: 8px; border: ${isActive ? '1px solid #2563eb' : '1px solid #cbd5e1'}; background: ${isActive ? '#eff6ff' : '#f8fafc'}; color: ${isActive ? '#1d4ed8' : '#475569'}; cursor: pointer; transition: all 0.2s;">
               <span>${label}</span>
             </button>
@@ -273,7 +273,7 @@ const IshHaqiModule = (function () {
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openDetailsModal(${c.id})" title="${isUz ? "Batafsil hisob-kitob" : "Детали начисления"}">${CURRENT_LANG === 'uz' ? "Batafsil" : "Подробнее"}</button>
               ${c.status !== "paid" 
-                ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, '${escapeHtml(c.full_name)}', ${c.final_amount})" style="margin-left: 4px;">${isUz ? "To'lash" : "Выплатить"}</button>`
+                ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openPayModal(${c.id}, ${jsArg(c.full_name)}, ${c.final_amount})" style="margin-left: 4px;">${isUz ? "To'lash" : "Выплатить"}</button>`
                 : `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 4px;">✓ ${isUz ? "To'langan" : "Оплачено"}</span>`
               }
             </td>
@@ -481,7 +481,7 @@ const IshHaqiModule = (function () {
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: ${emp.is_absent ? '#ef4444' : '#10b981'};">
-                <input type="checkbox" class="att-checkbox" data-empid="${emp.id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.id})">
+                <input type="checkbox" class="att-checkbox" data-empid="${emp.employee_id}" ${emp.is_absent ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="IshHaqiModule.toggleAttRow(this, ${emp.employee_id})">
                 <span>${emp.is_absent ? (isUz ? 'Kelmadi' : 'Не вышел') : (isUz ? 'Ishda' : 'На работе')}</span>
               </label>
             </div>
@@ -593,6 +593,8 @@ const IshHaqiModule = (function () {
   }
 
   async function saveAttendance() {
+    // The daily list gives each person as employee_id (it used to be read as
+    // emp.id, so every "Kelmadi" went out without an id and saving failed).
     const checkboxes = document.querySelectorAll(".att-checkbox");
     const absentRecords = [];
     checkboxes.forEach(chk => {
@@ -636,6 +638,7 @@ const IshHaqiModule = (function () {
 
     try {
       employeesList = await API.getEmployees();
+      await ensureJobTypes();             // for the position's pay type
     } catch (err) {
       showToast(err.message, "error");
       return;
@@ -651,7 +654,9 @@ const IshHaqiModule = (function () {
     } else {
       filteredList.forEach((e, idx) => {
         const isFixed = e.employee_type === "fixed";
-        const typeBadge = isFixed 
+        // The position's own type (Fiks / Ishbay / Soatbay) when it is an Ish turi
+        const job = jobTypesList.find(x => x.id === e.job_type_id);
+        const typeBadge = job ? payTypeBadge(job) : isFixed
           ? `<span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">${t.type_fixed}</span>` 
           : `<span class="badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">${t.type_piecework}</span>`;
 
@@ -661,7 +666,9 @@ const IshHaqiModule = (function () {
 
         const salaryStr = isFixed 
           ? `${formatNumber(e.monthly_salary)} <small>UZS</small>` 
-          : `<span style="color:#64748b;">${isUz ? "Tarif bo'yicha" : "По расценкам"}</span>`;
+          : job
+            ? `${formatNumber(job.price_per_unit)} <small>UZS / ${escapeHtml(unitText(job))}</small>`
+            : `<span style="color:#64748b;">${isUz ? "Tarif bo'yicha" : "По расценкам"}</span>`;
 
         rowsHtml += `
           <tr>
@@ -678,7 +685,7 @@ const IshHaqiModule = (function () {
               <button class="btn ${e.is_active ? 'btn-secondary' : 'btn-success'} btn-sm" onclick="IshHaqiModule.toggleEmployeeStatus(${e.id})" style="margin-left: 4px;">
                 ${e.is_active ? (isUz ? "Arxiv" : "В архив") : (isUz ? "Tiklash" : "Восстановить")}
               </button>
-              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteEmployee(${e.id}, '${escapeHtml(e.full_name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteEmployee(${e.id}, ${jsArg(e.full_name)})" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">
                 ${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}
               </button>
             </td>
@@ -761,6 +768,105 @@ const IshHaqiModule = (function () {
   // ===========================================================================
   // TAB 4: JOB TYPES (PIECEWORK CATALOG)
   // ===========================================================================
+
+  // How a job (position) is paid: ishbay = units done x rate, soatbay =
+  // hours x rate (both through naryad entries), fiks = a monthly salary.
+  const PAY_TYPES = ["ishbay", "soatbay", "fiks"];
+  const UNITS = [
+    ["m2", "m² (Kvadrat metr)"], ["dona", "dona (Штука)"], ["metr", "metr (Метр)"],
+    ["taglik", "taglik (Поддон)"], ["quti", "quti (Коробка)"], ["tonna", "tonna (Тонна)"],
+  ];
+
+  function payTypeOf(j) {
+    return PAY_TYPES.includes(j && j.pay_type) ? j.pay_type : "ishbay";
+  }
+
+  function payTypeText(pt) {
+    const isUz = isUzbek();
+    return {
+      ishbay: { name: isUz ? "Ishbay" : "Сдельная", hint: isUz ? "Bajarilgan hajm × narx" : "Объем × расценка",
+                price: isUz ? "Birlik narxi (UZS)" : "Расценка за единицу (UZS)",
+                qty: isUz ? "Bajarilgan hajm / Miqdor" : "Объем / Количество", color: "#d97706", bg: "#fffbeb" },
+      soatbay: { name: isUz ? "Soatbay" : "Почасовая", hint: isUz ? "Ishlagan soat × 1 soat narxi" : "Часы × ставка за час",
+                 price: isUz ? "1 soat narxi (UZS)" : "Ставка за час (UZS)",
+                 qty: isUz ? "Ishlagan soat" : "Отработано часов", color: "#0284c7", bg: "#f0f9ff" },
+      fiks: { name: isUz ? "Fiks (oylik)" : "Оклад", hint: isUz ? "Har oy belgilangan oylik maosh (oklad)" : "Фиксированная зарплата в месяц",
+              price: isUz ? "Oylik summa (UZS)" : "Оклад в месяц (UZS)",
+              qty: "", color: "#7c3aed", bg: "#f5f3ff" },
+    }[pt];
+  }
+
+  function payTypeBadge(j) {
+    const t = payTypeText(payTypeOf(j));
+    return `<span class="badge" style="background:${t.bg}; color:${t.color}; border:1px solid ${t.color}30; font-weight:700;">${t.name}</span>`;
+  }
+
+  // "m²", "soat" or "ish" - what one unit of the quantity is
+  function unitText(j) {
+    const isUz = isUzbek();
+    const pt = payTypeOf(j);
+    if (pt === "soatbay") return isUz ? "soat" : "час";
+    if (pt === "fiks") return isUz ? "oy" : "мес";
+    return j.unit_of_measure || "dona";
+  }
+
+  // Type, unit and price fields shared by the add and edit forms
+  function jobTypeFields(prefix, jt) {
+    const isUz = isUzbek();
+    const pt = payTypeOf(jt);
+    const unit = jt && jt.unit_of_measure;
+    const units = UNITS.some(([v]) => v === unit) || !unit || pt !== "ishbay" ? UNITS : [[unit, unit], ...UNITS];
+    return `
+      <div class="form-group">
+        <label class="form-label">${isUz ? "To'lov turi" : "Тип оплаты"} *</label>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+          ${PAY_TYPES.map(k => {
+            const t = payTypeText(k);
+            return `<label style="display:flex; flex-direction:column; gap:2px; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; cursor:pointer;" class="pt-option">
+              <span style="display:flex; align-items:center; gap:6px; font-weight:700; color:${t.color};">
+                <input type="radio" name="${prefix}-paytype" value="${k}" ${k === pt ? "checked" : ""} onchange="IshHaqiModule.onPayTypeChange('${prefix}')">
+                ${t.name}
+              </span>
+              <span style="font-size:11.5px; color:#64748b;">${t.hint}</span>
+            </label>`;
+          }).join("")}
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;" id="${prefix}-unit-group">
+          <label class="form-label">${isUz ? "O'lchov birligi" : "Единица измерения"} *</label>
+          <select id="${prefix}-unit" class="form-control">
+            ${units.map(([v, l]) => `<option value="${escapeHtml(v)}" ${v === unit ? "selected" : ""}>${escapeHtml(l)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label class="form-label" id="${prefix}-price-label">${payTypeText(pt).price} *</label>
+          <input type="number" id="${prefix}-price" class="form-control" required min="1" step="any" placeholder="500" value="${jt ? jt.price_per_unit : ""}">
+        </div>
+      </div>`;
+  }
+
+  function onPayTypeChange(prefix) {
+    const checked = document.querySelector(`input[name="${prefix}-paytype"]:checked`);
+    const pt = checked ? checked.value : "ishbay";
+    const unitGroup = document.getElementById(`${prefix}-unit-group`);
+    if (unitGroup) unitGroup.style.display = pt === "ishbay" ? "" : "none";
+    const label = document.getElementById(`${prefix}-price-label`);
+    if (label) label.textContent = `${payTypeText(pt).price} *`;
+    document.querySelectorAll(`input[name="${prefix}-paytype"]`).forEach(r => {
+      const box = r.closest(".pt-option");
+      if (box) box.style.borderColor = r.checked ? payTypeText(r.value).color : "#e2e8f0";
+    });
+  }
+
+  function readJobTypeFields(prefix) {
+    const checked = document.querySelector(`input[name="${prefix}-paytype"]:checked`);
+    return {
+      pay_type: checked ? checked.value : "ishbay",
+      unit_of_measure: document.getElementById(`${prefix}-unit`).value,
+      price_per_unit: parseFloat(document.getElementById(`${prefix}-price`).value),
+    };
+  }
   async function renderJobTypesTab(container) {
     const t = getI18n();
     const isUz = isUzbek();
@@ -775,7 +881,7 @@ const IshHaqiModule = (function () {
 
     let rowsHtml = "";
     if (jobTypesList.length === 0) {
-      rowsHtml = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">${isUz ? "Ish turlari mavjud emas" : "Виды работ не добавлены"}</td></tr>`;
+      rowsHtml = `<tr><td colspan="7" style="text-align: center; padding: 30px; color: #94a3b8;">${isUz ? "Ish turlari mavjud emas" : "Виды работ не добавлены"}</td></tr>`;
     } else {
       jobTypesList.forEach((j, idx) => {
         const statusBadge = j.is_active 
@@ -786,12 +892,13 @@ const IshHaqiModule = (function () {
           <tr>
             <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
             <td style="font-weight: 700; color: #0f172a;">${escapeHtml(j.name)}</td>
-            <td style="text-align: center;"><span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(j.unit_of_measure)}</span></td>
-            <td style="text-align: right; font-weight: 800; font-family: monospace; color: #2563eb; font-size: 14px;">${formatNumber(j.price_per_unit)} <small>UZS</small></td>
+            <td style="text-align: center;">${payTypeBadge(j)}</td>
+            <td style="text-align: center;"><span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(unitText(j))}</span></td>
+            <td style="text-align: right; font-weight: 800; font-family: monospace; color: #2563eb; font-size: 14px;">${formatNumber(j.price_per_unit)} <small>UZS / ${escapeHtml(unitText(j))}</small></td>
             <td style="text-align: center;">${statusBadge}</td>
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-secondary btn-sm" onclick="IshHaqiModule.openEditJobTypeModal(${j.id})">${isUz ? "Tahrirlash" : "Изм."}</button>
-              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, '${escapeHtml(j.name)}')" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
+              <button class="btn btn-danger btn-sm" onclick="IshHaqiModule.deleteJobType(${j.id}, ${jsArg(j.name)})" title="O'chirish" style="margin-left: 4px; padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>
             </td>
           </tr>
         `;
@@ -802,7 +909,7 @@ const IshHaqiModule = (function () {
       <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Ishbay narxlar spravochnigi" : "Справочник расценок сдельных работ"}</div>
+            <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Ish turlari va narxlar (ishbay, soatbay, fiks)" : "Виды работ и расценки (сдельно, почасово, фикс)"}</div>
             <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${jobTypesList.length} ${isUz ? "ta ish turi" : "видов работ"}</p>
           </div>
           <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.openAddJobTypeModal()">${t.btn_add_job}</button>
@@ -816,8 +923,9 @@ const IshHaqiModule = (function () {
                   <div>${isUz ? "Ish nomi / Operatsiya" : "Наименование работы"}</div>
                   <input type="text" class="table-col-filter" placeholder="${isUz ? 'Qidirish...' : 'Поиск...'}" style="width: 100%; margin-top: 4px; padding: 3px 6px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px;">
                 </th>
+                <th style="text-align: center;">${isUz ? "To'lov turi" : "Тип оплаты"}</th>
                 <th style="text-align: center;">${isUz ? "Birligi" : "Ед. изм."}</th>
-                <th style="text-align: right;">${isUz ? "Birlik narxi (Tarif)" : "Расценка за единицу"}</th>
+                <th style="text-align: right;">${isUz ? "Narx (Tarif)" : "Расценка"}</th>
                 <th style="text-align: center;">${isUz ? "Holati" : "Статус"}</th>
                 <th style="text-align: right;">${isUz ? "Amallar" : "Действия"}</th>
               </tr>
@@ -843,8 +951,9 @@ const IshHaqiModule = (function () {
     `).join("");
   }
 
-  function openAddEmployeeModal() {
+  async function openAddEmployeeModal() {
     const isUz = isUzbek();
+    await ensureJobTypes();
     const modalHost = document.getElementById("salary-modals-host");
     modalHost.innerHTML = `
       <div class="modal-overlay active" id="emp-modal">
@@ -868,20 +977,15 @@ const IshHaqiModule = (function () {
                   </select>
                 </div>
                 <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Oylik hisoblash turi" : "Тип оплаты"} *</label>
-                  <select id="emp-type" class="form-control" onchange="IshHaqiModule.handleEmpTypeChange(this.value)">
-                    <option value="fixed">${isUz ? "Fiksalangan oylik (Oklad)" : "Оклад (Фиксированная ЗП)"}</option>
-                    <option value="piecework">${isUz ? "Ishbay (Sdelnaya)" : "Сдельная (За объем работ)"}</option>
+                  <label class="form-label">${isUz ? "Lavozimi (Ish turi)" : "Должность (Вид работы)"} *</label>
+                  <select id="emp-position" class="form-control" required onchange="IshHaqiModule.onPositionChange('emp')">
+                    ${positionOptions(null, "")}
                   </select>
                 </div>
               </div>
+              <div id="emp-pay-info" style="margin:-6px 0 14px; font-size:12.5px; color:#475569;"></div>
 
-              <div class="form-group">
-                <label class="form-label">${isUz ? "Lavozimi" : "Должность"}</label>
-                <input type="text" id="emp-position" class="form-control" placeholder="Masalan: Katta usta, Saralovchi, Press operatori">
-              </div>
-
-              <div id="emp-fixed-fields">
+              <div id="emp-fixed-fields" style="display:none;">
                 <div class="form-row">
                   <div class="form-group" style="flex: 1;">
                     <label class="form-label">${isUz ? "Oylik maoshi (UZS)" : "Оклад в месяц (UZS)"} *</label>
@@ -915,11 +1019,48 @@ const IshHaqiModule = (function () {
     `;
   }
 
-  function handleEmpTypeChange(val) {
-    const fixedDiv = document.getElementById("emp-fixed-fields");
-    if (fixedDiv) {
-      fixedDiv.style.display = val === "fixed" ? "block" : "none";
+  // Lavozim comes from Ish turlari; its type decides how pay is worked out.
+  // All of them, inactive too: an employee may still hold an inactive position.
+  async function ensureJobTypes() {
+    try { jobTypesList = await API.getJobTypes(false); } catch (_) { /* the select says there are none */ }
+  }
+
+  function positionOptions(selectedId, legacyText) {
+    const isUz = isUzbek();
+    const usable = jobTypesList.filter(j => j.is_active !== false || j.id === selectedId);
+    const head = selectedId ? "" : `<option value="" selected ${legacyText ? "" : "disabled"}>${legacyText
+      ? `${isUz ? "Hozirgi" : "Сейчас"}: ${escapeHtml(legacyText)} (${isUz ? "ish turidan emas" : "не из видов работ"})`
+      : (isUz ? "Lavozimni tanlang" : "Выберите должность")}</option>`;
+    return head + PAY_TYPES.map(pt => {
+      const list = usable.filter(j => payTypeOf(j) === pt);
+      if (!list.length) return "";
+      return `<optgroup label="${escapeHtml(payTypeText(pt).name)}">${list.map(j =>
+        `<option value="${j.id}" ${j.id === selectedId ? "selected" : ""}>${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${escapeHtml(unitText(j))}</option>`).join("")}</optgroup>`;
+    }).join("");
+  }
+
+  // Show what the chosen position means for pay; a fiks one brings its
+  // monthly salary into the salary field.
+  function onPositionChange(prefix, fillSalary = true) {
+    const isUz = isUzbek();
+    const sel = document.getElementById(`${prefix}-position`);
+    const jt = sel ? jobTypesList.find(j => String(j.id) === sel.value) : null;
+    const info = document.getElementById(`${prefix}-pay-info`);
+    const fixed = document.getElementById(`${prefix}-fixed-fields`);
+    if (!jt) {
+      if (info) info.innerHTML = "";
+      return;
     }
+    const pt = payTypeOf(jt);
+    const t = payTypeText(pt);
+    if (info) {
+      info.innerHTML = `<span style="color:${t.color}; font-weight:700;">${t.name}</span> · ${pt === "fiks"
+        ? (isUz ? "har oy belgilangan oylik maosh" : "фиксированный оклад в месяц")
+        : `${formatNumber(jt.price_per_unit)} UZS / ${escapeHtml(unitText(jt))} — ${isUz ? "Kunlik davomat & Ishlar'dagi naryad bo'yicha hisoblanadi" : "считается по нарядам"}`}`;
+    }
+    if (fixed) fixed.style.display = pt === "fiks" ? "" : "none";
+    const salary = document.getElementById(`${prefix}-salary`);
+    if (salary && pt === "fiks" && fillSalary) salary.value = jt.price_per_unit;
   }
 
   async function handleCreateEmployee(e) {
@@ -927,21 +1068,21 @@ const IshHaqiModule = (function () {
     const isUz = isUzbek();
     const fullName = document.getElementById("emp-fullname").value;
     const department = document.getElementById("emp-dept").value;
-    const empType = document.getElementById("emp-type").value;
-    const position = document.getElementById("emp-position").value;
+    const jobTypeId = parseInt(document.getElementById("emp-position").value);
     const phone = document.getElementById("emp-phone").value;
+    const isFixed = document.getElementById("emp-fixed-fields").style.display !== "none";
     const salary = parseFloat(document.getElementById("emp-salary")?.value || 0);
     const workDays = parseInt(document.getElementById("emp-workdays")?.value || 26);
     const hireDate = document.getElementById("emp-hiredate").value;
 
     try {
+      // Position, pay type and (for fiks) the salary come from the Ish turi.
       await API.createEmployee({
         full_name: fullName,
         department: department,
-        employee_type: empType,
-        position: position,
+        job_type_id: jobTypeId,
         phone_number: phone,
-        monthly_salary: salary,
+        monthly_salary: isFixed ? salary : 0,
         standard_work_days: workDays,
         hire_date: hireDate || null
       });
@@ -953,10 +1094,11 @@ const IshHaqiModule = (function () {
     }
   }
 
-  function openEditEmployeeModal(id) {
+  async function openEditEmployeeModal(id) {
     const isUz = isUzbek();
     const emp = employeesList.find(e => e.id === id);
     if (!emp) return;
+    await ensureJobTypes();
 
     const modalHost = document.getElementById("salary-modals-host");
     modalHost.innerHTML = `
@@ -981,12 +1123,15 @@ const IshHaqiModule = (function () {
                   </select>
                 </div>
                 <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Lavozimi" : "Должность"}</label>
-                  <input type="text" id="edit-emp-position" class="form-control" value="${escapeHtml(emp.position)}">
+                  <label class="form-label">${isUz ? "Lavozimi (Ish turi)" : "Должность (Вид работы)"}</label>
+                  <select id="edit-emp-position" class="form-control" onchange="IshHaqiModule.onPositionChange('edit-emp')">
+                    ${positionOptions(emp.job_type_id, emp.job_type_id ? "" : emp.position)}
+                  </select>
                 </div>
               </div>
+              <div id="edit-emp-pay-info" style="margin:-6px 0 14px; font-size:12.5px; color:#475569;"></div>
 
-              ${emp.employee_type === 'fixed' ? `
+              <div id="edit-emp-fixed-fields" style="${emp.employee_type === 'fixed' ? '' : 'display:none;'}">
                 <div class="form-row">
                   <div class="form-group" style="flex: 1;">
                     <label class="form-label">${isUz ? "Oylik maoshi (UZS)" : "Оклад (UZS)"} *</label>
@@ -997,7 +1142,7 @@ const IshHaqiModule = (function () {
                     <input type="number" id="edit-emp-workdays" class="form-control" value="${emp.standard_work_days}" min="1" max="31">
                   </div>
                 </div>
-              ` : ''}
+              </div>
 
               <div class="form-row">
                 <div class="form-group" style="flex: 1;">
@@ -1018,6 +1163,7 @@ const IshHaqiModule = (function () {
         </div>
       </div>
     `;
+    onPositionChange("edit-emp", false);
   }
 
   async function handleUpdateEmployee(e, id) {
@@ -1025,8 +1171,9 @@ const IshHaqiModule = (function () {
     const isUz = isUzbek();
     const fullName = document.getElementById("edit-emp-fullname").value;
     const department = document.getElementById("edit-emp-dept").value;
-    const position = document.getElementById("edit-emp-position").value;
+    const jobTypeId = document.getElementById("edit-emp-position").value;
     const phone = document.getElementById("edit-emp-phone").value;
+    const isFixed = document.getElementById("edit-emp-fixed-fields").style.display !== "none";
     const salaryInput = document.getElementById("edit-emp-salary");
     const workDaysInput = document.getElementById("edit-emp-workdays");
     const hireDate = document.getElementById("edit-emp-hiredate").value;
@@ -1034,12 +1181,13 @@ const IshHaqiModule = (function () {
     const payload = {
       full_name: fullName,
       department: department,
-      position: position,
       phone_number: phone,
       hire_date: hireDate || null
     };
-    if (salaryInput) payload.monthly_salary = parseFloat(salaryInput.value || 0);
-    if (workDaysInput) payload.standard_work_days = parseInt(workDaysInput.value || 26);
+    // An employee whose position is not yet an Ish turi keeps it until one is chosen.
+    if (jobTypeId) payload.job_type_id = parseInt(jobTypeId);
+    if (isFixed && salaryInput) payload.monthly_salary = parseFloat(salaryInput.value || 0);
+    if (isFixed && workDaysInput) payload.standard_work_days = parseInt(workDaysInput.value || 26);
 
     try {
       await API.updateEmployee(id, payload);
@@ -1068,22 +1216,7 @@ const IshHaqiModule = (function () {
                 <label class="form-label">${isUz ? "Ish nomi / Operatsiya" : "Наименование работы"} *</label>
                 <input type="text" id="jt-name" class="form-control" required placeholder="Masalan: Kafel saralash va navlash">
               </div>
-              <div class="form-row">
-                <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "O'lchov birligi" : "Единица измерения"} *</label>
-                  <select id="jt-unit" class="form-control">
-                    <option value="m2">m² (Kvadrat metr)</option>
-                    <option value="dona">dona (Штука)</option>
-                    <option value="taglik">taglik (Поддон)</option>
-                    <option value="quti">quti (Коробка)</option>
-                    <option value="tonna">tonna (Тонна)</option>
-                  </select>
-                </div>
-                <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Birlik narxi (UZS)" : "Расценка за единицу (UZS)"} *</label>
-                  <input type="number" id="jt-price" class="form-control" required step="50" placeholder="500">
-                </div>
-              </div>
+              ${jobTypeFields("jt", null)}
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" onclick="IshHaqiModule.closeModal('jt-modal')">${isUz ? "Bekor qilish" : "Отмена"}</button>
@@ -1093,21 +1226,16 @@ const IshHaqiModule = (function () {
         </div>
       </div>
     `;
+    onPayTypeChange("jt");
   }
 
   async function handleCreateJobType(e) {
     e.preventDefault();
     const isUz = isUzbek();
     const name = document.getElementById("jt-name").value;
-    const unit = document.getElementById("jt-unit").value;
-    const price = parseFloat(document.getElementById("jt-price").value);
 
     try {
-      await API.createJobType({
-        name: name,
-        unit_of_measure: unit,
-        price_per_unit: price
-      });
+      await API.createJobType({ name: name, ...readJobTypeFields("jt") });
       showToast(isUz ? "Ish turi muvaffaqiyatli qo'shildi!" : "Вид работы успешно добавлен!", "success");
       closeModal("jt-modal");
       await loadActiveTabContent();
@@ -1135,16 +1263,7 @@ const IshHaqiModule = (function () {
                 <label class="form-label">${isUz ? "Ish nomi" : "Наименование"}</label>
                 <input type="text" id="edit-jt-name" class="form-control" required value="${escapeHtml(jt.name)}">
               </div>
-              <div class="form-row">
-                <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "O'lchov birligi" : "Ед. изм."}</label>
-                  <input type="text" id="edit-jt-unit" class="form-control" required value="${escapeHtml(jt.unit_of_measure)}">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Birlik narxi (UZS)" : "Расценка (UZS)"}</label>
-                  <input type="number" id="edit-jt-price" class="form-control" required step="50" value="${jt.price_per_unit}">
-                </div>
-              </div>
+              ${jobTypeFields("edit-jt", jt)}
               <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                   <input type="checkbox" id="edit-jt-active" ${jt.is_active ? 'checked' : ''}>
@@ -1160,23 +1279,17 @@ const IshHaqiModule = (function () {
         </div>
       </div>
     `;
+    onPayTypeChange("edit-jt");
   }
 
   async function handleUpdateJobType(e, id) {
     e.preventDefault();
     const isUz = isUzbek();
     const name = document.getElementById("edit-jt-name").value;
-    const unit = document.getElementById("edit-jt-unit").value;
-    const price = parseFloat(document.getElementById("edit-jt-price").value);
     const isActive = document.getElementById("edit-jt-active").checked;
 
     try {
-      await API.updateJobType(id, {
-        name: name,
-        unit_of_measure: unit,
-        price_per_unit: price,
-        is_active: isActive
-      });
+      await API.updateJobType(id, { name: name, ...readJobTypeFields("edit-jt"), is_active: isActive });
       showToast(isUz ? "Ish turi yangilandi!" : "Вид работы обновлен!", "success");
       closeModal("jt-edit-modal");
       await loadActiveTabContent();
@@ -1205,13 +1318,13 @@ const IshHaqiModule = (function () {
       showToast(isUz ? "Avval ishbay xodimlarni ro'yxatga qo'shing!" : "Сначала добавьте сдельных сотрудников!", "warning");
       return;
     }
-    if (jobTypesList.length === 0) {
-      showToast(isUz ? "Avval ish turlari va narxlarini qo'shing!" : "Сначала добавьте виды работ!", "warning");
+    if (!jobTypesList.some(j => j.is_active !== false && payTypeOf(j) !== "fiks")) {
+      showToast(isUz ? "Avval ishbay yoki soatbay ish turi qo'shing!" : "Сначала добавьте сдельный или почасовой вид работ!", "warning");
       return;
     }
 
-    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}">[${escapeHtml(deptLabel(deptKey(e.department)))}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
-    let jobOptions = jobTypesList.map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${j.unit_of_measure}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${j.unit_of_measure}</option>`).join("");
+    let empOptions = pieceworkEmps.map(e => `<option value="${e.id}" data-job="${e.job_type_id || ""}">[${escapeHtml(deptLabel(deptKey(e.department)))}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
+    let jobOptions = jobTypesList.filter(j => j.is_active !== false && payTypeOf(j) !== "fiks").map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${escapeHtml(unitText(j))}" data-paytype="${payTypeOf(j)}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${escapeHtml(unitText(j))} (${payTypeText(payTypeOf(j)).name})</option>`).join("");
 
     const modalHost = document.getElementById("salary-modals-host");
     modalHost.innerHTML = `
@@ -1225,22 +1338,22 @@ const IshHaqiModule = (function () {
             <div class="modal-body">
               <div class="form-group">
                 <label class="form-label">${isUz ? "Ishbay xodim" : "Сдельный сотрудник"} *</label>
-                <select id="work-empid" class="form-control" required>
+                <select id="work-empid" class="form-control" required onchange="IshHaqiModule.onWorkEmployeeChange()">
                   ${empOptions}
                 </select>
               </div>
 
               <div class="form-group">
                 <label class="form-label">${isUz ? "Bajarilgan ish turi" : "Вид выполненной работы"} *</label>
-                <select id="work-jobid" class="form-control" required onchange="IshHaqiModule.updateWorkTotalCalc()">
+                <select id="work-jobid" class="form-control" required onchange="IshHaqiModule.onWorkJobChange()">
                   ${jobOptions}
                 </select>
               </div>
 
               <div class="form-row">
                 <div class="form-group" style="flex: 1;">
-                  <label class="form-label">${isUz ? "Bajarilgan hajm / Miqdor" : "Объем / Количество"} *</label>
-                  <input type="number" id="work-qty" class="form-control" required step="0.1" min="0.1" value="100" oninput="IshHaqiModule.updateWorkTotalCalc()">
+                  <label class="form-label" id="work-qty-label">${isUz ? "Bajarilgan hajm / Miqdor" : "Объем / Количество"} *</label>
+                  <input type="number" id="work-qty" class="form-control" required step="any" min="0.1" value="100" oninput="IshHaqiModule.updateWorkTotalCalc()">
                 </div>
                 <div class="form-group" style="flex: 1;">
                   <label class="form-label">${isUz ? "Jami summa (Hisoblangan)" : "Итоговая сумма"}</label>
@@ -1261,6 +1374,31 @@ const IshHaqiModule = (function () {
         </div>
       </div>
     `;
+    onWorkEmployeeChange();
+  }
+
+  // The employee's own position is the job they are paid for by default.
+  function onWorkEmployeeChange() {
+    const empSelect = document.getElementById("work-empid");
+    const jobSelect = document.getElementById("work-jobid");
+    if (!empSelect || !jobSelect) return;
+    const opt = empSelect.options[empSelect.selectedIndex];
+    const jobId = opt && opt.getAttribute("data-job");
+    if (jobId && [...jobSelect.options].some(o => o.value === jobId)) jobSelect.value = jobId;
+    onWorkJobChange();
+  }
+
+  // The quantity is hours for soatbay work and a count for fiks work.
+  const DEFAULT_QTY = { ishbay: 100, soatbay: 8 };
+  function onWorkJobChange() {
+    const jobSelect = document.getElementById("work-jobid");
+    const qtyInput = document.getElementById("work-qty");
+    if (!jobSelect || !qtyInput) return;
+    const opt = jobSelect.options[jobSelect.selectedIndex];
+    const pt = (opt && opt.getAttribute("data-paytype")) || "ishbay";
+    const label = document.getElementById("work-qty-label");
+    if (label) label.textContent = `${payTypeText(pt).qty} *`;
+    qtyInput.value = DEFAULT_QTY[pt];
     updateWorkTotalCalc();
   }
 
@@ -1269,6 +1407,7 @@ const IshHaqiModule = (function () {
     const qtyInput = document.getElementById("work-qty");
     const totalPreview = document.getElementById("work-total-preview");
     if (!jobSelect || !qtyInput || !totalPreview) return;
+    if (!jobSelect.options.length) { totalPreview.value = ""; return; }
 
     const opt = jobSelect.options[jobSelect.selectedIndex];
     const price = opt ? parseFloat(opt.getAttribute("data-price") || 0) : 0;
@@ -1482,14 +1621,17 @@ const IshHaqiModule = (function () {
     deleteJobType,
     openAddEmployeeModal,
     openEditEmployeeModal,
-    handleEmpTypeChange,
     handleCreateEmployee,
     handleUpdateEmployee,
     openAddJobTypeModal,
     openEditJobTypeModal,
     handleCreateJobType,
     handleUpdateJobType,
+    onPayTypeChange,
+    onPositionChange,
     openAddWorkModal,
+    onWorkEmployeeChange,
+    onWorkJobChange,
     updateWorkTotalCalc,
     handleCreateWorkEntry,
     openPayModal,

@@ -1227,4 +1227,8 @@ async function refreshOrderBadge(orders) {
   } catch (_) { /* a reminder must never break the page */ }
 }
 
-setInterval(() => { if (localStorage.getItem("erp_token")) refreshOrderBadge(); }, 60000);
+// Not while offline or in the background: the reminder can wait, and it
+// would only fill the console with failed requests.
+setInterval(() => {
+  if (localStorage.getItem("erp_token") && navigator.onLine !== false && !document.hidden) refreshOrderBadge();
+}, 60000);

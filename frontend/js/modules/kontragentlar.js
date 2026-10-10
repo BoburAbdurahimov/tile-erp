@@ -131,7 +131,7 @@ const BalancesModule = {
                   </td>
                   <td data-sort-value="${altVal}" style="text-align: right;">${altFormatted}</td>
                   <td style="text-align: right;">
-                    <button class="btn btn-secondary btn-sm" onclick="BalancesModule.openActSverka(${cp.id}, '${cp.name}')">
+                    <button class="btn btn-secondary btn-sm" onclick="BalancesModule.openActSverka(${cp.id}, ${jsArg(cp.name)})">
                       ${CURRENT_LANG === 'uz' ? 'Akt-Sverka' : 'Акт-Сверка'}
                     </button>
                   </td>

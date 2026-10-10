@@ -41,6 +41,7 @@ def _check_department(name: Optional[str]) -> str:
 class EmployeeCreateSchema(BaseModel):
     full_name: str
     department: Optional[str] = "Ma'muriyat"  # "Ma'muriyat" or an Ombor, e.g. "Toxir"
+    job_type_id: Optional[int] = None          # the position, from Ish turlari
     employee_type: str = Field(default="fixed", description="'fixed' or 'piecework'")
     position: Optional[str] = None
     phone_number: Optional[str] = None
@@ -51,6 +52,7 @@ class EmployeeCreateSchema(BaseModel):
 class EmployeeUpdateSchema(BaseModel):
     full_name: Optional[str] = None
     department: Optional[str] = None
+    job_type_id: Optional[int] = None
     position: Optional[str] = None
     phone_number: Optional[str] = None
     monthly_salary: Optional[float] = None
@@ -59,14 +61,51 @@ class EmployeeUpdateSchema(BaseModel):
 
 class JobTypeCreateSchema(BaseModel):
     name: str
+    pay_type: str = "ishbay"          # ishbay | soatbay | fiks
     unit_of_measure: str = "dona"
     price_per_unit: float
 
 class JobTypeUpdateSchema(BaseModel):
     name: Optional[str] = None
+    pay_type: Optional[str] = None
     unit_of_measure: Optional[str] = None
     price_per_unit: Optional[float] = None
     is_active: Optional[bool] = None
+
+
+# How a job is paid. Pay is always quantity x rate; what the quantity counts
+# follows from the type: units done, hours worked, or jobs done.
+PAY_TYPES = ("ishbay", "soatbay", "fiks")
+PAY_TYPE_UNITS = {"soatbay": "soat", "fiks": "oy"}
+
+
+def _pay_type(value: Optional[str]) -> str:
+    value = (value or "ishbay").strip().lower()
+    if value not in PAY_TYPES:
+        raise HTTPException(status_code=400, detail="Ish turi: ishbay, soatbay yoki fiks bo'lishi kerak")
+    return value
+
+
+def _unit_for(pay_type: str, unit: Optional[str]) -> str:
+    return PAY_TYPE_UNITS.get(pay_type) or ((unit or "").strip() or "dona")
+
+
+def _apply_position(db: Session, emp: Employee, job_type_id: int, salary: Optional[float]) -> None:
+    """The position comes from Ish turlari and decides how pay is worked out:
+    a fiks one is a monthly salary (its price, unless one is given), an
+    ishbay or soatbay one is paid from naryad entries."""
+    jt = db.query(JobType).filter(JobType.id == job_type_id).first()
+    if not jt:
+        raise HTTPException(status_code=400, detail="Lavozim (ish turi) topilmadi")
+    if not jt.is_active and emp.job_type_id != jt.id:
+        raise HTTPException(status_code=400, detail="Bu ish turi faol emas")
+    emp.job_type_id = jt.id
+    emp.position = jt.name
+    if (jt.pay_type or "ishbay") == "fiks":
+        emp.employee_type = "fixed"
+        emp.monthly_salary = float(salary) if salary else float(jt.price_per_unit or 0.0)
+    else:
+        emp.employee_type = "piecework"
 
 class DailyAbsenceItem(BaseModel):
     employee_id: int
@@ -142,6 +181,7 @@ def get_employees(
             "full_name": e.full_name,
             "department": e.department or "Ma'muriyat",
             "employee_type": e.employee_type,
+            "job_type_id": e.job_type_id,
             "position": e.position or "-",
             "phone_number": e.phone_number or "-",
             "monthly_salary": e.monthly_salary or 0.0,
@@ -170,6 +210,8 @@ def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin
         hire_date=hire_date,
         is_active=True
     )
+    if data.job_type_id is not None:
+        _apply_position(db, emp, data.job_type_id, data.monthly_salary)
     db.add(emp)
     db.commit()
     db.refresh(emp)
@@ -205,6 +247,8 @@ def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Que
         emp.phone_number = data.phone_number.strip()
     if data.monthly_salary is not None:
         emp.monthly_salary = float(data.monthly_salary)
+    if data.job_type_id is not None:
+        _apply_position(db, emp, data.job_type_id, data.monthly_salary)
     if data.standard_work_days is not None:
         emp.standard_work_days = int(data.standard_work_days)
     if data.hire_date is not None:
@@ -292,6 +336,7 @@ def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depend
         {
             "id": j.id,
             "name": j.name,
+            "pay_type": j.pay_type or "ishbay",
             "unit_of_measure": j.unit_of_measure,
             "price_per_unit": j.price_per_unit,
             "is_active": j.is_active,
@@ -302,9 +347,13 @@ def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depend
 
 @router.post("/job-types")
 def create_job_type(data: JobTypeCreateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+    if float(data.price_per_unit) <= 0:
+        raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak")
+    pay_type = _pay_type(data.pay_type)
     jt = JobType(
         name=data.name.strip(),
-        unit_of_measure=data.unit_of_measure.strip() if data.unit_of_measure else "dona",
+        pay_type=pay_type,
+        unit_of_measure=_unit_for(pay_type, data.unit_of_measure),
         price_per_unit=float(data.price_per_unit),
         is_active=True,
         created_by=current_user
@@ -331,9 +380,14 @@ def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Quer
 
     if data.name is not None:
         jt.name = data.name.strip()
-    if data.unit_of_measure is not None:
-        jt.unit_of_measure = data.unit_of_measure.strip()
+    if data.pay_type is not None:
+        jt.pay_type = _pay_type(data.pay_type)
+    if data.unit_of_measure is not None or data.pay_type is not None:
+        jt.unit_of_measure = _unit_for(jt.pay_type or "ishbay",
+                                       data.unit_of_measure if data.unit_of_measure is not None else jt.unit_of_measure)
     if data.price_per_unit is not None:
+        if float(data.price_per_unit) <= 0:
+            raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak")
         jt.price_per_unit = float(data.price_per_unit)
     if data.is_active is not None:
         jt.is_active = data.is_active
@@ -457,6 +511,9 @@ def save_daily_attendance(data: DailyAttendanceBatchSchema, db: Session = Depend
 
 @router.post("/daily-work")
 def add_daily_work_entry(data: DailyWorkEntrySchema, db: Session = Depends(get_db)):
+    jt = db.query(JobType).filter(JobType.id == data.job_type_id).first()
+    if jt and (jt.pay_type or "ishbay") == "fiks":
+        raise HTTPException(status_code=400, detail="Fiks (oylik) ish turi uchun naryad kiritilmaydi - u oylik maosh sifatida hisoblanadi")
     try:
         entry = record_daily_work_entry(
             db=db,
