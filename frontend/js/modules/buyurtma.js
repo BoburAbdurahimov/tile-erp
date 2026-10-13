@@ -53,10 +53,13 @@ const OrdersModule = {
     const days = Math.floor(abs / 86400000);
     const h = Math.floor((abs % 86400000) / 3600000);
     const m = Math.floor((abs % 3600000) / 60000);
-    const s = Math.floor((abs % 60000) / 1000);
-    const z = n => String(n).padStart(2, "0");
-    const clock = `${days ? days + (isUz ? " kun " : " дн ") : ""}${z(h)}:${z(m)}:${z(s)}`;
-    if (ms < 0) return { text: (isUz ? "Muddati o'tdi: " : "Просрочено: ") + clock, tone: "over" };
+    // In plain words: "2 kun 4 soat", "20 soat 13 daqiqa", "15 daqiqa".
+    const clock = days
+      ? `${days} ${isUz ? "kun" : "дн"} ${h} ${isUz ? "soat" : "ч"}`
+      : h
+        ? `${h} ${isUz ? "soat" : "ч"} ${m} ${isUz ? "daqiqa" : "мин"}`
+        : `${m} ${isUz ? "daqiqa" : "мин"}`;
+    if (ms < 0) return { text: (isUz ? "Kechikdi: " : "Опоздание: ") + clock, tone: "over" };
     if (ms < 86400000) return { text: clock + (isUz ? " qoldi" : " осталось"), tone: "urgent" };
     if (ms < 3 * 86400000) return { text: clock + (isUz ? " qoldi" : " осталось"), tone: "soon" };
     return { text: clock + (isUz ? " qoldi" : " осталось"), tone: "ok" };
@@ -80,7 +83,7 @@ const OrdersModule = {
       bekor: ["#f1f5f9", "#64748b", isUz ? "Bekor" : "Отменён"],
     };
     const [bg, fg, label] = map[o.payment_state] || map.tolanmagan;
-    return `<span style="background:${bg};color:${fg};padding:3px 8px;border-radius:6px;font-size:11.5px;font-weight:700;white-space:nowrap;">${label}</span>`;
+    return `<span style="background:${bg};color:${fg};padding:6px 12px;border-radius:10px;font-size:15px;font-weight:800;white-space:nowrap;">${label}</span>`;
   },
 
   open() { return this.orders.filter(o => o.status === "Yangi"); },
@@ -226,93 +229,84 @@ const OrdersModule = {
 
   // ------------------------------------------------------------ stage 1
 
+  // One big chip per size: "220 · 100 ta" and, while open, whether the Ombor has it.
   itemChips(o) {
     const isUz = this.isUz();
     return o.items.map(it => {
       const short = it.shortfall > 0;
       return `
-        <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;font-size:12.5px;
-                     background:${short ? "#fef2f2" : "#f8fafc"};border:1px solid ${short ? "#fecaca" : "#e2e8f0"};">
-          <b style="color:#0f172a;">${it.code}</b>
-          <span style="color:#475569;">× ${it.quantity}</span>
+        <span style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;font-size:17px;
+                     background:${short ? "#fef2f2" : "#f8fafc"};border:2px solid ${short ? "#fecaca" : "#e2e8f0"};">
+          <b style="color:#0f172a;font-size:20px;">${it.code}</b>
+          <span style="color:#334155;font-weight:700;">${formatNumber(it.quantity, 0, 0)} ${isUz ? "ta" : "шт"}</span>
           ${o.status === "Yangi"
             ? (short
-                ? `<span style="color:#b91c1c;font-weight:700;">−${it.shortfall} ${isUz ? "ishlab chiqarish" : "произвести"}</span>`
-                : `<span style="color:#15803d;font-weight:700;">✓ ${isUz ? "omborda" : "на складе"}</span>`)
+                ? `<span style="color:#b91c1c;font-weight:800;">${formatNumber(it.shortfall, 0, 0)} ${isUz ? "ta yetmaydi" : "не хватает"}</span>`
+                : `<span style="color:#15803d;font-weight:800;">${isUz ? "Omborda bor" : "Есть на складе"}</span>`)
             : ""}
         </span>`;
     }).join("");
   },
 
+  // Big and plain: who, how much, what, how long is left, and three big buttons.
   orderCard(o) {
     const isUz = this.isUz();
     const discount = o.discount_amount > 0
-      ? `<div style="font-size:12px;color:#64748b;"><s>${this.money(o.subtotal)}</s> −${o.discount_percent ? o.discount_percent + "%" : this.money(o.discount_amount)}</div>`
+      ? `<div style="font-size:14px;color:#64748b;"><s>${this.money(o.subtotal)}</s> −${o.discount_percent ? o.discount_percent + "%" : this.money(o.discount_amount)}</div>`
       : "";
+    const bigBtn = "padding:12px 20px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;";
     return `
-      <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff;display:flex;flex-direction:column;gap:10px;">
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+      <div style="border:2px solid #e2e8f0;border-radius:18px;padding:20px;background:#fff;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 6px rgba(15,23,42,0.05);">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
           <div style="min-width:0;">
-            <div style="font-weight:800;color:#0f172a;font-size:15px;">${escapeHtml(o.client_name)}</div>
-            <div style="color:#475569;font-size:13px;">
-              <a href="tel:${escapeHtml(o.client_phone)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.client_phone)}</a>
-              · ${o.order_number} · ${escapeHtml(o.sklad_label)} · ${o.sell_type === "mkv" ? "m²" : (isUz ? "metr" : "метр")}
-            </div>
+            <div style="font-weight:800;color:#0f172a;font-size:24px;line-height:1.2;">${escapeHtml(o.client_name)}</div>
+            <a href="tel:${escapeHtml(o.client_phone)}" style="display:inline-block;margin-top:4px;color:#2563eb;text-decoration:none;font-size:18px;font-weight:600;">${escapeHtml(o.client_phone)}</a>
           </div>
           <div style="text-align:right;">
-            <div style="font-weight:800;color:#0f172a;font-size:15px;">${this.money(o.total_amount)}</div>
+            <div style="font-weight:800;color:#0f172a;font-size:26px;line-height:1.2;">${this.money(o.total_amount)}</div>
             ${discount}
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">${this.itemChips(o)}</div>
-        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span data-deadline="${o.deadline}" class="order-countdown"
-              style="padding:5px 10px;border-radius:8px;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;"></span>
-            <span style="color:#64748b;font-size:12px;">${isUz ? "Muddat" : "Срок"}: ${this.fmtDeadline(o.deadline)}</span>
-            ${o.paid_amount > 0 ? this.payBadge(o) : ""}
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})"
-              style="background:#2563eb;color:#fff;border:none;padding:7px 12px;border-radius:8px;font-weight:600;cursor:pointer;">
-              ${isUz ? "Yetkazish" : "Доставить"}</button>
-            <button class="btn btn-sm btn-secondary" onclick="OrdersModule.openPay(${o.id})"
-              style="padding:7px 12px;border-radius:8px;font-weight:600;">${isUz ? "Avans" : "Аванс"}</button>
-            <button class="btn btn-sm btn-secondary" onclick="OrdersModule.cancel(${o.id})"
-              style="padding:7px 12px;border-radius:8px;font-weight:600;color:#b91c1c;">${isUz ? "Bekor" : "Отмена"}</button>
-          </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="padding:6px 12px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:16px;">${escapeHtml(o.sklad_label)}</span>
+          ${o.paid_amount > 0 ? this.payBadge(o) : ""}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${this.itemChips(o)}</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span data-deadline="${o.deadline}" class="order-countdown"
+            style="padding:10px 14px;border-radius:12px;font-weight:800;font-size:18px;"></span>
+          <span style="color:#475569;font-size:16px;">${isUz ? "Muddat" : "Срок"}: <b>${this.fmtDeadline(o.deadline)}</b></span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="OrdersModule.openDeliver(${o.id})"
+            style="${bigBtn}background:#2563eb;color:#fff;border:none;flex:1 1 140px;">${isUz ? "Yetkazish" : "Доставить"}</button>
+          <button class="btn btn-secondary" onclick="OrdersModule.openPay(${o.id})" style="${bigBtn}flex:1 1 100px;">${isUz ? "Avans" : "Аванс"}</button>
+          <button class="btn btn-secondary" onclick="OrdersModule.cancel(${o.id})" style="${bigBtn}color:#b91c1c;flex:1 1 100px;">${isUz ? "Bekor" : "Отмена"}</button>
         </div>
       </div>`;
   },
 
+  // What has to be made, one big card per size and Ombor.
   planHtml() {
     const isUz = this.isUz();
     if (!this.plan.length) {
-      return `<div style="padding:14px;border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:13.5px;">
-        ✓ ${isUz ? "Barcha ochiq buyurtmalar ombordagi mahsulot bilan yopiladi." : "Все открытые заказы покрываются складом."}</div>`;
+      return `<div style="padding:22px;border-radius:16px;background:#f0fdf4;border:2px solid #bbf7d0;color:#166534;font-size:20px;font-weight:800;text-align:center;">
+        ${isUz ? "Hammasi omborda bor. Hech narsa yasash shart emas." : "Всё есть на складе. Ничего производить не нужно."}</div>`;
     }
     return `
-      <div style="overflow-x:auto;">
-        <table class="data-table" style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead><tr>
-            <th style="padding:10px;text-align:left;">${isUz ? "O'lcham" : "Размер"}</th>
-            <th style="padding:10px;text-align:left;">${isUz ? "Ombor" : "Склад"}</th>
-            <th style="padding:10px;text-align:right;">${isUz ? "Ishlab chiqarish kerak" : "Произвести"}</th>
-            <th style="padding:10px;text-align:left;">${isUz ? "Eng yaqin muddat" : "Ближайший срок"}</th>
-            <th style="padding:10px;text-align:left;">${isUz ? "Buyurtmalar" : "Заказы"}</th>
-          </tr></thead>
-          <tbody>
-            ${this.plan.map(p => `
-              <tr>
-                <td style="padding:10px;"><b>${p.code}</b> <span style="color:#64748b;">(${p.length}×${p.width})</span></td>
-                <td style="padding:10px;">${escapeHtml(p.sklad_label)}</td>
-                <td style="padding:10px;text-align:right;font-weight:800;color:#b91c1c;">${formatNumber(p.quantity, 0, 0)} ${isUz ? "ta" : "шт"}</td>
-                <td style="padding:10px;"><span data-deadline="${p.deadline}" class="order-countdown"
-                  style="padding:4px 8px;border-radius:6px;font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;"></span></td>
-                <td style="padding:10px;color:#475569;font-size:12px;">${p.orders.join(", ")}</td>
-              </tr>`).join("")}
-          </tbody>
-        </table>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px;">
+        ${this.plan.map(p => `
+          <div style="border:2px solid #fecaca;border-left:8px solid #dc2626;border-radius:18px;padding:18px 20px;background:#fff;display:flex;flex-direction:column;gap:10px;">
+            <span style="align-self:flex-start;padding:6px 12px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:17px;">${escapeHtml(p.sklad_label)}</span>
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:44px;font-weight:900;color:#b91c1c;line-height:1;">${formatNumber(p.quantity, 0, 0)}</span>
+              <span style="font-size:20px;font-weight:800;color:#b91c1c;">${isUz ? "ta yasash kerak" : "шт произвести"}</span>
+            </div>
+            <div style="font-size:20px;color:#0f172a;">${isUz ? "O'lcham" : "Размер"}: <b>${p.code}</b>
+              <span style="color:#64748b;font-size:16px;">(${p.length}×${p.width})</span></div>
+            <span data-deadline="${p.deadline}" class="order-countdown"
+              style="align-self:flex-start;padding:10px 14px;border-radius:12px;font-weight:800;font-size:18px;"></span>
+          </div>`).join("")}
       </div>`;
   },
 
@@ -322,19 +316,18 @@ const OrdersModule = {
     return `
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div class="card" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;">
-          <h3 style="margin:0 0 4px;font-size:16px;color:#0f172a;">${isUz ? "Ishlab chiqarish rejasi" : "План производства"}</h3>
-          <p style="margin:0 0 12px;color:#64748b;font-size:12.5px;">
-            ${isUz ? "Ombordagi mahsulot buyurtmalarga muddat tartibida taqsimlanadi; yetmagani shu yerda."
-                   : "Склад распределяется по заказам в порядке сроков; недостающее — здесь."}
+          <h3 style="margin:0 0 4px;font-size:24px;color:#0f172a;">${isUz ? "Nima yasash kerak" : "Что произвести"}</h3>
+          <p style="margin:0 0 16px;color:#475569;font-size:16px;">
+            ${isUz ? "Buyurtmalar uchun omborda yetmayotgan kafellar." : "Плитки, которых не хватает на складе для заказов."}
           </p>
           ${this.planHtml()}
         </div>
         <div>
-          <h3 style="margin:0 0 10px;font-size:16px;color:#0f172a;">${isUz ? "Ochiq buyurtmalar" : "Открытые заказы"} (${open.length})</h3>
+          <h3 style="margin:0 0 14px;font-size:24px;color:#0f172a;">${isUz ? "Ochiq buyurtmalar" : "Открытые заказы"} (${open.length})</h3>
           ${open.length
-            ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:12px;">${open.map(o => this.orderCard(o)).join("")}</div>`
-            : `<div style="padding:30px;text-align:center;color:#94a3b8;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;">
-                 ${isUz ? "Ochiq buyurtma yo'q. «+ Yangi buyurtma» tugmasini bosing." : "Нет открытых заказов. Нажмите «+ Новый заказ»."}</div>`}
+            ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:16px;">${open.map(o => this.orderCard(o)).join("")}</div>`
+            : `<div style="padding:36px;text-align:center;color:#64748b;background:#fff;border:2px dashed #cbd5e1;border-radius:16px;font-size:18px;">
+                 ${isUz ? "Ochiq buyurtma yo'q. Yangi buyurtma uchun yuqoridagi + tugmasini bosing." : "Нет открытых заказов. Для нового заказа нажмите + вверху."}</div>`}
         </div>
       </div>`;
   },
@@ -403,23 +396,22 @@ const OrdersModule = {
       : `${sel.split("-").reverse().join(".")}${sel === todayKey ? (isUz ? " (bugun)" : " (сегодня)") : ""}`;
 
     const dueRow = (o) => `
-      <div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff;display:flex;flex-direction:column;gap:8px;">
+      <div style="border:2px solid #e2e8f0;border-radius:18px;padding:18px;background:#fff;display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <div>
-            <div style="font-weight:800;color:#0f172a;">${escapeHtml(o.client_name)}
-              <span style="color:#64748b;font-weight:500;font-size:12.5px;">· ${o.order_number}</span></div>
-            <div style="font-size:13px;color:#475569;">
+            <div style="font-weight:800;color:#0f172a;font-size:22px;">${escapeHtml(o.client_name)}</div>
+            <div style="font-size:17px;color:#475569;margin-top:2px;">
               <a href="tel:${escapeHtml(o.client_phone)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.client_phone)}</a>
               ${o.client_address ? " · " + escapeHtml(o.client_address) : ""}</div>
           </div>
           <span data-deadline="${o.deadline}" class="order-countdown"
-            style="align-self:flex-start;padding:5px 10px;border-radius:8px;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums;"></span>
+            style="align-self:flex-start;padding:10px 14px;border-radius:12px;font-weight:800;font-size:17px;"></span>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">${this.itemChips(o)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${this.itemChips(o)}</div>
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-          <span style="font-weight:700;color:#0f172a;">${this.money(o.total_amount)} · ${escapeHtml(o.sklad_label)}</span>
-          <button class="btn btn-sm" onclick="OrdersModule.openDeliver(${o.id})"
-            style="background:${o.shortfall_pieces > 0 ? "#d97706" : "#059669"};color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">
+          <span style="font-weight:800;color:#0f172a;font-size:20px;">${this.money(o.total_amount)} · ${escapeHtml(o.sklad_label)}</span>
+          <button class="btn" onclick="OrdersModule.openDeliver(${o.id})"
+            style="background:${o.shortfall_pieces > 0 ? "#d97706" : "#059669"};color:#fff;border:none;padding:12px 20px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;">
             ${o.shortfall_pieces > 0
               ? (isUz ? `${o.shortfall_pieces} ta yetmaydi — boshqa ombor` : `Не хватает ${o.shortfall_pieces} — другой склад`)
               : (isUz ? "Yetkazildi deb belgilash" : "Отметить доставку")}
@@ -430,8 +422,8 @@ const OrdersModule = {
     const doneRow = (o) => `
       <div style="border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;background:#f0fdf4;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div>
-          <div style="font-weight:700;color:#0f172a;">✓ ${escapeHtml(o.client_name)} <span style="color:#64748b;font-weight:500;font-size:12.5px;">· ${o.order_number}</span></div>
-          <div style="font-size:12.5px;color:#475569;"><b>${escapeHtml(o.car_number || "-")}</b>
+          <div style="font-weight:800;color:#0f172a;font-size:19px;">✓ ${escapeHtml(o.client_name)}</div>
+          <div style="font-size:15px;color:#475569;"><b>${escapeHtml(o.car_number || "-")}</b>
             · ${escapeHtml(o.driver_name || "")} <a href="tel:${escapeHtml(o.driver_phone || "")}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.driver_phone || "")}</a></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">${this.payBadge(o)}</div>
@@ -514,7 +506,7 @@ const OrdersModule = {
         <div style="overflow-x:auto;">
           <table class="data-table" style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px;">
             <thead><tr>
-              <th style="padding:10px;text-align:left;">${isUz ? "Buyurtma" : "Заказ"}</th>
+              <th style="padding:10px;text-align:left;">${isUz ? "Yetkazilgan" : "Доставлен"}</th>
               <th style="padding:10px;text-align:left;">${isUz ? "Mijoz" : "Клиент"}</th>
               <th style="padding:10px;text-align:left;">${isUz ? "Holat" : "Статус"}</th>
               <th style="padding:10px;text-align:right;">${isUz ? "Summa" : "Сумма"}</th>
@@ -525,7 +517,7 @@ const OrdersModule = {
             <tbody>
               ${rows.length ? rows.map(o => `
                 <tr>
-                  <td style="padding:10px;"><b>${o.order_number}</b><div style="font-size:11.5px;color:#64748b;">${o.status === "Yetkazildi" ? "" + (o.delivered_at || "").slice(0, 10) : (isUz ? "Yetkazilmagan" : "Не доставлен")}</div></td>
+                  <td style="padding:10px;white-space:nowrap;">${o.status === "Yetkazildi" ? (o.delivered_at || "").slice(0, 10).split("-").reverse().join(".") : `<span style="color:#64748b;">${isUz ? "Yetkazilmagan" : "Не доставлен"}</span>`}</td>
                   <td style="padding:10px;">${escapeHtml(o.client_name)}<div style="font-size:11.5px;"><a href="tel:${escapeHtml(o.client_phone)}" style="color:#2563eb;text-decoration:none;">${escapeHtml(o.client_phone)}</a></div></td>
                   <td style="padding:10px;">${this.payBadge(o)}
                     ${o.payments.length ? `<div style="font-size:11px;color:#64748b;margin-top:3px;">${o.payments.map(p => this.payMethodLabel(p)).join(" · ")}</div>` : ""}</td>
@@ -864,7 +856,7 @@ const OrdersModule = {
       discount_amount: pctMode ? 0 : discVal,
       note: val("ord-note") || null,
     });
-    showToast(`${isUz ? "Buyurtma qabul qilindi" : "Заказ принят"}: ${order.order_number}`, "success");
+    showToast(`${isUz ? "Buyurtma qabul qilindi" : "Заказ принят"}: ${escapeHtml(order.client_name)}`, "success");
     this.stage = "orders";
     await this.reload();
     return true;
@@ -908,7 +900,7 @@ const OrdersModule = {
           </span>
         </label>`;
     };
-    showModal(`${isUz ? "Yetkazib berish" : "Доставка"} — ${o.order_number}`, `
+    showModal(`${isUz ? "Yetkazib berish" : "Доставка"} — ${o.client_name}`, `
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px;">
           <b>${escapeHtml(o.client_name)}</b> · ${escapeHtml(o.client_phone)}${o.client_address ? " · " + escapeHtml(o.client_address) : ""}<br>
@@ -977,7 +969,7 @@ const OrdersModule = {
         <input type="radio" name="pay-method" value="${val}" ${checked ? "checked" : ""} style="width:18px;height:18px;" onchange="OrdersModule.onPayMethod()">
         <span><b style="display:block;">${title}</b><span style="font-size:11.5px;color:#64748b;">${sub}</span></span>
       </label>`;
-    showModal(`${isUz ? "To'lov" : "Оплата"} — ${o.order_number}`, `
+    showModal(`${isUz ? "To'lov" : "Оплата"} — ${o.client_name}`, `
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px;">
           <span><b>${escapeHtml(o.client_name)}</b> · ${escapeHtml(o.client_phone)}</span>
@@ -1081,7 +1073,7 @@ const OrdersModule = {
     const method = p => p.method === "dollar"
       ? `${isUz ? "Dollar (Kassa USD)" : "Доллары (Kassa USD)"}: $${formatNumber(p.pay_amount, 2, 2)} × ${formatNumber(p.rate || 0, 0, 2)}`
       : p.method === "karta" ? (isUz ? "Karta (Karta UZS)" : "Карта (Karta UZS)") : (isUz ? "Naqd (Kassa UZS)" : "Наличные (Kassa UZS)");
-    showModal(`${isUz ? "To'lovni bekor qilish" : "Отмена оплаты"} — ${o.order_number}`, `
+    showModal(`${isUz ? "To'lovni bekor qilish" : "Отмена оплаты"} — ${o.client_name}`, `
       <div style="display:flex;flex-direction:column;gap:10px;">
         <p style="margin:0;font-size:13px;color:#475569;">
           ${isUz ? "Qaysi to'lov bekor qilinsin? Pul kassadan qaytariladi va buyurtma qarzi shu summaga ko'payadi."
@@ -1117,8 +1109,8 @@ const OrdersModule = {
     const o = this.find(id);
     if (!o) return;
     showModal(isUz ? "Buyurtmani bekor qilish" : "Отмена заказа",
-      `<p style="margin:0;">${isUz ? `${o.order_number} (${escapeHtml(o.client_name)}) bekor qilinsinmi? Ombordan hech narsa chiqmagan.`
-                                   : `Отменить ${o.order_number} (${escapeHtml(o.client_name)})? Со склада ничего не списано.`}</p>`,
+      `<p style="margin:0;">${isUz ? `${escapeHtml(o.client_name)} buyurtmasi bekor qilinsinmi? Ombordan hech narsa chiqmagan.`
+                                   : `Отменить заказ ${escapeHtml(o.client_name)}? Со склада ничего не списано.`}</p>`,
       async () => {
         await API.cancelOrder(id);
         showToast(isUz ? "Bekor qilindi" : "Отменён", "success");
