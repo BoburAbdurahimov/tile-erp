@@ -12,12 +12,14 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.api.auth import get_current_user_role, check_permission, check_action
+from backend.services import material_warehouses as mw
 from backend.models import AutoSarfRule, MDMMaterial, StockItem
 from backend.services import sklad_service
 
 router = APIRouter(prefix="/ishlab-chiqarish/auto-sarf", tags=["MODUL 4: AVTO SARF"])
 
-# Production consumes raw materials from Warehouse 2 (Ishlab chiqarish uchun materiallar).
+# Production consumes raw materials from its Ombor's xomashyo warehouse; 2 is
+# the old shared one, for production that goes into no Ombor.
 PRODUCTION_WAREHOUSE_ID = 2
 
 
@@ -99,9 +101,12 @@ def calculate(
     by_material = {r.material_id: r for r in rules if r.sklad_id is None}
     if sklad_id is not None:
         by_material.update({r.material_id: r for r in rules if r.sklad_id == sklad_id})
+    # What that Ombor's own xomashyo warehouse holds
+    owner = mw.owner_of_sklad(sklad_id)
+    wh_id = mw.warehouse_id(db, owner, mw.XOMASHYO) if owner else PRODUCTION_WAREHOUSE_ID
     stock = {
         s.material_id: s.quantity or 0.0
-        for s in db.query(StockItem).filter(StockItem.warehouse_id == PRODUCTION_WAREHOUSE_ID).all()
+        for s in db.query(StockItem).filter(StockItem.warehouse_id == wh_id).all()
     }
     items = []
     for r in by_material.values():

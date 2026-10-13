@@ -20,6 +20,7 @@ from backend.services.inventory_service import (
 )
 from backend.services.currency_service import get_exchange_rate_for_date, convert_amount
 from backend.services.numbering import next_number
+from backend.services import material_warehouses as mw
 
 router = APIRouter(prefix="/savdo", tags=["MODUL 6 & 7: SOTIB OLISH VA SOTISH (Trade)"])
 
@@ -32,10 +33,14 @@ def get_purchases(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("zakup", role)
     query = db.query(Purchase).join(MDMCounterparty).join(Warehouse)
+    allowed = mw.allowed_ids(db, scope)
+    if allowed is not None:
+        query = query.filter(Purchase.warehouse_id.in_(allowed))
     if supplier_id:
         query = query.filter(Purchase.supplier_id == supplier_id)
     if status:
@@ -76,6 +81,7 @@ def get_purchases(
             supplier_code=p.supplier.code if p.supplier else "",
             warehouse_id=p.warehouse_id,
             warehouse_name=p.warehouse.name if p.warehouse else "",
+            ombor=(p.warehouse.owner or "") if p.warehouse else "",
             date=p.date,
             currency=p.currency,
             total_amount=round(p.total_amount, 2),
@@ -130,6 +136,14 @@ def create_purchase(
 
     currency = payload.currency or next((cur for _, _, cur in lines if cur), None) or "UZS"
 
+    # Which Ombor's warehouses the materials go to: the one chosen, or the
+    # user's own when they work in one Ombor.
+    owner = None
+    if payload.warehouse_id:
+        mw.check_warehouse(db, payload.warehouse_id, scope)
+    elif any(it.material_id and not it.sklad_id for it, _, _ in lines):
+        owner = mw.pick_owner(scope, payload.ombor)
+
     total_amount = 0.0
     purchase_items = []
     header_warehouse = payload.warehouse_id
@@ -180,9 +194,9 @@ def create_purchase(
         material = db.query(MDMMaterial).filter(MDMMaterial.id == it.material_id).first()
         if not material:
             raise HTTPException(status_code=404, detail="Material topilmadi.")
-        # Not chosen in the form: spare parts go to the Aralash ombor, the rest
-        # (raw and auxiliary materials) to the production materials warehouse.
-        warehouse_id = payload.warehouse_id or (3 if material.category == "Ehtiyot qism" else 2)
+        # Spare parts go to the Ombor's aralash warehouse, the rest (raw and
+        # auxiliary materials) to its xomashyo warehouse.
+        warehouse_id = payload.warehouse_id or mw.warehouse_id(db, owner, mw.kind_for_category(material.category))
         if header_warehouse and warehouse_id != header_warehouse:
             # Storno takes a purchase back from one warehouse.
             raise HTTPException(status_code=400, detail="Ehtiyot qism va xomashyoni alohida xarid qiling.")
@@ -231,19 +245,23 @@ def create_purchase(
     db.commit()
     db.refresh(purchase)
 
-    return get_purchases(supplier_id=purchase.supplier_id, start_date=purchase.date, end_date=purchase.date, db=db, role=role)[0]
+    return next(p for p in get_purchases(supplier_id=purchase.supplier_id, start_date=purchase.date,
+                                         end_date=purchase.date, db=db, role=role, scope=None)
+                if p.id == purchase.id)
 
 @router.post("/purchases/{purchase_id}/storno")
 def storno_purchase(
     purchase_id: int,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("zakup", role)
     check_action("storno", role)
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
         raise HTTPException(status_code=404, detail="Xarid topilmadi.")
+    mw.check_warehouse(db, purchase.warehouse_id, scope)
     if purchase.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu xarid allaqachon storno qilingan.")
         
@@ -287,13 +305,15 @@ def storno_purchase(
 def delete_purchase(
     purchase_id: int,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("zakup", role)
     check_action("delete", role)
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
         raise HTTPException(status_code=404, detail="Xarid hujjati topilmadi.")
+    mw.check_warehouse(db, purchase.warehouse_id, scope)
     # Deleting does not touch stock or balances, so only a reversed document may go.
     if purchase.storno_ref_id:
         raise HTTPException(status_code=400, detail="Bu storno yozuvi - asl hujjatni o'chiring.")

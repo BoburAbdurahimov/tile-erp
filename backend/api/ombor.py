@@ -7,24 +7,51 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import StockItem, Warehouse, MDMMaterial, StockTransfer
 from backend.schemas import StockItemResponse, StockAdjustmentRequest, StockTransferCreate, StockTransferResponse
-from backend.api.auth import get_current_user_role, check_permission, is_admin
+from backend.api.auth import get_current_user_role, check_permission, is_admin, get_ombor_scope, get_combined_permissions
+from backend.services import material_warehouses as mw
 from backend.services.inventory_service import adjust_stock_manual, transfer_stock_between_warehouses
 from backend.services.reports_service import generate_stock_excel
 
 router = APIRouter(prefix="/ombor", tags=["MODUL 2: OMBOR (Warehouse & Stock)"])
+
+@router.get("/warehouses")
+def material_warehouses(
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
+):
+    """The xomashyo and aralash warehouses this user works with: their
+    Ombor's own, or (no limit) every owner's plus the old shared ones."""
+    if not any(m in get_combined_permissions(role) for m in ("ombor", "zakup", "ishlab_chiqarish", "mdm")):
+        check_permission("ombor", role)
+    allowed = mw.allowed_ids(db, scope)
+    whs = db.query(Warehouse).filter(Warehouse.kind.in_(mw.KINDS)).all()
+    order = {o: i for i, o in enumerate(mw.OWNERS)}
+    whs.sort(key=lambda w: (order.get(w.owner, 99), mw.KINDS.index(w.kind)))
+    return {
+        "warehouses": [mw.describe(w) for w in whs if allowed is None or w.id in allowed],
+        "owners": mw.scope_owners(scope),
+    }
+
 
 @router.get("/stock", response_model=List[StockItemResponse])
 def get_stock_balances(
     warehouse_id: Optional[int] = None,
     category: Optional[str] = None,
     search: Optional[str] = None,
+    owner: Optional[str] = None,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
     
     query = db.query(StockItem).join(MDMMaterial).join(Warehouse)
-    
+    allowed = mw.allowed_ids(db, scope)
+    if allowed is not None:
+        query = query.filter(StockItem.warehouse_id.in_(allowed))
+    if owner:
+        query = query.filter(Warehouse.owner == owner)
     if warehouse_id:
         query = query.filter(StockItem.warehouse_id == warehouse_id)
     if category:
@@ -60,9 +87,11 @@ def get_stock_balances(
 def adjust_stock(
     payload: StockAdjustmentRequest,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
+    mw.check_warehouse(db, payload.warehouse_id, scope)
     item = adjust_stock_manual(
         db=db,
         warehouse_id=payload.warehouse_id,
@@ -84,9 +113,12 @@ def adjust_stock(
 def create_stock_transfer(
     payload: StockTransferCreate,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
+    mw.check_warehouse(db, payload.from_warehouse_id, scope)
+    mw.check_warehouse(db, payload.to_warehouse_id, scope)
     trans_date = payload.date or date.today()
     transfer = transfer_stock_between_warehouses(
         db=db,
@@ -120,10 +152,14 @@ def create_stock_transfer(
 @router.get("/transfers", response_model=List[StockTransferResponse])
 def get_stock_transfers(
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
     transfers = db.query(StockTransfer).order_by(StockTransfer.id.desc()).all()
+    allowed = mw.allowed_ids(db, scope)
+    if allowed is not None:
+        transfers = [t for t in transfers if t.from_warehouse_id in allowed or t.to_warehouse_id in allowed]
     res = []
     for t in transfers:
         res.append(StockTransferResponse(
@@ -150,10 +186,11 @@ def get_stock_transfers(
 def export_stock_excel(
     warehouse_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor", role)
-    stream = generate_stock_excel(db, warehouse_id)
+    stream = generate_stock_excel(db, warehouse_id, warehouse_ids=mw.allowed_ids(db, scope))
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

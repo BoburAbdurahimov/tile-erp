@@ -85,9 +85,9 @@ class TestResetToZero(unittest.TestCase):
         sup = db.query(MDMCounterparty).filter(MDMCounterparty.type == "supplier").first().id
         db.close()
 
-        # Work starts again from zero: buy, produce, and the cost shows in Moliya.
+        # Work starts again from zero: buy for Kodir, produce in Kodir, and the cost shows in Moliya.
         ok(client.post("/api/savdo/purchases", json={
-            "supplier_id": sup, "warehouse_id": 2, "date": str(date.today()), "currency": "USD",
+            "supplier_id": sup, "ombor": "Kodir", "date": str(date.today()), "currency": "USD",
             "items": [{"material_id": clay, "quantity": 1000, "unit_price": 0.05}]}, headers=ADMIN))
         ok(client.post("/api/ishlab-chiqarish/orders", json={
             "out_sklad_id": 4, "out_code": 680, "quantity": 10, "date": str(date.today()),

@@ -290,7 +290,7 @@ def get_exchange_rates(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("kassa", role)
+    # Any logged-in user: the header shows the day's dollar rate on every page.
     return db.query(ExchangeRate).order_by(ExchangeRate.date.desc()).limit(30).all()
 
 @router.post("/exchange-rates")

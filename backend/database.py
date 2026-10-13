@@ -67,6 +67,8 @@ _ADDED_COLUMNS = [
     ("job_types", "pay_type", "VARCHAR(20)"),
     ("employees", "job_type_id", "INTEGER"),
     ("monthly_salary_calculations", "penalty_amount", "FLOAT"),
+    ("warehouses", "owner", "VARCHAR(20)"),
+    ("warehouses", "kind", "VARCHAR(20)"),
 ]
 
 
@@ -135,6 +137,16 @@ def run_data_migrations():
                 conn.execute(text("UPDATE monthly_salary_calculations SET status = 'draft' WHERE status = 'finalized'"))
     except Exception as e:
         logger.warning(f"Data migrations skipped: {e}")
+    # Each Ombor owner gets its own xomashyo and aralash warehouse.
+    try:
+        from backend.services.material_warehouses import ensure_owner_warehouses
+        db = SessionLocal()
+        try:
+            ensure_owner_warehouses(db)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Owner warehouses skipped: {e}")
 
 
 def create_tables():

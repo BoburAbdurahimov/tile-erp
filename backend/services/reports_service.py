@@ -150,7 +150,7 @@ def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:
         "client_receipts": client_receipts,
     }
 
-def generate_stock_excel(db: Session, warehouse_id: int = None) -> io.BytesIO:
+def generate_stock_excel(db: Session, warehouse_id: int = None, warehouse_ids: list = None) -> io.BytesIO:
     wb = Workbook()
     ws = wb.active
     ws.title = "Ombor qoldiqlari"
@@ -180,6 +180,8 @@ def generate_stock_excel(db: Session, warehouse_id: int = None) -> io.BytesIO:
     query = db.query(StockItem)
     if warehouse_id:
         query = query.filter(StockItem.warehouse_id == warehouse_id)
+    if warehouse_ids is not None:
+        query = query.filter(StockItem.warehouse_id.in_(warehouse_ids))
     items = query.all()
 
     for item in items:

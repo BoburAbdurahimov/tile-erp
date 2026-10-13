@@ -134,6 +134,8 @@ const API = {
   archiveCounterparty: (id) => apiRequest(`/mdm/counterparties/${id}/archive`, "POST"),
   deleteCounterparty: (id) => apiRequest(`/mdm/counterparties/${id}`, "DELETE"),
   getWarehouses: () => apiRequest("/mdm/warehouses"),
+  // Xomashyo / aralash warehouses of the user's Ombors, and those Ombors
+  getMaterialWarehouses: () => apiRequest("/ombor/warehouses"),
   createWarehouse: (data) => apiRequest("/mdm/warehouses", "POST", data),
   updateWarehouse: (id, data) => apiRequest(`/mdm/warehouses/${id}`, "PUT", data),
   deleteWarehouse: (id) => apiRequest(`/mdm/warehouses/${id}`, "DELETE"),

@@ -62,21 +62,30 @@ const UsersModule = (() => {
     return OMBORS.filter(o => o.ids.some(id => ids.includes(id))).map(o => o.name).join(", ");
   }
 
-  // Which Ombors the user works in. None ticked = all of them.
-  function renderSkladCheckboxes(inputName, selected = []) {
+  // Which Ombors the user works in, or "Barcha omborlar". One of them must be
+  // ticked, so nobody gets every Ombor by forgetting to tick theirs.
+  function renderSkladCheckboxes(inputName, selected = null) {
     const isUz = CURRENT_LANG === "uz";
+    const box = "display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #0f172a; cursor: pointer; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;";
+    const all = Array.isArray(selected) && selected.length === 0;
     return `
       <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; background: #f8fafc;">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;">
           ${OMBORS.map(o => `
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #0f172a; cursor: pointer; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;">
-              <input type="checkbox" name="${inputName}" value="${o.ids.join(",")}" ${o.ids.some(id => (selected || []).includes(id)) ? "checked" : ""} style="width: 16px; height: 16px; cursor: pointer;" />
+            <label style="${box}">
+              <input type="checkbox" name="${inputName}" value="${o.ids.join(",")}" ${o.ids.some(id => (selected || []).includes(id)) ? "checked" : ""}
+                onchange="if (this.checked) document.querySelector('input[name=${inputName}_all]').checked = false" style="width: 16px; height: 16px; cursor: pointer;" />
               ${o.name}
             </label>`).join("")}
+          <label style="${box}">
+            <input type="checkbox" name="${inputName}_all" ${all ? "checked" : ""}
+              onchange="if (this.checked) document.querySelectorAll('input[name=${inputName}]').forEach(c => c.checked = false)" style="width: 16px; height: 16px; cursor: pointer;" />
+            ${isUz ? "Barcha omborlar" : "Все склады"}
+          </label>
         </div>
         <div style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
-          ${isUz ? "Foydalanuvchi faqat belgilangan omborlarda ishlaydi: Ombor, ishlab chiqarish va sotish. Har ombor 120 va 100 bilan birga beriladi. Hech biri belgilanmasa - barcha omborlar. Admin har doim hammasini ko'radi."
-                 : "Пользователь работает только в отмеченных складах: склад, производство и продажи. Каждый склад даётся вместе (120 и 100). Ничего не отмечено - все склады. Админ всегда видит все."}
+          ${isUz ? "Foydalanuvchi faqat belgilangan omborda ishlaydi: tayyor kafel, xomashyo, aralash, ishlab chiqarish, sotish va xarid. Har ombor 120 va 100 bilan birga beriladi. Admin har doim hammasini ko'radi."
+                 : "Пользователь работает только в отмеченном складе: плитка, сырьё, смешанный склад, производство, продажи и закупки. Каждый склад даётся вместе (120 и 100). Админ всегда видит все."}
         </div>
       </div>`;
   }
@@ -84,6 +93,12 @@ const UsersModule = (() => {
   function checkedSklads(inputName) {
     return Array.from(document.querySelectorAll(`input[name='${inputName}']:checked`))
       .flatMap(el => el.value.split(",").map(v => parseInt(v, 10)));
+  }
+
+  // An Admin needs none; anybody else needs their Ombor or "Barcha omborlar".
+  function omborChosen(inputName, roles) {
+    if (roles.includes("Admin")) return true;
+    return checkedSklads(inputName).length > 0 || !!document.querySelector(`input[name='${inputName}_all']:checked`);
   }
 
   function renderRoleCheckboxes(inputName, selectedRolesStr = "") {
@@ -525,7 +540,7 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
 
             <div style="margin-bottom: 24px;">
               <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">${isUz ? "Biriktirilgan ombor" : "Закреплённый склад"}</label>
-              ${renderSkladCheckboxes("new_user_sklads", [])}
+              ${renderSkladCheckboxes("new_user_sklads", null)}
             </div>
 
             <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -552,6 +567,10 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
       return;
     }
     const role = checkedRoles.join(",");
+    if (!omborChosen("new_user_sklads", checkedRoles)) {
+      showToast(isUz ? "Qaysi omborda ishlashini belgilang (yoki «Barcha omborlar»)" : "Отметьте склад пользователя (или «Все склады»)", "error");
+      return;
+    }
 
     try {
       await API.createUser({
@@ -635,6 +654,10 @@ ${isUz ? "Telegram Bot Foydalanuvchilari" : "Пользователи Telegram �
       return;
     }
     const role = checkedRoles.join(",");
+    if (!omborChosen("edit_user_sklads", checkedRoles)) {
+      showToast(isUz ? "Qaysi omborda ishlashini belgilang (yoki «Barcha omborlar»)" : "Отметьте склад пользователя (или «Все склады»)", "error");
+      return;
+    }
 
     const payload = {
       full_name: fullName,

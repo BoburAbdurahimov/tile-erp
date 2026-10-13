@@ -198,10 +198,12 @@ const MdmModule = {
           </div>
         `;
       } else if (this.currentTab === "warehouses") {
-        // The 4 owner warehouses of the Ombor. Raw-material stores are in "Xomashyo ombori".
+        // Each Ombor (Toxir, Kodir, Istam, Aziz): its tiles (eni 120 and 100) and
+        // its own xomashyo and aralash warehouses.
         const isUz = CURRENT_LANG === 'uz';
-        const res = await API.getSkladWarehouses();
+        const [res, mats] = await Promise.all([API.getSkladWarehouses(), API.getMaterialWarehouses()]);
         const whs = res.warehouses || [];
+        const matWhs = mats.warehouses || [];
         const pcs = isUz ? 'dona' : 'шт';
         tableDiv.innerHTML = `
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;">
@@ -226,6 +228,28 @@ const MdmModule = {
                     <td style="text-align:right;">${formatNumber(w.total_qty, 0, 0)} ${pcs}</td>
                     <td style="text-align:right;">${formatNumber(w.total_metres, 0, 1)} ${isUz ? 'metr' : 'м'}</td>
                     <td style="text-align:right;"><button class="btn btn-secondary btn-sm" onclick="openSkladOwner(${w.sklad_id})">${isUz ? "Ochish" : "Открыть"}</button></td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+          <h3 style="margin: 22px 0 10px; font-size: 16px; color: #0f172a;">${isUz ? "Xomashyo va aralash omborlari" : "Склады сырья и смешанные"}</h3>
+          <div class="table-container" style="overflow-x: auto;">
+            <table class="data-table" id="mdm-material-warehouses-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr>
+                  <th>${isUz ? 'Ombor' : 'Склад'}</th>
+                  <th>${isUz ? 'Kimniki' : 'Владелец'}</th>
+                  <th>${isUz ? 'Turi' : 'Тип'}</th>
+                  <th>${isUz ? 'Kod' : 'Код'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${matWhs.map(w => `
+                  <tr>
+                    <td><strong>${escapeHtml(w.name)}</strong></td>
+                    <td>${escapeHtml(w.owner || (isUz ? 'Umumiy (eski)' : 'Общий (старый)'))}</td>
+                    <td>${w.kind === 'aralash' ? (isUz ? 'Aralash: ehtiyot qism, yordamchi' : 'Смешанный: запчасти') : (isUz ? 'Xomashyo' : 'Сырьё')}</td>
+                    <td style="color:#64748b;">${escapeHtml(w.code)}</td>
                   </tr>`).join("")}
               </tbody>
             </table>

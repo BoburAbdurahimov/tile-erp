@@ -14,6 +14,7 @@ from backend.schemas import (
     ConsumedMaterialResponse, LineExpenseCreate, LineExpenseResponse, LineExpenseItemResponse
 )
 from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope, check_ombor
+from backend.services import material_warehouses as mw
 from backend.services import sklad_service as sklad_svc
 from backend.services.numbering import next_number
 from backend.services.inventory_service import (
@@ -203,11 +204,13 @@ def create_production_order(
     direct_cost_usd = 0.0
     consumed_records = []
 
+    # Raw materials come from the xomashyo warehouse of the Ombor the sheets
+    # go into (Toxir's production uses Toxir's clay).
+    owner = mw.owner_of_sklad(payload.out_sklad_id)
+    wh_id = mw.warehouse_id(db, owner, mw.XOMASHYO) if owner else mw.SHARED[mw.XOMASHYO]
     for c in payload.consumed_materials:
         if c.quantity <= 0:
             continue
-        # Direct production consumed materials strictly deduct from Warehouse 2 (Ishlab chiqarish materiallari)
-        wh_id = 2
         unit_cost = deduct_stock(db, wh_id, c.material_id, c.quantity)
         line_cost = c.quantity * unit_cost
         direct_cost_usd += line_cost
@@ -318,10 +321,14 @@ def get_line_expenses(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
     query = db.query(LineExpense)
+    allowed = mw.allowed_ids(db, scope)
+    if allowed is not None:
+        query = query.filter(LineExpense.warehouse_id.in_(allowed))
     if start_date:
         query = query.filter(LineExpense.date >= start_date)
     if end_date:
@@ -370,9 +377,12 @@ def get_line_expenses(
 def create_line_expense(
     payload: LineExpenseCreate,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
+    wh = db.query(Warehouse).filter(
+        Warehouse.id == mw.warehouse_id(db, mw.pick_owner(scope, payload.ombor), mw.ARALASH)).first()
 
     if not payload.items or len(payload.items) == 0:
         raise HTTPException(status_code=400, detail="Kamida bitta sarf materialini kiritishingiz shart.")
@@ -383,11 +393,11 @@ def create_line_expense(
     total_cost_usd = 0.0
     items_records = []
 
-    # Deduct items strictly from Warehouse 3 (Aralash ombor)
+    # Issued from the Ombor's aralash warehouse
     for it in payload.items:
         if it.quantity <= 0:
             continue
-        unit_cost = deduct_stock(db, 3, it.material_id, it.quantity)
+        unit_cost = deduct_stock(db, wh.id, it.material_id, it.quantity)
         line_cost = it.quantity * unit_cost
         total_cost_usd += line_cost
 
@@ -401,7 +411,7 @@ def create_line_expense(
     expense = LineExpense(
         expense_number=exp_num,
         date=payload.date,
-        warehouse_id=3,
+        warehouse_id=wh.id,
         line_ids_str=line_ids_str,
         total_cost_usd=total_cost_usd,
         status="Tasdiqlandi",
@@ -432,8 +442,8 @@ def create_line_expense(
         id=expense.id,
         expense_number=expense.expense_number,
         date=expense.date,
-        warehouse_id=3,
-        warehouse_name="Aralash ombor",
+        warehouse_id=wh.id,
+        warehouse_name=wh.name,
         line_ids=payload.line_ids,
         line_names=line_names,
         total_cost_usd=round(total_cost_usd, 2),
@@ -447,23 +457,25 @@ def create_line_expense(
 def storno_line_expense(
     expense_id: int,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
     check_action("storno", role)
     expense = db.query(LineExpense).filter(LineExpense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Hujjat topilmadi.")
+    mw.check_warehouse(db, expense.warehouse_id, scope)
 
     if expense.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu hujjat allaqachon storno qilingan.")
 
 
-    # Return materials back to Warehouse 3
+    # Return materials back to the warehouse they were issued from
     for it in expense.items:
         add_stock_with_avg_valuation(
             db=db,
-            warehouse_id=3,
+            warehouse_id=expense.warehouse_id or mw.SHARED[mw.ARALASH],
             material_id=it.material_id,
             quantity=it.quantity,
             unit_price=it.unit_cost_usd,

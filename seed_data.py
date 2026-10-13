@@ -42,6 +42,9 @@ def seed_database():
         wh3 = Warehouse(id=3, code="WH-03", name="Aralash ombor", is_system_default=True, description="Yordamchi materiallar, ehtiyot qismlar va qadoqlash ombori")
         db.add_all([wh1, wh2, wh3])
         db.commit()
+    # Each Ombor owner's own xomashyo and aralash warehouse
+    from backend.services.material_warehouses import ensure_owner_warehouses
+    ensure_owner_warehouses(db)
 
     # 3. Production Lines (5 Lines)
     if not db.query(ProductionLine).first():

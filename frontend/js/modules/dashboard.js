@@ -51,12 +51,21 @@ const DashboardModule = {
 
   async loadData() {
     try {
+      // Only what this user may see: production, Kassa and Moliya each need
+      // their own right, and a missing one leaves its cards out.
+      const canProd = hasModuleAccess("production");
+      const canKassa = hasModuleAccess("kassa");
+      const canFinance = hasModuleAccess("finance");
       const [stats7d, registers, pnl, orders] = await Promise.all([
-        API.get7DayStats(),
-        API.getCashRegisters(),
-        API.getPnL(),
-        API.getProductionOrders()
+        canProd ? API.get7DayStats() : null,
+        canKassa ? API.getCashRegisters() : [],
+        canFinance ? API.getPnL() : null,
+        canProd ? API.getProductionOrders() : []
       ]);
+      ["productionChart", "cash-overview-list", "recent-production-table"].forEach((id, i) => {
+        const card = document.getElementById(id)?.closest(".card");
+        if (card) card.style.display = [canProd, canKassa, canProd][i] ? "" : "none";
+      });
 
       // Render KPIs
       const kpiGrid = document.getElementById("kpi-grid");
@@ -70,12 +79,14 @@ const DashboardModule = {
         const kassaUzsInUsd = kassaUzs / (fxRate || 12850);
         const kassaUsdInUzs = kassaUsd * (fxRate || 12850);
         
-        kpiGrid.innerHTML = `
+        const cards = [];
+        if (stats7d) cards.push(`
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "7 kunlik hajm" : "Объем за 7 дней"}</span>
             <span class="kpi-value">${formatNumber(stats7d.total_7d_pieces, 0, 2)} ${CURRENT_LANG === 'uz' ? 'dona' : 'шт'}</span>
-            <span class="kpi-sub">${CURRENT_LANG === 'uz' ? "Barcha omborlarga" : "На все склады"}</span>
-          </div>
+            <span class="kpi-sub">${(stats7d.owners || []).join(", ")}</span>
+          </div>`);
+        if (canKassa) cards.push(`
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Kassa USD" : "Касса USD"}</span>
             <span class="kpi-value" style="color: #10b981;">$${kassaUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -85,13 +96,18 @@ const DashboardModule = {
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Kassa UZS" : "Касса UZS"}</span>
             <span class="kpi-value" style="color: #2563eb;">${(kassaUzs / 1e6).toFixed(1)} mln</span>
             <span class="kpi-sub">≈ $${kassaUzsInUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-          </div>
+          </div>`);
+        if (pnl) cards.push(`
           <div class="kpi-card">
             <span class="kpi-title">${CURRENT_LANG === 'uz' ? "Joriy oy Sof Foyda" : "Чистая прибыль (мес.)"}</span>
             <span class="kpi-value" style="color: ${pnl.net_profit_usd >= 0 ? '#10b981' : '#ef4444'};">$${pnl.net_profit_usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             <span class="kpi-sub">${CURRENT_LANG === 'uz' ? 'Tushum:' : 'Выручка:'} $${pnl.revenue_usd.toLocaleString()}</span>
-          </div>
-        `;
+          </div>`);
+        // The Ombor's tiles in stock, for whoever works with the Ombor.
+        if (hasModuleAccess("ombor")) {
+          try { cards.push(renderSkladOwnerCards((await API.getSkladWarehouses()).warehouses || [])); } catch (_) {}
+        }
+        kpiGrid.innerHTML = cards.join("");
       }
 
       // Render Cash Overview
@@ -158,7 +174,7 @@ const DashboardModule = {
       }
 
       // Render Simple Canvas Production Chart
-      this.drawChart(stats7d);
+      if (stats7d) this.drawChart(stats7d);
 
     } catch (e) {
       console.error("Dashboard error:", e);
