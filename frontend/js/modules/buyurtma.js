@@ -248,33 +248,60 @@ const OrdersModule = {
     }).join("");
   },
 
-  // Big and plain: who, how much, what, how long is left, and three big buttons.
+  fmtDate(iso) {
+    const d = this.parseLocal(iso);
+    if (!d) return "-";
+    const z = n => String(n).padStart(2, "0");
+    return `${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()}`;
+  },
+
+  // A small card: which GP Ombor, what is sold and how many, and the date.
+  // Tapping it opens the order with everything else (openOrder).
   orderCard(o) {
+    const isUz = this.isUz();
+    const late = this.parseLocal(o.deadline) < new Date();
+    return `
+      <button type="button" onclick="OrdersModule.openOrder(${o.id})"
+        style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:2px solid #e2e8f0;border-radius:14px;padding:14px 16px;
+               background:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,0.05);">
+        <span style="align-self:flex-start;padding:5px 10px;border-radius:9px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:16px;">${escapeHtml(o.sklad_label)}</span>
+        <span style="display:flex;flex-direction:column;gap:4px;">
+          ${o.items.map(it => `
+            <span style="font-size:18px;color:#0f172a;"><b>${it.code}</b> — <b>${formatNumber(it.quantity, 0, 0)}</b> ${isUz ? "ta" : "шт"}</span>`).join("")}
+        </span>
+        <span style="font-size:16px;font-weight:700;color:${late ? "#b91c1c" : "#475569"};">${this.fmtDate(o.deadline)}</span>
+      </button>`;
+  },
+
+  // The whole order: client, money, stock, time left and the actions.
+  openOrder(id) {
+    const o = this.find(id);
+    if (!o) return;
     const isUz = this.isUz();
     const discount = o.discount_amount > 0
       ? `<div style="font-size:14px;color:#64748b;"><s>${this.money(o.subtotal)}</s> −${o.discount_percent ? o.discount_percent + "%" : this.money(o.discount_amount)}</div>`
       : "";
     const bigBtn = "padding:12px 20px;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;";
-    return `
-      <div style="border:2px solid #e2e8f0;border-radius:18px;padding:20px;background:#fff;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 6px rgba(15,23,42,0.05);">
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
-          <div style="min-width:0;">
-            <div style="font-weight:800;color:#0f172a;font-size:24px;line-height:1.2;">${escapeHtml(o.client_name)}</div>
-            <a href="tel:${escapeHtml(o.client_phone)}" style="display:inline-block;margin-top:4px;color:#2563eb;text-decoration:none;font-size:18px;font-weight:600;">${escapeHtml(o.client_phone)}</a>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-weight:800;color:#0f172a;font-size:26px;line-height:1.2;">${this.money(o.total_amount)}</div>
+    showModal(o.client_name, `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <a href="tel:${escapeHtml(o.client_phone)}" style="color:#2563eb;text-decoration:none;font-size:18px;font-weight:700;">${escapeHtml(o.client_phone)}</a>
+          ${o.client_address ? `<div style="color:#475569;font-size:15px;margin-top:2px;">${escapeHtml(o.client_address)}</div>` : ""}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800;color:#0f172a;font-size:24px;">${this.money(o.total_amount)}</div>
             ${discount}
           </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <span style="padding:6px 12px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:16px;">${escapeHtml(o.sklad_label)}</span>
-          ${o.paid_amount > 0 ? this.payBadge(o) : ""}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="padding:6px 12px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:16px;">${escapeHtml(o.sklad_label)}</span>
+            ${o.paid_amount > 0 ? this.payBadge(o) : ""}
+          </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${this.itemChips(o)}</div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <span data-deadline="${o.deadline}" class="order-countdown"
-            style="padding:10px 14px;border-radius:12px;font-weight:800;font-size:18px;"></span>
+            style="padding:10px 14px;border-radius:12px;font-weight:800;font-size:17px;"></span>
           <span style="color:#475569;font-size:16px;">${isUz ? "Muddat" : "Срок"}: <b>${this.fmtDeadline(o.deadline)}</b></span>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -283,7 +310,8 @@ const OrdersModule = {
           <button class="btn btn-secondary" onclick="OrdersModule.openPay(${o.id})" style="${bigBtn}flex:1 1 100px;">${isUz ? "Avans" : "Аванс"}</button>
           <button class="btn btn-secondary" onclick="OrdersModule.cancel(${o.id})" style="${bigBtn}color:#b91c1c;flex:1 1 100px;">${isUz ? "Bekor" : "Отмена"}</button>
         </div>
-      </div>`;
+      </div>`);
+    this.tick();
   },
 
   // What has to be made, one big card per size and Ombor.
@@ -325,7 +353,7 @@ const OrdersModule = {
         <div>
           <h3 style="margin:0 0 14px;font-size:24px;color:#0f172a;">${isUz ? "Ochiq buyurtmalar" : "Открытые заказы"} (${open.length})</h3>
           ${open.length
-            ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:16px;">${open.map(o => this.orderCard(o)).join("")}</div>`
+            ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,160px),1fr));gap:12px;">${open.map(o => this.orderCard(o)).join("")}</div>`
             : `<div style="padding:36px;text-align:center;color:#64748b;background:#fff;border:2px dashed #cbd5e1;border-radius:16px;font-size:18px;">
                  ${isUz ? "Ochiq buyurtma yo'q. Yangi buyurtma uchun yuqoridagi + tugmasini bosing." : "Нет открытых заказов. Для нового заказа нажмите + вверху."}</div>`}
         </div>
@@ -1156,7 +1184,7 @@ const OrdersModule = {
   // ------------------------------------------------------------ timers
 
   tick() {
-    document.querySelectorAll("#orders-root .order-countdown").forEach(el => {
+    document.querySelectorAll("#orders-root .order-countdown, #modal-body .order-countdown").forEach(el => {
       const c = this.countdown(el.dataset.deadline);
       el.textContent = c.text;
       const [bg, fg, bd] = this.toneStyle(c.tone);
