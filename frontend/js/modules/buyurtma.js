@@ -108,9 +108,9 @@ const OrdersModule = {
 
     container.innerHTML = `
       <div id="orders-root" style="display:flex;flex-direction:column;gap:16px;">
-        <div class="card" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-            <div>
+        <div class="card" style="margin:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+            <div style="flex:1;min-width:0;">
               <h2 style="margin:0;font-size:22px;font-weight:700;color:#0f172a;">${isUz ? "Sotuv" : "Продажи"}</h2>
               <p style="margin:4px 0 0;color:#64748b;font-size:13px;">
                 ${isUz ? "Buyurtma → Yetkazib berish → To'lov. Mahsulotlar Ombordan olinadi."
@@ -197,7 +197,7 @@ const OrdersModule = {
           ${isUz
             ? `${urgent.length} ta buyurtmaning muddati 3 kun ichida, lekin omborda yetarli emas. Jami <b>${formatNumber(pieces, 0, 0)} ta</b> ishlab chiqarish kerak.`
             : `У ${urgent.length} заказов срок в течение 3 дней, но на складе не хватает. Нужно произвести <b>${formatNumber(pieces, 0, 0)} шт</b>.`}
-          <a href="javascript:void(0)" onclick="OrdersModule.setStage('orders')" style="color:#c2410c;font-weight:700;margin-left:4px;">
+          <a href="javascript:void(0)" onclick="OrdersModule.showPlan()" style="color:#c2410c;font-weight:700;margin-left:4px;">
             ${isUz ? "Rejani ko'rish" : "Смотреть план"}</a>
         </span>
       </div>`;
@@ -255,22 +255,85 @@ const OrdersModule = {
     return `${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()}`;
   },
 
-  // A small card: which GP Ombor, what is sold and how many, and the date.
+  // Both lists use the same small card: the Ombor on top, size — quantity,
+  // and the date at the bottom; the stripe on the left is red while something
+  // still has to be made and green once the Ombor has it all.
+  card(stripe, onclick, inner) {
+    return `
+      <button type="button" onclick="${onclick}"
+        style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:1px solid #e2e8f0;border-left:6px solid ${stripe};
+               border-radius:14px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+        <span style="align-self:flex-start;padding:4px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:15px;">${inner.sklad}</span>
+        <span style="display:flex;flex-direction:column;gap:2px;">${inner.lines}</span>
+        ${inner.foot}
+      </button>`;
+  },
+
+  sizeLine(code, qty, color) {
+    const isUz = this.isUz();
+    return `<span style="font-size:18px;color:#0f172a;"><b>${code}</b> — <b style="color:${color || "#0f172a"};">${formatNumber(qty, 0, 0)}</b> ${isUz ? "ta" : "шт"}</span>`;
+  },
+
+  cardGrid(cards) {
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:12px;">${cards}</div>`;
+  },
+
   // Tapping it opens the order with everything else (openOrder).
   orderCard(o) {
-    const isUz = this.isUz();
     const late = this.parseLocal(o.deadline) < new Date();
-    return `
-      <button type="button" onclick="OrdersModule.openOrder(${o.id})"
-        style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:2px solid #e2e8f0;border-radius:14px;padding:14px 16px;
-               background:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,0.05);">
-        <span style="align-self:flex-start;padding:5px 10px;border-radius:9px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:16px;">${escapeHtml(o.sklad_label)}</span>
-        <span style="display:flex;flex-direction:column;gap:4px;">
-          ${o.items.map(it => `
-            <span style="font-size:18px;color:#0f172a;"><b>${it.code}</b> — <b>${formatNumber(it.quantity, 0, 0)}</b> ${isUz ? "ta" : "шт"}</span>`).join("")}
-        </span>
-        <span style="font-size:16px;font-weight:700;color:${late ? "#b91c1c" : "#475569"};">${this.fmtDate(o.deadline)}</span>
-      </button>`;
+    return this.card(o.shortfall_pieces > 0 ? "#dc2626" : "#16a34a", `OrdersModule.openOrder(${o.id})`, {
+      sklad: escapeHtml(o.sklad_label),
+      lines: o.items.map(it => this.sizeLine(it.code, it.quantity)).join(""),
+      foot: `<span style="margin-top:auto;font-size:15px;font-weight:700;color:${late ? "#b91c1c" : "#64748b"};">${this.fmtDate(o.deadline)}</span>`,
+    });
+  },
+
+  // One per size and Ombor still to be made; tapping shows which orders need it.
+  planCard(p, i) {
+    const isUz = this.isUz();
+    return this.card("#dc2626", `OrdersModule.openPlan(${i})`, {
+      sklad: escapeHtml(p.sklad_label),
+      lines: this.sizeLine(p.code, p.quantity, "#b91c1c")
+        + `<span style="font-size:15px;font-weight:800;color:#b91c1c;">${isUz ? "yasash kerak" : "произвести"}</span>`,
+      foot: `<span data-deadline="${p.deadline}" data-plain="1" class="order-countdown"
+               style="margin-top:auto;font-weight:800;font-size:15px;"></span>`,
+    });
+  },
+
+  planOrders(p) {
+    return this.open().filter(o => (p.orders || []).includes(o.order_number));
+  },
+
+  openPlan(i) {
+    const p = this.plan[i];
+    if (!p) return;
+    const orders = this.planOrders(p);
+    if (orders.length === 1) return this.openOrder(orders[0].id);
+    const isUz = this.isUz();
+    showModal(`${p.code} — ${formatNumber(p.quantity, 0, 0)} ${isUz ? "ta yasash kerak" : "шт произвести"}`, `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="color:#64748b;font-size:15px;">${isUz ? "Shu buyurtmalar uchun:" : "Для этих заказов:"}</div>
+        ${orders.map(o => {
+          const it = o.items.find(x => x.code === p.code) || o.items[0];
+          return `
+            <button type="button" onclick="OrdersModule.openOrder(${o.id})"
+              style="display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;cursor:pointer;font:inherit;
+                     padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;">
+              <span>
+                <span style="display:block;font-weight:800;font-size:17px;color:#0f172a;">${escapeHtml(o.client_name)}</span>
+                <span style="display:block;color:#64748b;font-size:14px;">${this.fmtDate(o.deadline)}</span>
+              </span>
+              ${it ? this.sizeLine(it.code, it.quantity) : ""}
+            </button>`;
+        }).join("")}
+      </div>`);
+  },
+
+  // The reminder's link: bring the plan into view.
+  showPlan() {
+    if (this.stage !== "orders") this.setStage("orders");
+    const el = document.getElementById("orders-plan");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   },
 
   // The whole order: client, money, stock, time left and the actions.
@@ -314,50 +377,43 @@ const OrdersModule = {
     this.tick();
   },
 
-  // What has to be made, one big card per size and Ombor.
-  planHtml() {
-    const isUz = this.isUz();
-    if (!this.plan.length) {
-      return `<div style="padding:22px;border-radius:16px;background:#f0fdf4;border:2px solid #bbf7d0;color:#166534;font-size:20px;font-weight:800;text-align:center;">
-        ${isUz ? "Hammasi omborda bor. Hech narsa yasash shart emas." : "Всё есть на складе. Ничего производить не нужно."}</div>`;
-    }
+  section(id, title, count, sub, body) {
     return `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px;">
-        ${this.plan.map(p => `
-          <div style="border:2px solid #fecaca;border-left:8px solid #dc2626;border-radius:18px;padding:18px 20px;background:#fff;display:flex;flex-direction:column;gap:10px;">
-            <span style="align-self:flex-start;padding:6px 12px;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:800;font-size:17px;">${escapeHtml(p.sklad_label)}</span>
-            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
-              <span style="font-size:44px;font-weight:900;color:#b91c1c;line-height:1;">${formatNumber(p.quantity, 0, 0)}</span>
-              <span style="font-size:20px;font-weight:800;color:#b91c1c;">${isUz ? "ta yasash kerak" : "шт произвести"}</span>
-            </div>
-            <div style="font-size:20px;color:#0f172a;">${isUz ? "O'lcham" : "Размер"}: <b>${p.code}</b>
-              <span style="color:#64748b;font-size:16px;">(${p.length}×${p.width})</span></div>
-            <span data-deadline="${p.deadline}" class="order-countdown"
-              style="align-self:flex-start;padding:10px 14px;border-radius:12px;font-weight:800;font-size:18px;"></span>
-          </div>`).join("")}
+      <div id="${id}" class="card" style="margin:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,0.05);scroll-margin-top:90px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <h3 style="margin:0;font-size:22px;color:#0f172a;">${title}</h3>
+          <span style="padding:2px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:800;font-size:15px;">${count}</span>
+        </div>
+        <div style="margin:4px 0 14px;color:#64748b;font-size:14px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;">${sub}</div>
+        ${body}
       </div>`;
+  },
+
+  dot(color, label) {
+    return `<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:${color};"></span>${label}</span>`;
   },
 
   ordersHtml() {
     const isUz = this.isUz();
     const open = this.open();
-    return `
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <div class="card" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;">
-          <h3 style="margin:0 0 4px;font-size:24px;color:#0f172a;">${isUz ? "Nima yasash kerak" : "Что произвести"}</h3>
-          <p style="margin:0 0 16px;color:#475569;font-size:16px;">
-            ${isUz ? "Buyurtmalar uchun omborda yetmayotgan kafellar." : "Плитки, которых не хватает на складе для заказов."}
-          </p>
-          ${this.planHtml()}
-        </div>
-        <div>
-          <h3 style="margin:0 0 14px;font-size:24px;color:#0f172a;">${isUz ? "Ochiq buyurtmalar" : "Открытые заказы"} (${open.length})</h3>
-          ${open.length
-            ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,160px),1fr));gap:12px;">${open.map(o => this.orderCard(o)).join("")}</div>`
-            : `<div style="padding:36px;text-align:center;color:#64748b;background:#fff;border:2px dashed #cbd5e1;border-radius:16px;font-size:18px;">
-                 ${isUz ? "Ochiq buyurtma yo'q. Yangi buyurtma uchun yuqoridagi + tugmasini bosing." : "Нет открытых заказов. Для нового заказа нажмите + вверху."}</div>`}
-        </div>
-      </div>`;
+    const orders = this.section("orders-open", isUz ? "Ochiq buyurtmalar" : "Открытые заказы", open.length,
+      open.length
+        ? this.dot("#16a34a", isUz ? "Omborda bor" : "Есть на складе") + this.dot("#dc2626", isUz ? "Yasash kerak" : "Нужно произвести")
+        : (isUz ? "Yangi buyurtma uchun yuqoridagi + tugmasini bosing." : "Для нового заказа нажмите + вверху."),
+      open.length
+        ? this.cardGrid(open.map(o => this.orderCard(o)).join(""))
+        : `<div style="padding:22px;text-align:center;color:#64748b;border:2px dashed #cbd5e1;border-radius:12px;font-size:16px;">
+             ${isUz ? "Ochiq buyurtma yo'q" : "Нет открытых заказов"}</div>`);
+    const plan = this.section("orders-plan", isUz ? "Nima yasash kerak" : "Что произвести",
+      formatNumber(this.plan.reduce((s, p) => s + p.quantity, 0), 0, 0) + (isUz ? " ta" : " шт"),
+      this.plan.length
+        ? (isUz ? "Omborda yetmayotgan kafellar. Bossangiz — qaysi buyurtma uchun." : "Чего не хватает на складе. Нажмите — для какого заказа.")
+        : (isUz ? "Buyurtmalar uchun omborda yetmayotgan kafellar." : "Чего не хватает на складе для заказов."),
+      this.plan.length
+        ? this.cardGrid(this.plan.map((p, i) => this.planCard(p, i)).join(""))
+        : `<div style="padding:14px 16px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:16px;font-weight:700;">
+             ${isUz ? "Hammasi omborda bor — hech narsa yasash shart emas." : "Всё есть на складе — ничего производить не нужно."}</div>`);
+    return `<div style="display:flex;flex-direction:column;gap:16px;">${orders}${plan}</div>`;
   },
 
   // ------------------------------------------------------------ stage 2
@@ -1188,8 +1244,9 @@ const OrdersModule = {
       const c = this.countdown(el.dataset.deadline);
       el.textContent = c.text;
       const [bg, fg, bd] = this.toneStyle(c.tone);
-      el.style.background = bg;
       el.style.color = fg;
+      if (el.dataset.plain) return;           // small cards: coloured text, no box
+      el.style.background = bg;
       el.style.border = `1px solid ${bd}`;
     });
   },
