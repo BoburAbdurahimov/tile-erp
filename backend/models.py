@@ -59,6 +59,22 @@ class MDMCounterparty(Base):
     is_archived = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class SupplierPrice(Base):
+    """What a supplier sells us and at what price, set on the supplier in MDM.
+    A purchase takes its price from here, so Sotib olish asks no price."""
+    __tablename__ = "supplier_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    counterparty_id = Column(Integer, ForeignKey("mdm_counterparties.id"), nullable=False, index=True)
+    material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False, index=True)
+    price = Column(Float, nullable=False)                  # per material unit
+    currency = Column(String(10), nullable=False, default="UZS")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("counterparty_id", "material_id", name="uq_supplier_price"),)
+
+    material = relationship("MDMMaterial")
+
 class Warehouse(Base):
     __tablename__ = "warehouses"
     

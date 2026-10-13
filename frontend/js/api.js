@@ -129,6 +129,8 @@ const API = {
   },
   createCounterparty: (data) => apiRequest("/mdm/counterparties", "POST", data),
   updateCounterparty: (id, data) => apiRequest(`/mdm/counterparties/${id}`, "PUT", data),
+  getSupplierPrices: (id) => apiRequest(`/mdm/counterparties/${id}/prices`),
+  setSupplierPrices: (id, items) => apiRequest(`/mdm/counterparties/${id}/prices`, "PUT", items),
   archiveCounterparty: (id) => apiRequest(`/mdm/counterparties/${id}/archive`, "POST"),
   deleteCounterparty: (id) => apiRequest(`/mdm/counterparties/${id}`, "DELETE"),
   getWarehouses: () => apiRequest("/mdm/warehouses"),

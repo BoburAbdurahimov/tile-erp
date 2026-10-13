@@ -7,7 +7,7 @@ from sqlalchemy import func
 from backend.database import get_db
 from backend.models import (
     Purchase, PurchaseItem, Sale, SaleItem,
-    MDMCounterparty, MDMMaterial, Warehouse
+    MDMCounterparty, MDMMaterial, Warehouse, SupplierPrice
 )
 from backend.schemas import (
     PurchaseCreate, PurchaseResponse, PurchaseItemResponse,
@@ -18,7 +18,7 @@ from backend.services import sklad_service as sklad_svc
 from backend.services.inventory_service import (
     add_stock_with_avg_valuation, deduct_stock
 )
-from backend.services.currency_service import get_exchange_rate_for_date
+from backend.services.currency_service import get_exchange_rate_for_date, convert_amount
 from backend.services.numbering import next_number
 
 router = APIRouter(prefix="/savdo", tags=["MODUL 6 & 7: SOTIB OLISH VA SOTISH (Trade)"])
@@ -104,13 +104,39 @@ def create_purchase(
 
     pur_num = next_number(db, Purchase.purchase_number, f"PUR-{payload.date.strftime('%Y%m%d')}-")
 
+    # A line without a price takes the supplier's price for that material
+    # from MDM, so Sotib olish only asks who, what, how many and when.
+    price_list = {p.material_id: p for p in
+                  db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == supplier.id).all()}
+    lines = []                                   # (input, price, its currency or None = the purchase's)
+    for it in payload.items:
+        if it.quantity <= 0:
+            continue
+        if it.unit_price is not None and it.unit_price > 0:
+            lines.append((it, it.unit_price, None))
+            continue
+        if it.sklad_id or not it.material_id:
+            raise HTTPException(status_code=400, detail="Bu qator uchun narx kiritilmagan.")
+        listed = price_list.get(it.material_id)
+        if not listed:
+            mat = db.query(MDMMaterial).filter(MDMMaterial.id == it.material_id).first()
+            raise HTTPException(status_code=400, detail=(
+                f"{supplier.name} uchun {mat.name if mat else 'bu material'} narxi MDM da biriktirilmagan. "
+                "MDM > Yetkazib beruvchilar da material va narxini qo'shing."))
+        lines.append((it, listed.price, listed.currency))
+    if not lines:
+        raise HTTPException(status_code=400, detail="Xarid qilish uchun kamida bitta tovar/material va uning miqdori kerak.")
+
+    currency = payload.currency or next((cur for _, _, cur in lines if cur), None) or "UZS"
+
     total_amount = 0.0
     purchase_items = []
-    
-    for it in payload.items:
-        if it.quantity <= 0 or it.unit_price <= 0:
-            continue
-        line_tot = it.quantity * it.unit_price
+    header_warehouse = payload.warehouse_id
+
+    for it, unit_price, price_currency in lines:
+        if price_currency and price_currency != currency:
+            unit_price = convert_amount(unit_price, price_currency, currency, payload.date, db)
+        line_tot = it.quantity * unit_price
         total_amount += line_tot
 
         if it.sklad_id:
@@ -131,8 +157,8 @@ def create_purchase(
 
             purchase_items.append(PurchaseItem(
                 material_id=None, sklad_id=it.sklad_id, length=length, width=width,
-                quantity=it.quantity, unit_price=it.unit_price,
-                total_price=line_tot, currency=payload.currency
+                quantity=it.quantity, unit_price=unit_price,
+                total_price=line_tot, currency=currency
             ))
             sklad_svc.receive_stock(
                 db,
@@ -149,29 +175,39 @@ def create_purchase(
                 status_code=400,
                 detail="Har bir qatorda material yoki ombor o'lchami ko'rsatilishi kerak."
             )
+        material = db.query(MDMMaterial).filter(MDMMaterial.id == it.material_id).first()
+        if not material:
+            raise HTTPException(status_code=404, detail="Material topilmadi.")
+        # Not chosen in the form: spare parts go to the Aralash ombor, the rest
+        # (raw and auxiliary materials) to the production materials warehouse.
+        warehouse_id = payload.warehouse_id or (3 if material.category == "Ehtiyot qism" else 2)
+        if header_warehouse and warehouse_id != header_warehouse:
+            # Storno takes a purchase back from one warehouse.
+            raise HTTPException(status_code=400, detail="Ehtiyot qism va xomashyoni alohida xarid qiling.")
+        header_warehouse = warehouse_id
 
         purchase_items.append(PurchaseItem(
             material_id=it.material_id,
             quantity=it.quantity,
-            unit_price=it.unit_price,
+            unit_price=unit_price,
             total_price=line_tot,
-            currency=payload.currency
+            currency=currency
         ))
 
         # Add to warehouse and recalculate moving AVG price
         add_stock_with_avg_valuation(
             db=db,
-            warehouse_id=payload.warehouse_id,
+            warehouse_id=warehouse_id,
             material_id=it.material_id,
             quantity=it.quantity,
-            unit_price=it.unit_price,
-            currency=payload.currency,
+            unit_price=unit_price,
+            currency=currency,
             trans_date=payload.date
         )
 
     # Update supplier balance (we owe them more -> negative balance or increased payable)
     rate = get_exchange_rate_for_date(db, payload.date)
-    if payload.currency == "USD":
+    if currency == "USD":
         supplier.current_balance_usd -= total_amount
         supplier.current_balance_uzs -= total_amount * rate
     else:
@@ -181,9 +217,9 @@ def create_purchase(
     purchase = Purchase(
         purchase_number=pur_num,
         supplier_id=payload.supplier_id,
-        warehouse_id=payload.warehouse_id,
+        warehouse_id=header_warehouse or 2,
         date=payload.date,
-        currency=payload.currency,
+        currency=currency,
         total_amount=total_amount,
         status="Tasdiqlandi",
         description=payload.description,
