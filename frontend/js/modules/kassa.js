@@ -181,7 +181,7 @@ const KassaModule = {
                   </td>
                   <td data-sort-value="${tx.description || ''}">${tr(tx.description) || '-'}</td>
                   <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
-                    ${CURRENT_ROLE === 'Admin' ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id}, ${jsArg(tx.category)})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
+                    ${canDo('delete') ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id}, ${jsArg(tx.category)})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                   </td>
                 </tr>
               `;

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_username, get_current_user_role, check_permission
+from backend.api.auth import get_current_username, get_current_user_role, check_permission, check_action
 from backend.models import OtherExpense, CashRegister, CashTransaction, MDMCounterparty
 from backend.services.numbering import next_number
 
@@ -154,6 +154,7 @@ def create_expense(
 def cancel_expense(expense_id: int, db: Session = Depends(get_db),
                    role: str = Depends(get_current_user_role)):
     check_permission("kassa", role)
+    check_action("storno", role)
     exp = db.query(OtherExpense).filter(OtherExpense.id == expense_id).first()
     if not exp:
         raise HTTPException(status_code=404, detail="Xarajat topilmadi.")

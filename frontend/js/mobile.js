@@ -107,7 +107,7 @@ const MobileUI = (() => {
   }
 
   function labelTable(table) {
-    if (table.id === "sklad-matrix-table" || table.classList.contains("no-cards")) return;
+    if (table.classList.contains("sklad-matrix-table") || table.classList.contains("no-cards")) return;
     if (table.parentElement && table.parentElement.closest("table")) return;    // nested table
     if (table.querySelector(":scope > tbody > tr > [rowspan]:not([rowspan='1'])")) return;
     const labels = headerLabels(table);

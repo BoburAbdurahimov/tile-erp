@@ -651,10 +651,16 @@ const OrdersModule = {
             <input id="ord-address" style="${field}" placeholder="${isUz ? "ixtiyoriy" : "необязательно"}"></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
-          <div><label style="${label}">${isUz ? "Ombor" : "Склад"} *</label>
-            <select id="ord-sklad" style="${field}" onchange="OrdersModule.refreshDraft()">
-              ${this.config.warehouses.map(w => `<option value="${w.id}" ${w.id === 3 ? "selected" : ""}>${w.name} — eni ${w.eni}</option>`).join("")}
-            </select></div>
+          <div style="display:grid;grid-template-columns:1fr 90px;gap:6px;">
+            <div><label style="${label}">${isUz ? "Ombor" : "Склад"} *</label>
+              <select id="ord-owner" style="${field}" onchange="OrdersModule.refreshDraft()">
+                ${[...new Set(this.config.warehouses.map(w => w.name))].map(n => `<option value="${escapeHtml(n)}" ${n === "Kodir" ? "selected" : ""}>${escapeHtml(n)}</option>`).join("")}
+              </select></div>
+            <div><label style="${label}">${isUz ? "Eni" : "Ширина"} *</label>
+              <select id="ord-eni" style="${field}" onchange="OrdersModule.refreshDraft()">
+                ${[...new Set(this.config.warehouses.map(w => w.eni))].map(e => `<option value="${e}">${e}</option>`).join("")}
+              </select></div>
+          </div>
           <div><label style="${label}">${isUz ? "Narx turi" : "Тип цены"} *</label>
             <select id="ord-selltype" style="${field}" onchange="OrdersModule.refreshDraft()">
               <option value="metr">${isUz ? "Metr bo'yicha" : "За метр"}</option>
@@ -691,9 +697,15 @@ const OrdersModule = {
     this.refreshDraft();
   },
 
-  draftSklad() { return parseInt(document.getElementById("ord-sklad")?.value || "3", 10); },
+  // The Ombor (owner) and its eni make the sklad the order is taken on.
+  draftSklad() {
+    const owner = document.getElementById("ord-owner")?.value;
+    const eni = this.draftEni();
+    const w = this.config.warehouses.find(x => x.name === owner && x.eni === eni) || this.config.warehouses[0];
+    return w ? w.id : 3;
+  },
   draftSellType() { return document.getElementById("ord-selltype")?.value || "metr"; },
-  draftEni() { return (this.config.warehouses.find(w => w.id === this.draftSklad()) || { eni: 120 }).eni; },
+  draftEni() { return parseInt(document.getElementById("ord-eni")?.value || "120", 10); },
 
   decode(code) {
     const c = parseInt(code, 10);

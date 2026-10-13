@@ -37,10 +37,14 @@ ROLE_PERMISSIONS = {
     "Moliya": ["moliya"],
     "MDM (Spravochniklar)": ["mdm"],
     "MDM": ["mdm"],
+    # Rights on top of a module: deleting a record, and storno (taking back a
+    # purchase, sale, production, payment or expense).
+    "O'chirish": ["delete"],
+    "Storno": ["storno"],
 
     # Legacy role aliases
-    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
-    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app", "tarix"],
+    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app", "tarix", "delete", "storno"],
+    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app", "tarix", "delete", "storno"],
     "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
     "Omborchi": ["dashboard", "ombor", "mdm", "zakup", "mini_app"],
     "Kassir": ["dashboard", "kassa", "kontragentlar", "mini_app"],
@@ -89,10 +93,16 @@ def get_current_username(user: User = Depends(get_current_user)) -> str:
 
 SKLAD_IDS = [c["id"] for c in SKLAD_CONFIG]   # 1..8: Toxir 120, Toxir 100, Kodir 120, ...
 
+def whole_ombors(ids: List[int]) -> List[int]:
+    """An Ombor (Toxir, Kodir, Istam, Aziz) is given as a whole: both of its
+    sklads, eni 120 and 100. [3] -> [3, 4]."""
+    owners = {c["name"] for c in SKLAD_CONFIG if c["id"] in ids}
+    return sorted(c["id"] for c in SKLAD_CONFIG if c["name"] in owners)
+
 def parse_sklads(value: Optional[str]) -> Optional[List[int]]:
     """'3,4' -> [3, 4]; empty -> None (every sklad)."""
     ids = [int(x) for x in str(value or "").split(",") if x.strip().isdigit()]
-    return ids or None
+    return whole_ombors(ids) or None
 
 def get_ombor_scope(user: User = Depends(get_current_user)) -> Optional[List[int]]:
     """The Ombor sklads this user is limited to, or None for all of them.
@@ -101,13 +111,26 @@ def get_ombor_scope(user: User = Depends(get_current_user)) -> Optional[List[int
         return None
     return parse_sklads(user.ombor_sklads)
 
+def ombor_names(ids: List[int]) -> str:
+    seen = []
+    for c in SKLAD_CONFIG:
+        if c["id"] in ids and c["name"] not in seen:
+            seen.append(c["name"])
+    return ", ".join(seen)
+
+def check_ombor(sklad_id: Optional[int], scope: Optional[List[int]]):
+    """A user tied to some Ombors moves goods only in them (Ombor, ishlab
+    chiqarish, sotish). scope None = every Ombor."""
+    if scope is not None and sklad_id not in scope:
+        raise HTTPException(status_code=403, detail=f"Sizga faqat shu omborlar biriktirilgan: {ombor_names(scope)}.")
+
 def _clean_sklads(ids: Optional[List[int]]) -> Optional[str]:
     """[] clears the limit; otherwise every id must be a known sklad."""
     ids = sorted(set(ids or []))
     bad = [i for i in ids if i not in SKLAD_IDS]
     if bad:
         raise HTTPException(status_code=400, detail=f"Bunday ombor yo'q: {bad}.")
-    return ",".join(str(i) for i in ids) or None
+    return ",".join(str(i) for i in whole_ombors(ids)) or None
 
 def check_permission(module: str, role_str: str):
     roles = parse_roles(role_str)
@@ -119,6 +142,18 @@ def check_permission(module: str, role_str: str):
             status_code=403,
             detail=f"Sizning rollaringiz ({role_str}) uchun '{module}' moduliga kirish ruxsati berilmagan!"
         )
+
+ACTION_NAMES = {"delete": "O'chirish", "storno": "Storno"}
+
+def check_action(action: str, role_str: str):
+    """Deleting and storno need their own right (\"O'chirish\", \"Storno\"),
+    besides the module the record belongs to. Admins have both."""
+    if is_admin(role_str) or action in get_combined_permissions(role_str):
+        return
+    raise HTTPException(
+        status_code=403,
+        detail=f"Sizda \"{ACTION_NAMES[action]}\" ruxsati yo'q. Admin uni Foydalanuvchilar bo'limida berishi mumkin.",
+    )
 
 # ==================== SCHEMAS ====================
 class LoginRequest(BaseModel):
@@ -249,7 +284,9 @@ def list_roles():
         {"role": "Sotib olish (Zakup)", "name": "Sotib olish (Zakup)", "desc": "Xaridlar va ta'minot"},
         {"role": "Sotish (Realizatsiya)", "name": "Sotish (Realizatsiya)", "desc": "Tayyor kafel sotish"},
         {"role": "Moliya & PnL", "name": "Moliya & PnL", "desc": "Foyda-zarar va moliyaviy hisobotlar"},
-        {"role": "MDM (Spravochniklar)", "name": "MDM (Spravochniklar)", "desc": "Kataloglar va narxlar"}
+        {"role": "MDM (Spravochniklar)", "name": "MDM (Spravochniklar)", "desc": "Kataloglar va narxlar"},
+        {"role": "O'chirish", "name": "O'chirish", "desc": "Ruxsat berilgan modullarda yozuvlarni o'chirish"},
+        {"role": "Storno", "name": "Storno", "desc": "Xarid, sotuv, ishlab chiqarish, to'lov va xarajatni storno / bekor qilish"}
     ]
 
 @router.get("/current")

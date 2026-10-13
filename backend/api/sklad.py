@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission, get_ombor_scope
+from backend.api.auth import get_current_user_role, check_permission, get_ombor_scope, check_ombor, get_combined_permissions
 from backend.models import (
     SKLAD_CONFIG, SKLAD_LENGTHS, SKLAD_WIDTHS,
     SKLAD_OP_IN, SKLAD_OP_OUT,
@@ -63,9 +63,7 @@ def _allowed(scope: Optional[List[int]]) -> Optional[List[int]]:
 def _check_sklad(sklad_id: int, scope: Optional[List[int]]):
     if not svc.get_config(sklad_id):
         raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
-    if scope and sklad_id not in scope:
-        names = ", ".join(svc.sklad_label(i) for i in scope)
-        raise HTTPException(status_code=403, detail=f"Sizga faqat shu omborlar biriktirilgan: {names}.")
+    check_ombor(sklad_id, scope or None)
 
 
 def _guard(fn):
@@ -81,7 +79,9 @@ def _guard(fn):
 @router.get("/config")
 def get_sklad_config(role: str = Depends(get_current_user_role),
                      scope: Optional[List[int]] = Depends(get_ombor_scope)):
-    check_permission("ombor", role)
+    # Sotish and Ishlab chiqarish pick an Ombor from this list too.
+    if not any(m in get_combined_permissions(role) for m in ("ombor", "sotish", "ishlab_chiqarish", "zakup")):
+        check_permission("ombor", role)
     allowed = _allowed(scope)
     return {
         "warehouses": [c for c in SKLAD_CONFIG if allowed is None or c["id"] in allowed],

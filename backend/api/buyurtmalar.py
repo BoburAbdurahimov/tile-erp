@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission, is_admin
+from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope, check_ombor
 from backend.models import SELL_TYPE_METR, PAY_CASH
 from backend.services import order_service as svc
 from backend.services import demo_service
@@ -72,6 +72,17 @@ def _guard(fn):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _mine(rows: list, scope: Optional[List[int]]) -> list:
+    """Only the rows of the Ombors the user is tied to (scope None = all)."""
+    return rows if scope is None else [r for r in rows if r.get("sklad_id") in scope]
+
+
+def _check_order(db: Session, order_id: int, scope: Optional[List[int]]) -> dict:
+    o = _guard(lambda: svc.get_order(db, order_id))
+    check_ombor(o["sklad_id"], scope)
+    return o
+
+
 def _check_any(role: str, *modules: str):
     """Pass if the role may use any one of the modules."""
     last = None
@@ -91,23 +102,26 @@ def list_orders(
     status: Optional[str] = Query(None, description="Yangi | Yetkazildi | Bekor"),
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("sotish", role)
-    return {"orders": svc.list_orders(db, status=status)}
+    return {"orders": _mine(svc.list_orders(db, status=status), scope)}
 
 
 @router.get("/production-plan")
-def production_plan(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+def production_plan(db: Session = Depends(get_db), role: str = Depends(get_current_user_role),
+                    scope: Optional[List[int]] = Depends(get_ombor_scope)):
     """Sizes open orders still need produced, nearest deadline first."""
     _check_any(role, "sotish", "ishlab_chiqarish", "ombor")
-    return {"plan": svc.production_plan(db)}
+    return {"plan": _mine(svc.production_plan(db), scope)}
 
 
 @router.get("/products")
-def ombor_products(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+def ombor_products(db: Session = Depends(get_db), role: str = Depends(get_current_user_role),
+                   scope: Optional[List[int]] = Depends(get_ombor_scope)):
     """Finished goods (tayyor mahsulot) as held in the Ombor."""
     _check_any(role, "sotish", "mdm", "ombor")
-    return {"products": svc.ombor_products(db)}
+    return {"products": _mine(svc.ombor_products(db), scope)}
 
 
 @router.get("/usd-rate")
@@ -134,15 +148,19 @@ def clear_demo(db: Session = Depends(get_db), role: str = Depends(get_current_us
 
 @router.get("/{order_id}/delivery-options")
 def delivery_options(order_id: int, db: Session = Depends(get_db),
-                     role: str = Depends(get_current_user_role)):
+                     role: str = Depends(get_current_user_role), scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("sotish", role)
-    return _guard(lambda: svc.delivery_options(db, order_id))
+    _check_order(db, order_id, scope)
+    res = _guard(lambda: svc.delivery_options(db, order_id))
+    res["options"] = _mine(res["options"], scope)
+    return res
 
 
 @router.get("/{order_id}")
-def get_order(order_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+def get_order(order_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role),
+              scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("sotish", role)
-    return _guard(lambda: svc.get_order(db, order_id))
+    return _check_order(db, order_id, scope)
 
 
 # ==================== WRITES ====================
@@ -158,8 +176,9 @@ def preview(payload: OrderPreview, role: str = Depends(get_current_user_role)):
 
 @router.post("")
 def create_order(payload: OrderCreate, db: Session = Depends(get_db),
-                 role: str = Depends(get_current_user_role)):
+                 role: str = Depends(get_current_user_role), scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("sotish", role)
+    check_ombor(payload.sklad_id, scope)
     data = payload.model_dump()
     # Stored as local wall-clock time; drop any offset the browser sent.
     data["deadline"] = payload.deadline.replace(tzinfo=None)
@@ -169,8 +188,11 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db),
 
 @router.post("/{order_id}/deliver")
 def deliver(order_id: int, payload: DeliverRequest, db: Session = Depends(get_db),
-            role: str = Depends(get_current_user_role)):
+            role: str = Depends(get_current_user_role), scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("sotish", role)
+    _check_order(db, order_id, scope)
+    if payload.sklad_id:
+        check_ombor(payload.sklad_id, scope)
     _guard(lambda: svc.deliver_order(
         db, order_id, payload.car_number, payload.driver_name,
         payload.driver_phone, payload.note, created_by=role,
@@ -181,8 +203,9 @@ def deliver(order_id: int, payload: DeliverRequest, db: Session = Depends(get_db
 
 @router.post("/{order_id}/pay")
 def pay(order_id: int, payload: PayRequest, db: Session = Depends(get_db),
-        role: str = Depends(get_current_user_role)):
+        role: str = Depends(get_current_user_role), scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("sotish", role)
+    _check_order(db, order_id, scope)
     _guard(lambda: svc.pay_order(
         db, order_id, payload.amount, payload.method,
         payload.paid_date, payload.note, created_by=role,
@@ -193,17 +216,20 @@ def pay(order_id: int, payload: PayRequest, db: Session = Depends(get_db),
 
 @router.post("/{order_id}/payments/{payment_id}/cancel")
 def cancel_payment(order_id: int, payment_id: int, db: Session = Depends(get_db),
-                   role: str = Depends(get_current_user_role)):
-    """Admin only, like deleting a Kassa transaction: it takes money out of the Kassa."""
+                   role: str = Depends(get_current_user_role), scope: Optional[List[int]] = Depends(get_ombor_scope)):
+    """Needs the Storno right: it takes money back out of the Kassa."""
     check_permission("sotish", role)
-    if not is_admin(role):
-        raise HTTPException(status_code=403, detail="To'lovni bekor qilish faqat Admin uchun.")
+    check_action("storno", role)
+    _check_order(db, order_id, scope)
     _guard(lambda: svc.cancel_payment(db, order_id, payment_id))
     return svc.get_order(db, order_id)
 
 
 @router.post("/{order_id}/cancel")
-def cancel(order_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
+def cancel(order_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role),
+           scope: Optional[List[int]] = Depends(get_ombor_scope)):
     check_permission("sotish", role)
+    check_action("storno", role)
+    _check_order(db, order_id, scope)
     _guard(lambda: svc.cancel_order(db, order_id))
     return svc.get_order(db, order_id)

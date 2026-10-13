@@ -285,6 +285,14 @@ function hasModuleAccess(moduleName) {
   return false;
 }
 
+// Deleting and storno are rights of their own ("O'chirish", "Storno"), on top
+// of the module. The old all-round roles keep both.
+function canDo(action) {
+  const roles = getUserRoles();
+  if (roles.some(r => ["Admin", "Ish boshqaruvchi", "Direktor"].includes(r))) return true;
+  return roles.includes(action === "delete" ? "O'chirish" : "Storno");
+}
+
 function updateUserDisplay() {
   const roles = getUserRoles();
   const isAdmin = roles.includes("Admin");
@@ -321,6 +329,10 @@ function updateUserDisplay() {
 
   const logoutLabel = document.getElementById("header-logout-label");
   if (logoutLabel) logoutLabel.textContent = CURRENT_LANG === "uz" ? "Chiqish" : "Выйти";
+
+  // Delete / storno buttons stay hidden without the right (see style.css).
+  document.body.classList.toggle("no-delete", !canDo("delete"));
+  document.body.classList.toggle("no-storno", !canDo("storno"));
 
   // Filter Odoo top parallel navigation tabs based on assigned roles
   document.querySelectorAll(".odoo-nav-tab").forEach(tab => {

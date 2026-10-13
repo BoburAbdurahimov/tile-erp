@@ -13,7 +13,7 @@ from backend.schemas import (
     PurchaseCreate, PurchaseResponse, PurchaseItemResponse,
     SaleCreate, SaleResponse, SaleItemResponse
 )
-from backend.api.auth import get_current_user_role, check_permission, is_admin
+from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope, check_ombor
 from backend.services import sklad_service as sklad_svc
 from backend.services.inventory_service import (
     add_stock_with_avg_valuation, deduct_stock
@@ -91,7 +91,8 @@ def get_purchases(
 def create_purchase(
     payload: PurchaseCreate,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("zakup", role)
     
@@ -144,6 +145,7 @@ def create_purchase(
             # materials cannot: clay and glaze have no length or width.
             if not sklad_svc.get_config(it.sklad_id):
                 raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
+            check_ombor(it.sklad_id, scope)
             try:
                 if it.code is not None:
                     length, width = sklad_svc.decode_size(int(it.code))
@@ -238,6 +240,7 @@ def storno_purchase(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("zakup", role)
+    check_action("storno", role)
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
         raise HTTPException(status_code=404, detail="Xarid topilmadi.")
@@ -286,9 +289,8 @@ def delete_purchase(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if is_admin(role) else "zakup", role)
-    if not is_admin(role):
-        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    check_permission("zakup", role)
+    check_action("delete", role)
     purchase = db.query(Purchase).filter(Purchase.id == purchase_id).first()
     if not purchase:
         raise HTTPException(status_code=404, detail="Xarid hujjati topilmadi.")
@@ -436,6 +438,7 @@ def storno_sale(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("sotish", role)
+    check_action("storno", role)
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Sotuv topilmadi.")
@@ -492,9 +495,8 @@ def delete_sale(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("admin_tools" if is_admin(role) else "sotish", role)
-    if not is_admin(role):
-        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    check_permission("sotish", role)
+    check_action("delete", role)
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Sotuv hujjati topilmadi.")

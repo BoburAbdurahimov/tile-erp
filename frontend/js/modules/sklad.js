@@ -13,8 +13,8 @@
 const SkladModule = {
   config: null,
   warehouses: [],
-  currentSkladId: 3,
-  matrix: null,
+  currentSkladId: 3,         // the chosen Ombor is the owner of this sklad
+  matrices: [],              // both of its sklads (eni 120 and 100), shown together
   movements: [],
   view: "matrix",           // matrix | movements | stats
   sellLines: [],
@@ -74,10 +74,18 @@ const SkladModule = {
       if (this.warehouses.length && !this.warehouses.some(w => w.sklad_id === this.currentSkladId)) {
         this.currentSkladId = this.warehouses[0].sklad_id;
       }
-      this.matrix = await API.getSkladMatrix(this.currentSkladId);
+      this.matrices = await this.fetchMatrices();
     } catch (e) {
       showToast(e.message, "error");
     }
+  },
+
+  // An Ombor is its owner's two sklads: Toxir = Toxir 120 + Toxir 100.
+  ownerName(skladId) { return (this.warehouses.find(w => w.sklad_id === skladId) || {}).name; },
+  ownerSklads(name) { return this.warehouses.filter(w => w.name === name); },
+
+  fetchMatrices() {
+    return Promise.all(this.ownerSklads(this.ownerName(this.currentSkladId)).map(w => API.getSkladMatrix(w.sklad_id)));
   },
 
   async setView(v) {
@@ -114,36 +122,40 @@ const SkladModule = {
   async selectSklad(id) {
     this.currentSkladId = id;
     try {
-      this.matrix = await API.getSkladMatrix(id);
-      const [whs] = await Promise.all([API.getSkladWarehouses()]);
+      const whs = await API.getSkladWarehouses();
       this.warehouses = whs.warehouses || [];
+      this.matrices = await this.fetchMatrices();
     } catch (e) { showToast(e.message, "error"); }
     await this.setView(this.view);
   },
 
-  // ---------- warehouse picker ----------
+  // ---------- Ombor picker: the 4 owners ----------
   picker() {
     const isUz = CURRENT_LANG === "uz";
+    const current = this.ownerName(this.currentSkladId);
     return `
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
-        ${this.warehouses.map(w => {
-          const on = w.sklad_id === this.currentSkladId;
-          return `<button class="btn btn-sm" onclick="SkladModule.selectSklad(${w.sklad_id})"
-            style="padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        ${groupSkladOwners(this.warehouses).map(o => {
+          const on = o.name === current;
+          return `<button class="btn btn-sm" onclick="SkladModule.selectSklad(${o.parts[0].sklad_id})"
+            style="padding:8px 16px;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;min-width:96px;
                    background:${on ? "#0f172a" : "#f1f5f9"};color:${on ? "#fff" : "#475569"};
                    border:1px solid ${on ? "#0f172a" : "#e2e8f0"};">
-            ${w.name} <span style="opacity:.75;font-weight:500;">${w.eni}</span>
-            <span style="display:block;font-size:10px;font-weight:600;opacity:.85;">${formatNumber(w.total_qty)} ${isUz ? "dona" : "шт"}</span>
+            ${escapeHtml(o.name)}
+            <span style="display:block;font-size:11px;font-weight:600;opacity:.85;">${formatNumber(o.qty)} ${isUz ? "dona" : "шт"}</span>
           </button>`;
         }).join("")}
       </div>`;
   },
 
-  // ---------- matrix ----------
+  // ---------- matrix: both sklads of the Ombor, one after the other ----------
   matrixView() {
+    if (!this.matrices.length) return `${this.picker()}<div style="padding:30px;color:#94a3b8;">—</div>`;
+    return this.picker() + this.matrices.map(m => this.oneMatrix(m)).join("");
+  },
+
+  oneMatrix(m) {
     const isUz = CURRENT_LANG === "uz";
-    const m = this.matrix;
-    if (!m) return `<div style="padding:30px;color:#94a3b8;">—</div>`;
 
     const byPos = {};
     (m.cells || []).forEach(c => { byPos[`${c.length}_${c.width}`] = c; });
@@ -165,16 +177,15 @@ const SkladModule = {
       </tr>`).join("");
 
     return `
-      ${this.picker()}
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;font-size:13px;">
-        <div><strong>${m.name} ${m.eni}</strong></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;margin:6px 0 10px;font-size:13px;">
+        <div style="font-size:17px;"><strong>${m.name} ${m.eni}</strong></div>
         <div style="color:#64748b;">${isUz ? "Jami" : "Всего"}: <strong>${formatNumber(m.total_qty)}</strong> ${isUz ? "dona" : "шт"}</div>
         <div style="color:#64748b;">${isUz ? "Metr" : "Метр"}: <strong>${formatNumber(m.total_metr, 0, 2)}</strong></div>
         <div style="color:#64748b;">m²: <strong>${formatNumber(m.total_mkv, 0, 2)}</strong></div>
       </div>
       <div class="sklad-matrix-wrap">
         <div class="table-container">
-          <table class="data-table" id="sklad-matrix-table" style="width:100%;border-collapse:collapse;">
+          <table class="data-table sklad-matrix-table" id="sklad-matrix-table-${m.sklad_id}" style="width:100%;border-collapse:collapse;">
             <thead>${head}</thead><tbody>${body}</tbody>
           </table>
         </div>
@@ -182,7 +193,8 @@ const SkladModule = {
           ${isUz ? "Qator = uzunlik, ustun = kenglik. 680 = 600×80." : "Строка = длина, столбец = ширина. 680 = 600×80."}
         </div>
       </div>
-      ${this.phonePicture()}`;
+      ${this.phonePicture(m)}
+      <div style="height:18px;"></div>`;
   },
 
   // ---------- phone: the grid as a picture ----------
@@ -244,15 +256,14 @@ const SkladModule = {
     return canvas.toDataURL("image/png");
   },
 
-  phonePicture() {
+  phonePicture(m) {
     if (!this.isPhone()) return `<div class="sklad-phone-pic"></div>`;
     const isUz = CURRENT_LANG === "uz";
-    const m = this.matrix;
     const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     return `
       <div class="sklad-phone-pic">
-        <img id="sklad-pic" src="${this.matrixPicture(m)}" alt="${m.name} ${m.eni}"
-             onclick="SkladModule.openPicture()">
+        <img id="sklad-pic-${m.sklad_id}" src="${this.matrixPicture(m)}" alt="${m.name} ${m.eni}"
+             onclick="SkladModule.openPicture(${m.sklad_id})">
         <div class="sklad-pic-meta">
           <span>${isUz ? "Kattalashtirish uchun bosing" : "Нажмите, чтобы увеличить"}</span>
           <span>${isUz ? "Yangilandi" : "Обновлено"} ${time}</span>
@@ -260,13 +271,14 @@ const SkladModule = {
       </div>`;
   },
 
-  openPicture() {
-    const pic = document.getElementById("sklad-pic");
-    if (!pic) return;
+  openPicture(skladId) {
+    const pic = document.getElementById(`sklad-pic-${skladId}`);
+    const m = this.matrices.find(x => x.sklad_id === skladId);
+    if (!pic || !m) return;
     this.closePicture();
-    const m = this.matrix;
     const viewer = document.createElement("div");
     viewer.id = "sklad-pic-viewer";
+    viewer.dataset.sklad = skladId;
     viewer.className = "sklad-pic-viewer";
     viewer.innerHTML = `
       <div class="sklad-pic-bar">
@@ -300,14 +312,15 @@ const SkladModule = {
     this._refreshing = true;
     const skladId = this.currentSkladId;
     try {
-      const [matrix, whs] = await Promise.all([API.getSkladMatrix(skladId), API.getSkladWarehouses()]);
+      const [matrices, whs] = await Promise.all([this.fetchMatrices(), API.getSkladWarehouses()]);
       // Skip if the user switched warehouse or tab meanwhile.
       if (skladId !== this.currentSkladId || this.view !== "matrix" || !document.getElementById("sklad-content")) return;
-      this.matrix = matrix;
+      this.matrices = matrices;
       this.warehouses = whs.warehouses || this.warehouses;
       el.innerHTML = this.matrixView();
-      const pic = document.getElementById("sklad-pic");
-      const viewerImg = document.querySelector("#sklad-pic-viewer img");
+      const viewer = document.getElementById("sklad-pic-viewer");
+      const pic = viewer && document.getElementById(`sklad-pic-${viewer.dataset.sklad}`);
+      const viewerImg = viewer && viewer.querySelector("img");
       if (pic && viewerImg) viewerImg.src = pic.src;
     } catch (e) {
       // Keep the last picture; the next round tries again.
@@ -376,18 +389,39 @@ const SkladModule = {
       </div>`;
   },
 
+  // ================= forms: which Ombor, and which eni of it =================
+  omborEniFields(prefix) {
+    const isUz = CURRENT_LANG === "uz";
+    const owner = this.ownerName(this.currentSkladId);
+    const enis = [...new Set(this.warehouses.map(w => w.eni))];
+    const lbl = "font-size:12px;font-weight:600;color:#334155;";
+    return `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div><label style="${lbl}">${isUz ? "Ombor" : "Склад"}</label>
+          <select id="${prefix}-owner" class="form-control">
+            ${groupSkladOwners(this.warehouses).map(o => `<option value="${escapeHtml(o.name)}" ${o.name === owner ? "selected" : ""}>${escapeHtml(o.name)}</option>`).join("")}
+          </select></div>
+        <div><label style="${lbl}">${isUz ? "Eni" : "Ширина"}</label>
+          <select id="${prefix}-eni" class="form-control">
+            ${enis.map(e => `<option value="${e}">${e}</option>`).join("")}
+          </select></div>
+      </div>`;
+  },
+
+  pickedSklad(prefix) {
+    const owner = document.getElementById(`${prefix}-owner`).value;
+    const eni = parseInt(document.getElementById(`${prefix}-eni`).value, 10);
+    const w = this.warehouses.find(x => x.name === owner && x.eni === eni);
+    return w ? w.sklad_id : null;
+  },
+
   // ================= KIRIM (goods in) =================
   openReceiveModal() {
     const isUz = CURRENT_LANG === "uz";
     this.receiveLines = [{ code: "", quantity: 1 }];
     showModal(
       isUz ? "Kirim" : "Приход",
-      `<div style="margin-bottom:12px;">
-         <label style="font-size:12px;font-weight:600;color:#334155;">${isUz ? "Ombor" : "Склад"}</label>
-         <select id="rcv-sklad" class="form-control">
-           ${this.warehouses.map(w => `<option value="${w.sklad_id}" ${w.sklad_id === this.currentSkladId ? "selected" : ""}>${w.name} ${w.eni}</option>`).join("")}
-         </select>
-       </div>
+      `${this.omborEniFields("rcv")}
        <div style="margin-bottom:12px;">
          <label style="font-size:12px;font-weight:600;color:#334155;">${isUz ? "Kimdan" : "От кого"}</label>
          <input id="rcv-supplier" class="form-control" placeholder="${isUz ? "Yetkazib beruvchi" : "Поставщик"}" />
@@ -463,7 +497,7 @@ const SkladModule = {
     }
     try {
       await API.skladKirim({
-        sklad_id: parseInt(document.getElementById("rcv-sklad").value, 10),
+        sklad_id: this.pickedSklad("rcv"),
         supplier: (document.getElementById("rcv-supplier").value || "").trim(),
         items
       });
@@ -477,15 +511,14 @@ const SkladModule = {
   // ================= SOTISH (sale) =================
   openSellModal() {
     const isUz = CURRENT_LANG === "uz";
-    const cfg = this.matrix;
-    this.sellLines = [{ code: "", quantity: 1, unit_price: 0, eni: cfg ? cfg.eni : 120 }];
+    this.sellLines = [{ code: "", quantity: 1, unit_price: 0, eni: 120 }];
     showModal(
       isUz ? "Sotish" : "Продажа",
       `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
          <div>
            <label style="font-size:12px;font-weight:600;color:#334155;">${isUz ? "Ombor" : "Склад"}</label>
-           <select id="sell-sklad" class="form-control" onchange="SkladModule.onSellSkladChange()">
-             ${this.warehouses.map(w => `<option value="${w.sklad_id}" ${w.sklad_id === this.currentSkladId ? "selected" : ""}>${w.name} ${w.eni}</option>`).join("")}
+           <select id="sell-sklad" class="form-control" onchange="SkladModule.refreshPreview()">
+             ${groupSkladOwners(this.warehouses).map(o => `<option value="${o.parts[0].sklad_id}" ${o.name === this.ownerName(this.currentSkladId) ? "selected" : ""}>${escapeHtml(o.name)}</option>`).join("")}
            </select>
          </div>
          <div>
@@ -528,13 +561,6 @@ const SkladModule = {
       async () => await this.submitSell(),
       "modal-lg"
     );
-    this.renderSellLines();
-  },
-
-  onSellSkladChange() {
-    const id = parseInt(document.getElementById("sell-sklad").value, 10);
-    const w = this.warehouses.find(x => x.sklad_id === id);
-    if (w) this.sellLines.forEach(l => { l.eni = w.eni; });
     this.renderSellLines();
   },
 

@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission
+from backend.api.auth import get_current_user_role, check_permission, check_action
 from backend.models import AutoSarfRule, MDMMaterial, StockItem
 from backend.services import sklad_service
 
@@ -76,6 +76,7 @@ def add_rule(payload: RuleCreate, db: Session = Depends(get_db), role: str = Dep
 @router.delete("/{rule_id}")
 def delete_rule(rule_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
     check_permission("ishlab_chiqarish", role)
+    check_action("delete", role)
     rule = db.query(AutoSarfRule).filter(AutoSarfRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Norma topilmadi.")

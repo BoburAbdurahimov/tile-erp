@@ -12,7 +12,7 @@ from backend.schemas import (
     CashRegisterResponse, CashTransactionCreate, CashTransactionResponse,
     ExchangeRateCreate, ExchangeRateResponse
 )
-from backend.api.auth import get_current_user_role, get_current_username, check_permission, is_admin
+from backend.api.auth import get_current_user_role, get_current_username, check_permission, is_admin, check_action
 from backend.services.currency_service import (
     get_exchange_rate_for_date, set_manual_exchange_rate,
     fetch_cbu_rate_today, convert_amount
@@ -196,9 +196,8 @@ def delete_cash_transaction(
     role: str = Depends(get_current_user_role),
     username: str = Depends(get_current_username),
 ):
-    check_permission("admin_tools" if is_admin(role) else "kassa", role)
-    if not is_admin(role):
-        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    check_permission("kassa", role)
+    check_action("delete", role)
     tx = db.query(CashTransaction).filter(CashTransaction.id == transaction_id).first()
     if not tx:
         raise HTTPException(status_code=404, detail="Tranzaksiya topilmadi.")

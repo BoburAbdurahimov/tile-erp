@@ -2144,3 +2144,42 @@ table button {
     text-align: center !important;
   }
 }
+
+/* Without the "O'chirish" / "Storno" right those buttons are not offered
+   (the server refuses them as well). */
+body.no-delete [onclick*="Module.delete"],
+body.no-storno [onclick*="Module.storno"],
+body.no-storno [onclick*="OrdersModule.cancel"],
+body.no-storno [onclick*="OrdersModule.openCancelPayment"],
+body.no-storno [onclick*="ExpensesModule.cancel("] {
+  display: none !important;
+}
+
+/* Desktop: a tall form fits the screen. Its title and its save buttons stay
+   in view and only the fields in between scroll, so nothing runs off the top
+   or the bottom (the Foydalanuvchilar forms are built as a .modal-card). */
+@media (min-width: 769px) {
+  .modal-overlay > .modal-content,
+  .modal-overlay > .modal-card {
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-overlay > .modal-content > .modal-body,
+  .modal-overlay > .modal-card > form {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .modal-overlay > .modal-card > form > .form-actions {
+    position: sticky;
+    bottom: -24px;
+    margin: 0 -24px -24px;
+    padding: 14px 24px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+  }
+}
