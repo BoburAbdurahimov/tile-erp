@@ -238,7 +238,71 @@ const MdmModule = {
     }
   },
 
-  openCreateModal() {
+  // ---- A supplier's materials and their prices: Sotib olish takes the price
+  // from here, so its form asks only who, what, how many and when.
+  async loadPriceMaterials() {
+    const all = await API.getMaterials();
+    this.priceMaterials = (all || []).filter(m => m.category !== "Tayyor mahsulot");
+  },
+
+  priceSectionHtml() {
+    const isUz = CURRENT_LANG === 'uz';
+    return `
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 700; color: #0f172a;">${isUz ? "Materiallar va narxlari" : "Материалы и цены"}</div>
+            <div style="font-size: 12px; color: #64748b;">${isUz ? "Sotib olishda narx shu yerdan olinadi." : "При закупке цена берётся отсюда."}</div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="MdmModule.addPriceRow()"
+            title="${isUz ? "Material qo'shish" : "Добавить материал"}" aria-label="${isUz ? "Material qo'shish" : "Добавить материал"}">${uiIcon("plus")}</button>
+        </div>
+        <div id="sp-rows" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>`;
+  },
+
+  addPriceRow(row = null) {
+    const box = document.getElementById("sp-rows");
+    if (!box) return;
+    const isUz = CURRENT_LANG === 'uz';
+    const field = "padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;";
+    const div = document.createElement("div");
+    div.className = "sp-row";
+    div.style.cssText = "display: grid; grid-template-columns: minmax(0, 1fr) 120px 80px 34px; gap: 6px; align-items: center;";
+    div.innerHTML = `
+      <select class="form-control sp-mat" style="${field}">
+        <option value="">${isUz ? "Materialni tanlang" : "Выберите материал"}</option>
+        ${(this.priceMaterials || []).map(m => `<option value="${m.id}" ${row && row.material_id === m.id ? "selected" : ""}>${escapeHtml(m.name)} (${escapeHtml(tr(m.unit))})</option>`).join("")}
+      </select>
+      <input type="number" class="form-control sp-price" step="any" min="0.01" placeholder="${isUz ? "Narx" : "Цена"}" value="${row ? row.price : ""}" style="${field}">
+      <select class="form-control sp-cur" style="${field}">
+        <option value="UZS" ${!row || row.currency !== "USD" ? "selected" : ""}>UZS</option>
+        <option value="USD" ${row && row.currency === "USD" ? "selected" : ""}>USD</option>
+      </select>
+      <button type="button" class="btn btn-sm" onclick="this.closest('.sp-row').remove()" title="${isUz ? "O'chirish" : "Удалить"}"
+        style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 0; border-radius: 8px;">✕</button>`;
+    box.appendChild(div);
+  },
+
+  // The rows as the API wants them, or an error to show.
+  readPriceRows() {
+    const isUz = CURRENT_LANG === 'uz';
+    const items = [];
+    const seen = new Set();
+    for (const row of document.querySelectorAll("#sp-rows .sp-row")) {
+      const materialId = parseInt(row.querySelector(".sp-mat").value);
+      const price = parseFloat(row.querySelector(".sp-price").value);
+      if (!materialId && !price) continue;                 // an empty row is ignored
+      if (!materialId) return { error: isUz ? "Har bir narx uchun materialni tanlang" : "Выберите материал для каждой цены" };
+      if (!(price > 0)) return { error: isUz ? "Narx musbat bo'lishi kerak" : "Цена должна быть больше нуля" };
+      if (seen.has(materialId)) return { error: isUz ? "Bir material ikki marta tanlangan" : "Материал выбран дважды" };
+      seen.add(materialId);
+      items.push({ material_id: materialId, price, currency: row.querySelector(".sp-cur").value });
+    }
+    return { items };
+  },
+
+  async openCreateModal() {
     // Ombor stock (finished tiles, by owner) is added by Kirim in the Ombor.
     if (this.currentTab === "tayyor" || this.currentTab === "warehouses") {
       // Finished goods are whatever the Ombor holds; they are added by Kirim there.
@@ -360,6 +424,9 @@ const MdmModule = {
     } else {
       const type = this.currentTab === "clients" ? "client" : "supplier";
       const typeName = type === "client" ? (CURRENT_LANG === 'uz' ? "Mijoz" : "Клиент") : (CURRENT_LANG === 'uz' ? "Yetkazib beruvchi" : "Поставщик");
+      if (type === "supplier") {
+        try { await this.loadPriceMaterials(); } catch (e) { showToast(e.message, "error"); return; }
+      }
       
       const regions = [
         "Toshkent shahri", "Toshkent viloyati", "Samarqand", "Andijon",
@@ -400,6 +467,7 @@ const MdmModule = {
                 <input type="number" step="any" data-signed id="cp-init-bal" class="form-control" value="0" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;" />
               </div>
             </div>
+            ${type === "supplier" ? this.priceSectionHtml() : ""}
           </form>
         `,
         async () => {
@@ -413,9 +481,14 @@ const MdmModule = {
             showToast(CURRENT_LANG === 'uz' ? "Nom kiritilishi shart!" : "Наименование обязательно!", "warning");
             return false;
           }
+          const prices = type === "supplier" ? MdmModule.readPriceRows() : { items: [] };
+          if (prices.error) {
+            showToast(prices.error, "warning");
+            return false;
+          }
 
           try {
-            await API.createCounterparty({
+            const created = await API.createCounterparty({
               name,
               type,
               region,
@@ -424,6 +497,9 @@ const MdmModule = {
               initial_balance_usd: initBal,
               initial_balance_uzs: 0
             });
+            if (type === "supplier" && prices.items.length) {
+              await API.setSupplierPrices(created.id, prices.items);
+            }
             showToast(t('msg_saved'), "success");
             await MdmModule.loadTabContent();
             return true;
@@ -433,6 +509,7 @@ const MdmModule = {
           }
         }
       );
+      if (type === "supplier") this.addPriceRow();
     }
   },
 
@@ -523,6 +600,11 @@ const MdmModule = {
       const cps = await API.getCounterparties(type, null, true);
       const cp = cps.find(c => c.id === id);
       if (!cp) return;
+      let prices = [];
+      if (type === "supplier") {
+        await this.loadPriceMaterials();
+        prices = await API.getSupplierPrices(id);
+      }
 
       const regions = [
         "Toshkent shahri", "Toshkent viloyati", "Samarqand", "Andijon",
@@ -561,6 +643,7 @@ const MdmModule = {
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_phone')}</label>
               <input type="text" id="edit-cp-phone" class="form-control" value="${cp.phone || ''}" placeholder="+998901234567" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;" />
             </div>
+            ${type === "supplier" ? this.priceSectionHtml() : ""}
           </form>
         `,
         async () => {
@@ -574,11 +657,17 @@ const MdmModule = {
             showToast(CURRENT_LANG === 'uz' ? "Kod va nom kiritilishi shart!" : "Код и наименование обязательны!", "warning");
             return false;
           }
+          const priceRows = type === "supplier" ? MdmModule.readPriceRows() : { items: [] };
+          if (priceRows.error) {
+            showToast(priceRows.error, "warning");
+            return false;
+          }
 
           try {
             await API.updateCounterparty(id, {
               code, name, region, is_resident: isResident, phone
             });
+            if (type === "supplier") await API.setSupplierPrices(id, priceRows.items);
             showToast(t('msg_saved'), "success");
             await MdmModule.loadTabContent();
             return true;
@@ -588,6 +677,10 @@ const MdmModule = {
           }
         }
       );
+      if (type === "supplier") {
+        prices.forEach(row => this.addPriceRow(row));
+        if (!prices.length) this.addPriceRow();
+      }
     } catch (e) {
       showToast(e.message, "error");
     }

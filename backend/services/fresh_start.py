@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.models import (
-    AppFlag, AttendanceEntry, AuditLog, AutoSarfRule, CashExchange, CashRegister, CashTransaction,
+    AppFlag, AttendanceEntry, AuditLog, AutoSarfRule, CashExchange, CashRegister, CashTransaction, SupplierPrice,
     Employee, JobType, LineExpense, LineExpenseItem, MDMCounterparty, MDMMaterial,
     MonthlySalaryCalculation, OtherExpense, ProductionConsumedMaterial, ProductionOrder,
     Purchase, PurchaseItem, SalaryAdjustment, Sale, SaleItem, SkladInventory, SkladMovement,
@@ -80,6 +80,7 @@ def _wipe(db: Session) -> dict:
     wipe(CashTransaction, "kassa_transactions")
     db.query(CashRegister).update({CashRegister.balance: 0.0}, synchronize_session=False)
 
+    wipe(SupplierPrice, "supplier_prices")
     wipe(MDMCounterparty, "counterparties")
     wipe(MDMMaterial, "materials")
     wipe(AuditLog, "audit_log")

@@ -54,6 +54,17 @@ class CounterpartyUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
 
+class SupplierPriceItem(BaseModel):
+    material_id: int
+    price: float
+    currency: str = "UZS"
+
+class SupplierPriceResponse(SupplierPriceItem):
+    material_code: str
+    material_name: str
+    unit: str
+    category: str
+
 class CounterpartyResponse(CounterpartyBase):
     id: int
     code: str
@@ -295,13 +306,13 @@ class PurchaseItemInput(BaseModel):
     length: Optional[int] = None
     width: Optional[int] = None
     quantity: float
-    unit_price: float
+    unit_price: Optional[float] = None  # empty: the supplier's price from MDM
 
 class PurchaseCreate(BaseModel):
     supplier_id: int
-    warehouse_id: int = 2 # Ishlab chiqarish uchun materiallar
+    warehouse_id: Optional[int] = None  # empty: by material (spare parts -> Aralash ombor, else 2)
     date: dt_date = Field(default_factory=dt_date.today)
-    currency: str = "USD"
+    currency: Optional[str] = None      # empty: the currency of the supplier's prices
     items: List[PurchaseItemInput]
     description: Optional[str] = None
 

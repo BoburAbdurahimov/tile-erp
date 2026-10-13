@@ -459,8 +459,10 @@ const KassaModule = {
               class="form-control" 
               placeholder="${isUz ? 'Kod yoki nom yozing (masalan: 10001 yoki Ali)...' : 'Введите код или наименование...'}" 
               style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;"
+              oninput="KassaModule.showCounterpartyBalance(this.value)"
             />
             <datalist id="tx-cp-datalist"></datalist>
+            <div id="tx-cp-balance" style="margin-top: 6px; font-size: 13.5px; font-weight: 700;"></div>
           </div>
           <div class="form-group" style="margin-top: 14px;">
             <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_description')}</label>
@@ -722,6 +724,26 @@ const KassaModule = {
       || list.find(c => String(c.code).toLowerCase() === lower || c.name.toLowerCase() === lower)
       || list.find(c => labels(c)[0].includes(lower))
       || null;
+  },
+
+  // Who owes whom, for the counterparty picked: a supplier's purchases (at
+  // their MDM prices) show up here as what we owe them.
+  showCounterpartyBalance(input) {
+    const el = document.getElementById("tx-cp-balance");
+    if (!el) return;
+    const isUz = CURRENT_LANG === 'uz';
+    const cp = this.findCounterparty(input);
+    if (!cp) { el.innerHTML = ""; return; }
+    const uzs = cp.current_balance_uzs || 0;
+    const usd = cp.current_balance_usd || 0;
+    const amount = `${formatNumber(Math.abs(uzs), 0, 0)} so'm ($${formatNumber(Math.abs(usd), 2, 2)})`;
+    if (Math.abs(uzs) < 1 && Math.abs(usd) < 0.01) {
+      el.innerHTML = `<span style="color:#64748b;">${isUz ? "Qarz yo'q" : "Долга нет"}</span>`;
+    } else if (uzs < 0 || (Math.abs(uzs) < 1 && usd < 0)) {
+      el.innerHTML = `<span style="color:#b91c1c;">${isUz ? "Biz qarzdormiz" : "Мы должны"}: ${amount}</span>`;
+    } else {
+      el.innerHTML = `<span style="color:#15803d;">${isUz ? "Ular qarzdor" : "Они должны"}: ${amount}</span>`;
+    }
   },
 
   async populateCounterpartiesForTx() {

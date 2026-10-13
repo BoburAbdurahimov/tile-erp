@@ -8,12 +8,13 @@ from backend.database import get_db
 from backend.models import (
     MDMMaterial, MDMCounterparty, Warehouse, StockItem,
     ProductionConsumedMaterial, SaleItem, PurchaseItem,
-    CashTransaction, Sale, Purchase
+    CashTransaction, Sale, Purchase, SupplierPrice
 )
 from backend.schemas import (
     MaterialCreate, MaterialUpdate, MaterialResponse,
     CounterpartyCreate, CounterpartyUpdate, CounterpartyResponse,
-    WarehouseCreate, WarehouseUpdate, WarehouseResponse
+    WarehouseCreate, WarehouseUpdate, WarehouseResponse,
+    SupplierPriceItem, SupplierPriceResponse
 )
 from backend.api.auth import get_current_user_role, check_permission, is_admin
 from backend.services.reports_service import generate_mdm_excel
@@ -132,6 +133,7 @@ def delete_material(
     db.query(ProductionConsumedMaterial).filter(ProductionConsumedMaterial.material_id == material_id).delete()
     db.query(SaleItem).filter(SaleItem.material_id == material_id).delete()
     db.query(PurchaseItem).filter(PurchaseItem.material_id == material_id).delete()
+    db.query(SupplierPrice).filter(SupplierPrice.material_id == material_id).delete()
     
     db.delete(mat)
     db.commit()
@@ -267,10 +269,77 @@ def delete_counterparty(
     # Nullify or clean related transactions
     for tx in db.query(CashTransaction).filter(CashTransaction.counterparty_id == counterparty_id).all():
         tx.counterparty_id = None
+    db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == counterparty_id).delete()
     
     db.delete(cp)
     db.commit()
     return {"success": True, "message": f"{cp.name} muvaffaqiyatli o'chirildi.", "id": counterparty_id}
+
+# ----------------- SUPPLIER PRICES (what each supplier sells, at what price) -----------------
+PRICE_CURRENCIES = ("UZS", "USD")
+
+
+def _supplier(db: Session, counterparty_id: int) -> MDMCounterparty:
+    cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == counterparty_id).first()
+    if not cp:
+        raise HTTPException(status_code=404, detail="Kontragent topilmadi.")
+    if cp.type != "supplier":
+        raise HTTPException(status_code=400, detail="Material va narx faqat yetkazib beruvchiga biriktiriladi.")
+    return cp
+
+
+def _price_rows(db: Session, counterparty_id: int) -> List[dict]:
+    rows = db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == counterparty_id).all()
+    return [{
+        "material_id": r.material_id, "price": r.price, "currency": r.currency,
+        "material_code": r.material.code if r.material else "", "material_name": r.material.name if r.material else "",
+        "unit": r.material.unit if r.material else "", "category": r.material.category if r.material else "",
+    } for r in sorted(rows, key=lambda r: (r.material.name if r.material else ""))]
+
+
+@router.get("/counterparties/{counterparty_id}/prices", response_model=List[SupplierPriceResponse])
+def get_supplier_prices(
+    counterparty_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    # Sotib olish reads it to offer the supplier's materials.
+    try:
+        check_permission("zakup", role)
+    except HTTPException:
+        check_permission("mdm", role)
+    _supplier(db, counterparty_id)
+    return _price_rows(db, counterparty_id)
+
+
+@router.put("/counterparties/{counterparty_id}/prices", response_model=List[SupplierPriceResponse])
+def set_supplier_prices(
+    counterparty_id: int,
+    payload: List[SupplierPriceItem],
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role)
+):
+    """The supplier's whole list: what is sent replaces what was there."""
+    check_permission("mdm", role)
+    _supplier(db, counterparty_id)
+    seen = set()
+    for item in payload:
+        if item.material_id in seen:
+            raise HTTPException(status_code=400, detail="Bir material ikki marta tanlangan.")
+        seen.add(item.material_id)
+        if not db.query(MDMMaterial).filter(MDMMaterial.id == item.material_id).first():
+            raise HTTPException(status_code=404, detail="Material topilmadi.")
+        if item.price is None or item.price <= 0:
+            raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak.")
+        if (item.currency or "").upper() not in PRICE_CURRENCIES:
+            raise HTTPException(status_code=400, detail="Valyuta UZS yoki USD bo'lishi kerak.")
+
+    db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == counterparty_id).delete()
+    for item in payload:
+        db.add(SupplierPrice(counterparty_id=counterparty_id, material_id=item.material_id,
+                             price=round(float(item.price), 4), currency=item.currency.upper()))
+    db.commit()
+    return _price_rows(db, counterparty_id)
 
 # ----------------- WAREHOUSES -----------------
 
