@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import check_permission, get_current_user_role, get_current_username
+from backend.api.auth import check_permission, get_current_user_role, get_current_username, check_action
 from backend.models import (Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation,
                             SalaryAdjustment, AuditLog, SKLAD_CONFIG)
 from backend.services.salary_service import (
@@ -321,7 +321,9 @@ def toggle_employee_active(id: int, current_user: str = Query("Admin"), db: Sess
     return {"status": "success", "is_active": emp.is_active}
 
 @router.delete("/employees/{id}")
-def delete_employee(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def delete_employee(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                    role: str = Depends(get_current_user_role)):
+    check_action("delete", role)
     if current_user != "Admin":
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     emp = db.query(Employee).filter(Employee.id == id).first()
@@ -430,7 +432,9 @@ def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Quer
     return {"status": "success", "message": "Ish turi yangilandi"}
 
 @router.delete("/job-types/{id}")
-def delete_job_type(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def delete_job_type(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                    role: str = Depends(get_current_user_role)):
+    check_action("delete", role)
     if current_user != "Admin":
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     jt = db.query(JobType).filter(JobType.id == id).first()
@@ -549,7 +553,9 @@ def add_daily_work_entry(data: DailyWorkEntrySchema, db: Session = Depends(get_d
         raise HTTPException(status_code=500, detail=f"Ish yozuvini saqlashda xatolik: {e}")
 
 @router.delete("/daily-work/{id}")
-def delete_work_entry_endpoint(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def delete_work_entry_endpoint(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                               role: str = Depends(get_current_user_role)):
+    check_action("delete", role)
     try:
         delete_daily_work_entry(db, id, current_user=current_user)
         return {"status": "success", "message": "Ish yozuvi o'chirildi"}
@@ -592,6 +598,7 @@ def create_adjustment(data: SalaryAdjustmentSchema, db: Session = Depends(get_db
 @router.delete("/adjustments/{id}")
 def remove_adjustment(id: int, db: Session = Depends(get_db),
                       role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+    check_action("delete", role)
     adj = db.query(SalaryAdjustment).filter(SalaryAdjustment.id == id).first()
     if adj and adj.cash_transaction_id:
         check_permission("kassa", role)
@@ -651,6 +658,7 @@ def storno_salary_endpoint(id: int, db: Session = Depends(get_db),
                            role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
     """Take a salary payment back: the money returns to its Kassa."""
     check_permission("kassa", role)
+    check_action("storno", role)
     try:
         calc = storno_salary_payment(db, id, current_user=username)
         return {"status": "success", "calculation_id": calc.id, "salary_status": calc.status}

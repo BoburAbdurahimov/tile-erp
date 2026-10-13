@@ -13,7 +13,7 @@ from backend.schemas import (
     ProductionOrderCreate, ProductionOrderResponse, ProductionLineResponse,
     ConsumedMaterialResponse, LineExpenseCreate, LineExpenseResponse, LineExpenseItemResponse
 )
-from backend.api.auth import get_current_user_role, check_permission, is_admin
+from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope, check_ombor
 from backend.services import sklad_service as sklad_svc
 from backend.services.numbering import next_number
 from backend.services.inventory_service import (
@@ -33,7 +33,8 @@ def get_production_lines(
 @router.get("/stats-7-days")
 def get_7_day_production_stats(
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
     today = date.today()
@@ -45,11 +46,13 @@ def get_7_day_production_stats(
         ProductionOrder.date <= today,
         ProductionOrder.status == "Tasdiqlandi"
     ).all()
-    
+    if scope is not None:
+        orders = [o for o in orders if o.out_sklad_id in scope]
+
     # Aggregate by date and by Ombor owner (Toxir, Kodir, Istam, Aziz)
     owners = []
     for cfg in sklad_svc.SKLAD_CONFIG:
-        if cfg["name"] not in owners:
+        if cfg["name"] not in owners and (scope is None or cfg["id"] in scope):
             owners.append(cfg["name"])
     days_map = {}
     for i in range(7):
@@ -83,12 +86,15 @@ def get_production_orders(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
     # Outer joins: an order may have no line (lines are no longer used) and no
     # output_material (output went to the Ombor); inner joins would hide it.
     query = db.query(ProductionOrder).outerjoin(ProductionLine).outerjoin(MDMMaterial)
+    if scope is not None:
+        query = query.filter(ProductionOrder.out_sklad_id.in_(scope))
     
     if line_id:
         query = query.filter(ProductionOrder.line_id == line_id)
@@ -153,9 +159,11 @@ def get_production_orders(
 def create_production_order(
     payload: ProductionOrderCreate,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
+    check_ombor(payload.out_sklad_id, scope)
     
     if payload.quantity <= 0:
         raise HTTPException(status_code=400, detail="Ishlab chiqarish hajmi musbat bo'lishi shart.")
@@ -442,6 +450,7 @@ def storno_line_expense(
     role: str = Depends(get_current_user_role)
 ):
     check_permission("ishlab_chiqarish", role)
+    check_action("storno", role)
     expense = db.query(LineExpense).filter(LineExpense.id == expense_id).first()
     if not expense:
         raise HTTPException(status_code=404, detail="Hujjat topilmadi.")
@@ -470,12 +479,15 @@ def storno_line_expense(
 def storno_production_order(
     order_id: int,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ishlab_chiqarish", role)
+    check_action("storno", role)
     order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Ishlab chiqarish buyurtmasi topilmadi.")
+    check_ombor(order.out_sklad_id, scope)
         
     if order.status == "Storno":
         raise HTTPException(status_code=400, detail="Ushbu buyurtma allaqachon STORNO qilingan.")
@@ -541,14 +553,15 @@ def storno_production_order(
 def delete_production_order(
     order_id: int,
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
-    check_permission("admin_tools" if is_admin(role) else "ishlab_chiqarish", role)
-    if not is_admin(role):
-        raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
+    check_permission("ishlab_chiqarish", role)
+    check_action("delete", role)
     order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Buyurtma topilmadi.")
+    check_ombor(order.out_sklad_id, scope)
     # Deleting does not touch stock, so only a document already reversed by
     # storno may go; otherwise its goods and materials would stay counted.
     if order.storno_ref_id:

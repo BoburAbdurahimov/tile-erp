@@ -15,7 +15,9 @@ const UsersModule = (() => {
     { id: "Sotish (Realizatsiya)", name: { uz: "Sotish (Realizatsiya)", ru: "Продажи и Реализация" }, desc: { uz: "Tayyor kafellarni mijozlarga sotish", ru: "Реализация готовой плитки покупателям" } },
     { id: "Moliya & PnL", name: { uz: "Moliya & PnL", ru: "Финансы и PnL" }, desc: { uz: "Foyda va zarar hisoboti (PnL)", ru: "Отчет о прибылях и убытках (PnL)" } },
     { id: "Ish haqi", name: { uz: "Ish haqi & Xodimlar", ru: "Зарплата и Персонал" }, desc: { uz: "Oyliklar, kunlik davomat, ishbay to'lovlar va vedomost", ru: "Оклады, табель посещаемости, сдельная оплата и ведомости" } },
-    { id: "MDM (Spravochniklar)", name: { uz: "MDM (Spravochniklar)", ru: "MDM (Справочники)" }, desc: { uz: "Materiallar, kafel turlari va kontragentlar katalogi", ru: "Справочники материалов, видов плитки и контрагентов" } }
+    { id: "MDM (Spravochniklar)", name: { uz: "MDM (Spravochniklar)", ru: "MDM (Справочники)" }, desc: { uz: "Materiallar, kafel turlari va kontragentlar katalogi", ru: "Справочники материалов, видов плитки и контрагентов" } },
+    { id: "O'chirish", name: { uz: "O'chirish", ru: "Удаление" }, desc: { uz: "Ruxsat berilgan modullarda yozuvlarni o'chirish", ru: "Удаление записей в доступных модулях" } },
+    { id: "Storno", name: { uz: "Storno", ru: "Сторно" }, desc: { uz: "Xarid, sotuv, ishlab chiqarish, to'lov va xarajatni storno / bekor qilish", ru: "Сторно / отмена закупок, продаж, производства, платежей и расходов" } }
   ];
 
   function renderRoleBadges(roleStr) {
@@ -40,51 +42,48 @@ const UsersModule = (() => {
       else if (r.includes("Sotish") || r.includes("Realizatsiya")) { color = "#c026d3"; bg = "#fdf4ff"; icon = ""; label = isUz ? "Sotish" : "Продажи"; }
       else if (r.includes("Moliya") || r === "Direktor" || r === "Buxgalter") { color = "#7c3aed"; bg = "#f5f3ff"; icon = ""; label = isUz ? "Moliya" : "Финансы"; }
       else if (r.includes("MDM")) { color = "#475569"; bg = "#f1f5f9"; icon = ""; label = "MDM"; }
+      else if (r === "O'chirish") { color = "#b91c1c"; bg = "#fef2f2"; label = isUz ? "O'chirish" : "Удаление"; }
+      else if (r === "Storno") { color = "#c2410c"; bg = "#fff7ed"; label = isUz ? "Storno" : "Сторно"; }
 
       return `<span style="background: ${bg}; color: ${color}; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; border: 1px solid ${color}30; display: inline-block; white-space: nowrap;">${label}</span>`;
     }).join("") + `</div>`;
   }
 
-  // The 8 Ombor warehouses (owner x eni), same ids as the backend SKLAD_CONFIG.
-  const OMBOR_SKLADS = [
-    { id: 1, name: "Toxir", eni: 120 }, { id: 2, name: "Toxir", eni: 100 },
-    { id: 3, name: "Kodir", eni: 120 }, { id: 4, name: "Kodir", eni: 100 },
-    { id: 5, name: "Istam", eni: 120 }, { id: 6, name: "Istam", eni: 100 },
-    { id: 7, name: "Aziz", eni: 120 }, { id: 8, name: "Aziz", eni: 100 },
+  // The 4 Ombors; each holds two sklads (eni 120 and 100), same ids as the
+  // backend SKLAD_CONFIG, and is always given or taken as a whole.
+  const OMBORS = [
+    { name: "Toxir", ids: [1, 2] }, { name: "Kodir", ids: [3, 4] },
+    { name: "Istam", ids: [5, 6] }, { name: "Aziz", ids: [7, 8] },
   ];
 
   function omborLabel(ids) {
     const isUz = CURRENT_LANG === "uz";
     if (!ids || !ids.length) return isUz ? "Barcha omborlar" : "Все склады";
-    return OMBOR_SKLADS.filter(s => ids.includes(s.id)).map(s => `${s.name} ${s.eni}`).join(", ");
+    return OMBORS.filter(o => o.ids.some(id => ids.includes(id))).map(o => o.name).join(", ");
   }
 
-  // Which Ombor warehouses the user works in. None ticked = all of them.
+  // Which Ombors the user works in. None ticked = all of them.
   function renderSkladCheckboxes(inputName, selected = []) {
     const isUz = CURRENT_LANG === "uz";
-    const owners = [...new Set(OMBOR_SKLADS.map(s => s.name))];
     return `
       <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; background: #f8fafc;">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px;">
-          ${owners.map(o => `
-            <div>
-              <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">${o}</div>
-              ${OMBOR_SKLADS.filter(s => s.name === o).map(s => `
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #334155; cursor: pointer; margin-bottom: 2px;">
-                  <input type="checkbox" name="${inputName}" value="${s.id}" ${(selected || []).includes(s.id) ? "checked" : ""} style="width: 15px; height: 15px; cursor: pointer;" />
-                  ${s.name} ${s.eni}
-                </label>`).join("")}
-            </div>`).join("")}
+          ${OMBORS.map(o => `
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #0f172a; cursor: pointer; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff;">
+              <input type="checkbox" name="${inputName}" value="${o.ids.join(",")}" ${o.ids.some(id => (selected || []).includes(id)) ? "checked" : ""} style="width: 16px; height: 16px; cursor: pointer;" />
+              ${o.name}
+            </label>`).join("")}
         </div>
         <div style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
-          ${isUz ? "Ombor mudiri faqat belgilangan omborlarni ko'radi. Hech biri belgilanmasa - barcha omborlar. Admin har doim hammasini ko'radi."
-                 : "Заведующий видит только отмеченные склады. Ничего не отмечено - все склады. Админ всегда видит все."}
+          ${isUz ? "Foydalanuvchi faqat belgilangan omborlarda ishlaydi: Ombor, ishlab chiqarish va sotish. Har ombor 120 va 100 bilan birga beriladi. Hech biri belgilanmasa - barcha omborlar. Admin har doim hammasini ko'radi."
+                 : "Пользователь работает только в отмеченных складах: склад, производство и продажи. Каждый склад даётся вместе (120 и 100). Ничего не отмечено - все склады. Админ всегда видит все."}
         </div>
       </div>`;
   }
 
   function checkedSklads(inputName) {
-    return Array.from(document.querySelectorAll(`input[name='${inputName}']:checked`)).map(el => parseInt(el.value, 10));
+    return Array.from(document.querySelectorAll(`input[name='${inputName}']:checked`))
+      .flatMap(el => el.value.split(",").map(v => parseInt(v, 10)));
   }
 
   function renderRoleCheckboxes(inputName, selectedRolesStr = "") {
