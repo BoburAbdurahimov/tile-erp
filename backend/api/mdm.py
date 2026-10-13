@@ -16,7 +16,8 @@ from backend.schemas import (
     WarehouseCreate, WarehouseUpdate, WarehouseResponse,
     SupplierPriceItem, SupplierPriceResponse
 )
-from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action
+from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope
+from backend.services import material_warehouses as mw
 from backend.services.reports_service import generate_mdm_excel
 
 router = APIRouter(prefix="/mdm", tags=["MODUL 1: MDM (Master Data)"])
@@ -344,10 +345,13 @@ def set_supplier_prices(
 @router.get("/warehouses", response_model=List[WarehouseResponse])
 def get_warehouses(
     db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role)
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
     check_permission("ombor" if role in ["Direktor", "Ish boshqaruvchi"] else "mdm", role)
-    return db.query(Warehouse).order_by(Warehouse.id).all()
+    allowed = mw.allowed_ids(db, scope)
+    whs = db.query(Warehouse).order_by(Warehouse.id).all()
+    return [w for w in whs if allowed is None or w.id in allowed]
 
 @router.post("/warehouses", response_model=WarehouseResponse)
 def create_warehouse(

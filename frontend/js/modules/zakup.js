@@ -1,6 +1,7 @@
 const PurchasesModule = {
   suppliersList: [],
   supplierMaterials: [],
+  owners: [],               // the Ombors this user buys for (one = no choice to make)
 
   async render(container) {
     container.innerHTML = `
@@ -35,7 +36,9 @@ const PurchasesModule = {
     const isUz = CURRENT_LANG === 'uz';
 
     try {
-      const purchases = await API.getPurchases();
+      const [purchases, whs] = await Promise.all([API.getPurchases(), API.getMaterialWarehouses()]);
+      this.owners = whs.owners || [];
+      const showOmbor = this.owners.length > 1;
       if (!purchases || purchases.length === 0) {
         tableDiv.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; color: #64748b;">
@@ -54,17 +57,19 @@ const PurchasesModule = {
             <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 12px; text-transform: uppercase;">
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 0, false)" style="padding: 12px 14px;">${t('th_date')} <span class="sort-icon">↕</span></th>
               <th class="sortable" onclick="TableFilterSort.sortTable(this, 1, false)" style="padding: 12px 14px;">${isUz ? 'Kimdan' : 'Поставщик'} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)" style="padding: 12px 14px;">${isUz ? 'Material' : 'Материал'} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 3, true)" style="padding: 12px 14px; text-align: right;">${isUz ? 'Qancha' : 'Количество'} <span class="sort-icon">↕</span></th>
-              <th class="sortable" onclick="TableFilterSort.sortTable(this, 4, false)" style="padding: 12px 14px;">${t('th_status')} <span class="sort-icon">↕</span></th>
+              ${showOmbor ? `<th class="sortable" onclick="TableFilterSort.sortTable(this, 2, false)" style="padding: 12px 14px;">${isUz ? 'Ombor' : 'Склад'} <span class="sort-icon">↕</span></th>` : ''}
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, ${2 + showOmbor}, false)" style="padding: 12px 14px;">${isUz ? 'Material' : 'Материал'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, ${3 + showOmbor}, true)" style="padding: 12px 14px; text-align: right;">${isUz ? 'Qancha' : 'Количество'} <span class="sort-icon">↕</span></th>
+              <th class="sortable" onclick="TableFilterSort.sortTable(this, ${4 + showOmbor}, false)" style="padding: 12px 14px;">${t('th_status')} <span class="sort-icon">↕</span></th>
               <th style="padding: 12px 14px; text-align: right;">${t('th_actions')}</th>
             </tr>
             <tr class="filter-row">
               ${filter(0, isUz ? 'Sana...' : 'Дата...')}
               ${filter(1, isUz ? 'Kimdan...' : 'Поставщик...')}
-              ${filter(2, isUz ? 'Material...' : 'Материал...')}
+              ${showOmbor ? filter(2, isUz ? 'Ombor...' : 'Склад...') : ''}
+              ${filter(2 + showOmbor, isUz ? 'Material...' : 'Материал...')}
               <th></th>
-              ${filter(4, isUz ? 'Holat...' : 'Статус...')}
+              ${filter(4 + showOmbor, isUz ? 'Holat...' : 'Статус...')}
               <th></th>
             </tr>
           </thead>
@@ -79,6 +84,7 @@ const PurchasesModule = {
               <tr class="${p.status === 'Storno' ? 'storno-row' : ''}" style="border-bottom: 1px solid #f1f5f9; ${p.status === 'Storno' ? 'opacity: 0.6; background: #fff1f2;' : ''}">
                 <td data-sort-value="${p.date}" style="padding: 12px 14px; white-space: nowrap;">${formatDate(p.date)}</td>
                 <td data-sort-value="${escapeHtml(p.supplier_name)}" style="padding: 12px 14px; font-weight: 600;">${escapeHtml(p.supplier_name)}</td>
+                ${showOmbor ? `<td data-sort-value="${escapeHtml(p.ombor || '')}" style="padding: 12px 14px;">${escapeHtml(p.ombor || (isUz ? 'Umumiy' : 'Общий'))}</td>` : ''}
                 <td data-sort-value="${escapeHtml(itemsList.map(it => it.material_name).join(', '))}" style="padding: 12px 14px;"><div style="display: flex; flex-direction: column; gap: 3px;">${matCell}</div></td>
                 <td data-sort-value="${totalQty}" style="padding: 12px 14px; text-align: right; font-weight: 700;"><div style="display: flex; flex-direction: column; gap: 3px;">${qtyCell}</div></td>
                 <td data-sort-value="${p.status}" style="padding: 12px 14px;">
@@ -92,7 +98,7 @@ const PurchasesModule = {
                       ${t('btn_storno')}
                     </button>
                   ` : '<span style="color: #94a3b8; font-size: 12px;">-</span>'}
-                  ${CURRENT_ROLE === 'Admin' ? `
+                  ${canDo('delete') ? `
                     <button class="btn btn-danger btn-sm" onclick="PurchasesModule.deletePurchase(${p.id}, ${jsArg(label)})" title="O'chirish" style="padding: 4px 8px; font-size: 12px; margin-left: 4px;">
                       ${isUz ? "O'chirish" : "Удалить"}
                     </button>
@@ -116,7 +122,9 @@ const PurchasesModule = {
     const z = n => String(n).padStart(2, "0");
     const todayStr = `${now.getFullYear()}-${z(now.getMonth() + 1)}-${z(now.getDate())}`;
     try {
-      this.suppliersList = await API.getCounterparties("supplier");
+      const [suppliers, whs] = await Promise.all([API.getCounterparties("supplier"), API.getMaterialWarehouses()]);
+      this.suppliersList = suppliers;
+      this.owners = whs.owners || [];
     } catch (e) {
       showToast(e.message, "error");
       return;
@@ -140,6 +148,14 @@ const PurchasesModule = {
               ${this.suppliersList.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}
             </select>
           </div>
+          ${this.owners.length > 1 ? `
+          <div>
+            <label style="${label}">${isUz ? 'Qaysi ombor uchun *' : 'Для какого склада *'}</label>
+            <select id="pur-ombor" class="form-control" style="${field}">
+              <option value="">${isUz ? 'Omborni tanlang' : 'Выберите склад'}</option>
+              ${this.owners.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("")}
+            </select>
+          </div>` : ''}
           <div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <label style="${label} margin-bottom: 0;">${isUz ? 'Nima va qancha *' : 'Что и сколько *'}</label>
@@ -158,8 +174,14 @@ const PurchasesModule = {
       async () => {
         const supplierId = parseInt(document.getElementById("pur-supplier").value);
         const d = document.getElementById("pur-date").value;
+        // One Ombor: it goes there without asking; several: the one chosen.
+        const ombor = document.getElementById("pur-ombor") ? document.getElementById("pur-ombor").value : (PurchasesModule.owners[0] || "");
         if (!supplierId) {
           showToast(isUz ? "Kimdan olinayotganini tanlang" : "Выберите поставщика", "warning");
+          return false;
+        }
+        if (!ombor) {
+          showToast(isUz ? "Qaysi ombor uchun olinayotganini tanlang" : "Выберите склад", "warning");
           return false;
         }
         const items = [];
@@ -177,7 +199,7 @@ const PurchasesModule = {
           return false;
         }
         try {
-          await API.createPurchase({ supplier_id: supplierId, date: d, items });
+          await API.createPurchase({ supplier_id: supplierId, date: d, items, ombor });
           showToast(isUz ? "Xarid saqlandi, ombor qoldig'i yangilandi" : "Закупка сохранена, остатки обновлены", "success");
           await PurchasesModule.loadPurchases();
           return true;

@@ -1,6 +1,8 @@
 const OmborModule = {
-  currentWarehouseId: null,
+  currentFilter: null,      // warehouse ids of the chosen tab; null = all the user's
   currentView: "stock",
+  warehouses: [],           // xomashyo / aralash warehouses of the user's Ombors
+  owners: [],
 
   async render(container) {
     container.innerHTML = `
@@ -31,18 +33,8 @@ const OmborModule = {
           </button>
         </div>
 
-        <!-- Warehouse Filter Tabs (Visible in Stock view) -->
-        <div class="tabs-nav" id="warehouse-tabs" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;">
-          <button class="tab-btn active" onclick="OmborModule.filterWarehouse(null, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid #2563eb; color: #2563eb;">
-            ${CURRENT_LANG === 'uz' ? 'Barcha Omborlar' : 'Все Склады'}
-          </button>
-          <button class="tab-btn" onclick="OmborModule.filterWarehouse(2, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            ${CURRENT_LANG === 'uz' ? '2: Ishlab chiqarish materiallari' : '2: Материалы для производства'}
-          </button>
-          <button class="tab-btn" onclick="OmborModule.filterWarehouse(3, this)" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; color: #64748b;">
-            ${CURRENT_LANG === 'uz' ? '3: Aralash ombor' : '3: Смешанный склад'}
-          </button>
-        </div>
+        <!-- Warehouse Filter Tabs (Visible in Stock view): the user's Ombors -->
+        <div class="tabs-nav" id="warehouse-tabs" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; flex-wrap: wrap;"></div>
 
         <div class="table-container" id="stock-table-container">
           <div style="text-align: center; padding: 40px; color: #94a3b8;">${t('msg_loading')}</div>
@@ -50,7 +42,51 @@ const OmborModule = {
       </div>
     `;
 
+    try {
+      const whs = await API.getMaterialWarehouses();
+      this.warehouses = whs.warehouses || [];
+      this.owners = whs.owners || [];
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+    this.currentFilter = null;
+    this.renderTabs();
     await this.loadStock();
+  },
+
+  // Tabs: all, then each Ombor (Toxir: its xomashyo + aralash) and the old
+  // shared warehouses; a user of one Ombor gets its xomashyo and aralash.
+  tabGroups() {
+    const isUz = CURRENT_LANG === 'uz';
+    const groups = [{ label: isUz ? 'Barchasi' : 'Все', ids: null }];
+    if (this.owners.length > 1) {
+      this.owners.forEach(o => groups.push({ label: o, ids: this.warehouses.filter(w => w.owner === o).map(w => w.id) }));
+      const shared = this.warehouses.filter(w => !w.owner);
+      if (shared.length) groups.push({ label: isUz ? 'Umumiy (eski)' : 'Общий (старый)', ids: shared.map(w => w.id) });
+    } else {
+      this.warehouses.forEach(w => groups.push({ label: w.name, ids: [w.id] }));
+    }
+    return groups;
+  },
+
+  renderTabs() {
+    const el = document.getElementById("warehouse-tabs");
+    if (!el) return;
+    this._groups = this.tabGroups();
+    el.innerHTML = this._groups.map((g, i) => {
+      const on = JSON.stringify(g.ids) === JSON.stringify(this.currentFilter);
+      return `<button class="tab-btn" onclick="OmborModule.filterGroup(${i})" style="padding: 10px 16px; font-weight: 600; font-size: 14px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid ${on ? '#2563eb' : 'transparent'}; color: ${on ? '#2563eb' : '#64748b'};">${escapeHtml(g.label)}</button>`;
+    }).join("");
+  },
+
+  async filterGroup(i) {
+    this.currentFilter = (this._groups[i] || {}).ids || null;
+    this.renderTabs();
+    await this.loadStock();
+  },
+
+  warehouseOptions(selectedId) {
+    return this.warehouses.map(w => `<option value="${w.id}" ${w.id === selectedId ? "selected" : ""}>${escapeHtml(w.name)}</option>`).join("");
   },
 
   async switchView(view) {
@@ -88,27 +124,16 @@ const OmborModule = {
     }
   },
 
-  async filterWarehouse(whId, btnEl) {
-    this.currentWarehouseId = whId;
-    document.querySelectorAll("#warehouse-tabs .tab-btn").forEach(btn => {
-      btn.style.borderBottomColor = "transparent";
-      btn.style.color = "#64748b";
-    });
-    if (btnEl) {
-      btnEl.style.borderBottomColor = "#2563eb";
-      btnEl.style.color = "#2563eb";
-    }
-    await this.loadStock();
-  },
-
   async loadStock() {
     const tableDiv = document.getElementById("stock-table-container");
     if (!tableDiv) return;
 
     try {
-      const rawStock = await API.getStockBalances(this.currentWarehouseId, "", "");
+      const rawStock = await API.getStockBalances(null, "", "");
       // Finished tiles are kept in the Ombor (owner + size), not here.
-      const stock = (rawStock || []).filter(s => s.quantity > 0 && s.material_category !== "Tayyor mahsulot");
+      const ids = this.currentFilter;
+      const stock = (rawStock || []).filter(s => s.quantity > 0 && s.material_category !== "Tayyor mahsulot"
+        && (!ids || ids.includes(s.warehouse_id)));
       
       let grandTotalUsd = 0;
       let grandTotalUzs = 0;
@@ -277,15 +302,13 @@ const OmborModule = {
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${CURRENT_LANG === 'uz' ? 'Qaysi Ombordan (Manba)' : 'Из какого склада'} *</label>
               <select id="tr-from-wh" class="form-control" required onchange="OmborModule.populateMaterialsForTransfer()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                <option value="2">2: Ishlab chiqarish materiallari</option>
-                <option value="3">3: Aralash ombor</option>
+                ${this.warehouseOptions((this.warehouses[0] || {}).id)}
               </select>
             </div>
             <div class="form-group">
               <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${CURRENT_LANG === 'uz' ? 'Qaysi Omborga (Maqsad)' : 'В какой склад'} *</label>
               <select id="tr-to-wh" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;">
-                <option value="2">2: Ishlab chiqarish materiallari</option>
-                <option value="3" selected>3: Aralash ombor</option>
+                ${this.warehouseOptions((this.warehouses[1] || {}).id)}
               </select>
             </div>
           </div>
@@ -489,8 +512,7 @@ const OmborModule = {
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px;">${t('th_warehouse')} *</label>
             <select id="adj-wh" class="form-control" required onchange="OmborModule.populateMaterialsForAdjust()" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
-              <option value="2" selected>2: Ishlab chiqarish uchun materiallar</option>
-              <option value="3">3: Aralash ombor</option>
+              ${this.warehouseOptions((this.warehouses[0] || {}).id)}
             </select>
           </div>
           <div class="form-group" style="margin-bottom: 14px;">

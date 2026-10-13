@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 from backend.database import SessionLocal
 from backend.models import MDMCounterparty, MDMMaterial, Purchase, StockItem
 from backend.services.order_service import ensure_card_register
+from backend.services import material_warehouses as mw
 
 MARK = "[DEMO]"
 
@@ -54,7 +55,7 @@ RAW_MATERIALS = [
     ("RM-PIGM-05", "Keramik pigment boyoq (Italiya)", "kg", 6.50, "Esmalglass Glazur (Ispaniya)", 0.02, 0.016),
 ]
 SKLADS_100 = (2, 4, 6, 8)        # Toxir 100, Kodir 100, Istam 100, Aziz 100
-STOCK_FOR_PIECES = 3000          # keep enough raw material in Warehouse 2 for this many pieces
+STOCK_FOR_PIECES = 3000          # keep enough raw material in each Ombor's xomashyo for this many pieces
 
 
 def ensure_raw_materials(call: Callable, db) -> dict:
@@ -83,27 +84,30 @@ def ensure_auto_sarf(call: Callable, db, mats: dict, on_day: date, log: List[str
             call("POST", "/ishlab-chiqarish/auto-sarf",
                  json={"sklad_id": sklad_id, "material_id": mats[code], "qty_per_unit": norm_100})
 
-    stock = {s.material_id: s.quantity or 0.0
-             for s in db.query(StockItem).filter(StockItem.warehouse_id == 2).all()}
-    by_supplier: dict = {}
-    for code, _, _, price, supplier, norm, _ in RAW_MATERIALS:
-        if code not in mats:
+    for owner in mw.OWNERS:
+        wh = mw.warehouse_id(db, owner, mw.XOMASHYO)
+        stock = {s.material_id: s.quantity or 0.0
+                 for s in db.query(StockItem).filter(StockItem.warehouse_id == wh).all()}
+        by_supplier: dict = {}
+        for code, _, _, price, supplier, norm, _ in RAW_MATERIALS:
+            if code not in mats:
+                continue
+            target = norm * STOCK_FOR_PIECES
+            have = stock.get(mats[code], 0.0)
+            if have < target / 2:
+                by_supplier.setdefault(supplier, []).append(
+                    {"material_id": mats[code], "quantity": round(target - have), "unit_price": price})
+        if not by_supplier:
             continue
-        target = norm * STOCK_FOR_PIECES
-        have = stock.get(mats[code], 0.0)
-        if have < target / 2:
-            by_supplier.setdefault(supplier, []).append(
-                {"material_id": mats[code], "quantity": round(target - have), "unit_price": price})
-    if not by_supplier:
-        return
-    log.append("Avto sarf uchun xomashyo kirimi (2-ombor)")
-    for supplier, rows in by_supplier.items():
-        cp = db.query(MDMCounterparty).filter(MDMCounterparty.name == supplier).first()
-        cp_id = cp.id if cp else call("POST", "/mdm/counterparties", json={
-            "name": supplier, "type": "supplier", "region": "Toshkent shahri", "phone": "+998710000000"})["id"]
-        call("POST", "/savdo/purchases", json={
-            "supplier_id": cp_id, "warehouse_id": 2, "date": str(on_day), "currency": "USD",
-            "items": rows, "description": f"Avto sarf uchun xomashyo {MARK}"})
+        log.append(f"Avto sarf uchun xomashyo kirimi ({owner})")
+        for supplier, rows in by_supplier.items():
+            cp = db.query(MDMCounterparty).filter(MDMCounterparty.name == supplier).first()
+            cp_id = cp.id if cp else call("POST", "/mdm/counterparties", json={
+                "name": supplier, "type": "supplier", "region": "Toshkent shahri", "phone": "+998710000000"})["id"]
+            call("POST", "/savdo/purchases", json={
+                "supplier_id": cp_id, "warehouse_id": wh, "date": str(on_day), "currency": "USD",
+                "items": rows, "description": f"Avto sarf uchun xomashyo {MARK}"})
+            db.expire_all()
 
 
 def run(call: Callable, force: bool = False) -> List[str]:
@@ -167,7 +171,7 @@ def run(call: Callable, force: bool = False) -> List[str]:
                 "name": name, "type": "client", "region": region, "phone": phone, "address": region})
 
         # ------------------------------------------------------------ purchases
-        log.append("Xaridlar: xomashyo (2-ombor), yordamchi materiallar va zapchastlar (3-ombor)")
+        log.append("Xaridlar: xomashyo, yordamchi materiallar va zapchastlar (har ombor o'ziniki)")
         mats = ensure_raw_materials(call, db)
         purchases = [
             (0, 2, [("RM-CLAY-01", 80_000, 0.045)]),
@@ -183,8 +187,12 @@ def run(call: Callable, force: bool = False) -> List[str]:
             rows = [{"material_id": mats[c], "quantity": q, "unit_price": p} for c, q, p in items if c in mats]
             if not rows:
                 continue
+            # raw materials round the 4 Ombors; consumables and spare parts to Kodir
+            owner = mw.OWNERS[i % len(mw.OWNERS)] if wh == 2 else "Kodir"
             pur = call("POST", "/savdo/purchases", json={
-                "supplier_id": suppliers[sup_idx]["id"], "warehouse_id": wh, "date": str(day(9 - i)),
+                "supplier_id": suppliers[sup_idx]["id"],
+                "warehouse_id": mw.warehouse_id(db, owner, mw.XOMASHYO if wh == 2 else mw.ARALASH),
+                "date": str(day(9 - i)),
                 "currency": "USD", "items": rows, "description": f"Oylik partiya {MARK}"})
             # Pay 60% now, the rest stays as debt to the supplier.
             if usd:
@@ -220,15 +228,16 @@ def run(call: Callable, force: bool = False) -> List[str]:
                 "notes": f"Smena {1 + i % 2} {MARK}"})
 
         # ------------------------------------------------------------ equipment materials
-        log.append("Sarf materiallari (3-ombordan)")
-        for d_ago, items, note in [
-            (5, [("SP-KILN-01", 2), ("AUX-STRAP", 3)], "Pech roligi almashtirildi"),
-            (2, [("SP-PRESS-02", 1), ("AUX-FILM", 4)], "Press manjeti va qadoqlash"),
+        log.append("Sarf materiallari (Kodir aralash omboridan)")
+        for d_ago, owner, items, note in [
+            (5, "Kodir", [("SP-KILN-01", 2), ("AUX-STRAP", 3)], "Pech roligi almashtirildi"),
+            (2, "Kodir", [("SP-PRESS-02", 1), ("AUX-FILM", 4)], "Press manjeti va qadoqlash"),
         ]:
             lst = [{"material_id": mats[c], "quantity": q} for c, q in items if c in mats]
             if lst:
                 call("POST", "/ishlab-chiqarish/line-expenses", json={
-                    "date": str(day(d_ago)), "line_ids": [], "items": lst, "notes": f"{note} {MARK}"})
+                    "date": str(day(d_ago)), "line_ids": [], "items": lst, "ombor": owner,
+                    "notes": f"{note} {MARK}"})
 
         # ------------------------------------------------------------ overheads
         log.append("Kassadan zavod xarajatlari (svet, gaz, ofis)")

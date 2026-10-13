@@ -10,6 +10,7 @@ from backend.database import SessionLocal
 from backend.main import app
 from backend.models import MDMCounterparty, StockItem, SupplierPrice
 from backend.services.currency_service import convert_amount
+from backend.services import material_warehouses as mw
 from tests_support import use_header_roles
 
 use_header_roles()
@@ -48,9 +49,9 @@ class TestSupplierPrices(unittest.TestCase):
     def prices(self, items, cp_id=None):
         return client.put(f"/api/mdm/counterparties/{cp_id or self.supplier['id']}/prices", headers=ADMIN, json=items)
 
-    def buy(self, items):
+    def buy(self, items, ombor="Toxir"):
         res = client.post("/api/savdo/purchases", headers=ADMIN, json={
-            "supplier_id": self.supplier["id"], "date": str(DAY), "items": items})
+            "supplier_id": self.supplier["id"], "date": str(DAY), "items": items, "ombor": ombor})
         if res.status_code == 200:
             self.made.append(res.json()["id"])
         return res
@@ -104,7 +105,12 @@ class TestSupplierPrices(unittest.TestCase):
             {"material_id": self.spare["id"], "price": 40000, "currency": "UZS"},
         ]))
         uzs0, _ = self.balance()
-        clay0 = self.stock(2, self.clay["id"])
+        db = SessionLocal()
+        try:
+            xom, arl = mw.warehouse_id(db, "Toxir", mw.XOMASHYO), mw.warehouse_id(db, "Toxir", mw.ARALASH)
+        finally:
+            db.close()
+        clay0 = self.stock(xom, self.clay["id"])
 
         pur = ok(self.buy([{"material_id": self.clay["id"], "quantity": 200},
                            {"material_id": self.glaze["id"], "quantity": 10}]))
@@ -116,13 +122,14 @@ class TestSupplierPrices(unittest.TestCase):
         # In the first line's currency; the dollar line converted at the day's rate
         self.assertEqual(pur["currency"], "UZS")
         self.assertAlmostEqual(pur["total_amount"], 200 * 1500 + 10 * glaze_uzs, delta=0.01)
-        self.assertEqual(self.stock(2, self.clay["id"]) - clay0, 200)                # raw material -> warehouse 2
+        self.assertEqual(self.stock(xom, self.clay["id"]) - clay0, 200)              # raw material -> Toxir xomashyo
         uzs1, _ = self.balance()
         self.assertAlmostEqual(uzs1 - uzs0, -pur["total_amount"], delta=0.01)          # we owe them that much
 
         spare = ok(self.buy([{"material_id": self.spare["id"], "quantity": 3}]))
-        self.assertEqual(spare["warehouse_id"], 3)                                     # spare parts -> Aralash ombor
-        self.assertEqual(self.stock(3, self.spare["id"]), 3)
+        self.assertEqual(spare["warehouse_id"], arl)                                   # spare parts -> Toxir aralash
+        self.assertEqual(spare["ombor"], "Toxir")
+        self.assertEqual(self.stock(arl, self.spare["id"]), 3)
 
         self.assertEqual(self.buy([{"material_id": self.clay["id"], "quantity": 5},
                                    {"material_id": self.spare["id"], "quantity": 1}]).status_code, 400)  # two warehouses

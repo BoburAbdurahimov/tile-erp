@@ -2,7 +2,7 @@ from typing import Dict, Any
 from sqlalchemy import extract
 from sqlalchemy.orm import Session
 from backend.models import (ProductionOrder, CashTransaction, LineExpense, SKLAD_CONFIG,
-                            MonthlySalaryCalculation, SalaryAdjustment, Employee)
+                            MonthlySalaryCalculation, SalaryAdjustment, Employee, Warehouse)
 from backend.services.currency_service import convert_amount
 
 # Production goes into a yo'nalish (an Ombor's eni: "Kodir 120") instead of
@@ -17,7 +17,8 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
     Calculates, for each Ombor production went into this month:
     1. Pieces produced.
     2. Direct raw materials cost (consumed from Warehouse 2).
-    3. Spare parts & consumables issued from Warehouse 3 (LineExpense), spread by volume.
+    3. Spare parts & consumables issued from an aralash warehouse (LineExpense): an Ombor's
+       own go to that Ombor's two yo'nalish by their volume, the old shared one's over all.
     4. Salaries and avans paid through Ish haqi, where the person works: an Ombor's people
        go to that Ombor's two yo'nalish by their volume (half each if it made
        nothing), Ma'muriyat to admin costs. People with no Ombor, and wages paid
@@ -61,17 +62,25 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         total_volume += order.quantity or 0.0
         total_direct += order.direct_cost_usd or 0.0
 
-    # Spare parts & consumables from Warehouse 3: spread over this month's production by volume.
+    # Spare parts & consumables: an Ombor's own aralash goes to that Ombor's
+    # production (by volume, half each if it made nothing); the old shared
+    # warehouse's is spread over all of this month's production by volume.
     line_expenses = db.query(LineExpense).filter(
         extract('year', LineExpense.date) == year,
         extract('month', LineExpense.date) == month,
         LineExpense.status == "Tasdiqlandi"
     ).all()
+    wh_owner = {w.id: w.owner for w in db.query(Warehouse).all()}
     total_equipment = 0.0
     for le in line_expenses:
         cost = le.total_cost_usd or 0.0
         total_equipment += cost
-        if total_volume > 0:
+        mine = [b for b in buckets.values() if b["owner"] == wh_owner.get(le.warehouse_id)]
+        if mine:
+            vol = sum(b["volume"] for b in mine)
+            for b in mine:
+                b["equipment"] += cost * (b["volume"] / vol if vol > 0 else 1 / len(mine))
+        elif total_volume > 0:
             for b in buckets.values():
                 b["equipment"] += cost * (b["volume"] / total_volume)
         else:

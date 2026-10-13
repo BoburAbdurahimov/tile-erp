@@ -83,6 +83,10 @@ class Warehouse(Base):
     name = Column(String(100), nullable=False) # 1: Tayyor mahsulotlar, 2: Ishlab chiqarish uchun materiallar, 3: Aralash ombor
     is_system_default = Column(Boolean, default=False)
     description = Column(Text, nullable=True)
+    # Each Ombor owner (Toxir, Kodir, Istam, Aziz) has its own xomashyo and
+    # aralash warehouse; NULL owner = the old shared ones (2 and 3).
+    owner = Column(String(20), nullable=True)
+    kind = Column(String(20), nullable=True)     # "xomashyo" | "aralash"
     
     stock_items = relationship("StockItem", back_populates="warehouse")
 

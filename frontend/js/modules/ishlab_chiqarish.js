@@ -214,24 +214,23 @@ const ProductionModule = {
   async openNewOrderModal() {
     const todayStr = new Date().toISOString().split("T")[0];
     
-    // Ombor config and raw-material stock from Warehouse 2 (Ishlab chiqarish uchun materiallar)
-    const [skladConfig, rawStockItems] = await Promise.all([
+    // The Ombors this user produces into, and each one's own xomashyo warehouse
+    const [skladConfig, whs] = await Promise.all([
       API.getSkladConfig(),
-      API.getStockBalances(2)
+      API.getMaterialWarehouses()
     ]);
+    this.materialWhs = whs.warehouses || [];
 
     // Finished sheets go into the Ombor: owner + sheet width (eni) + size code.
     this.skladConfig = skladConfig || { warehouses: [], lengths: [], widths: [] };
     const owners = [...new Set(this.skladConfig.warehouses.map(w => w.name))];
     const enis = [...new Set(this.skladConfig.warehouses.map(w => w.eni))];
-    this.wh2StockItems = (rawStockItems || []).filter(s => s.quantity > 0);
+    this.wh2StockItems = [];
 
     showModal(
       CURRENT_LANG === 'uz' ? "Yangi Ishlab Chiqarish hujjati kiritish" : "Ввод документа выпуска готовой продукции",
       `
-        <datalist id="prod-consumed-wh2-datalist">
-          ${this.wh2StockItems.map(s => `<option value="${s.material_code} - ${s.material_name} (${tr(s.unit)})" data-id="${s.material_id}">${CURRENT_LANG === 'uz' ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("")}
-        </datalist>
+        <datalist id="prod-consumed-wh2-datalist"></datalist>
 
         <form id="new-prod-order-form">
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
@@ -244,7 +243,7 @@ const ProductionModule = {
           <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 6px;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 13px;">${CURRENT_LANG === 'uz' ? 'Qaysi omborga *' : 'На какой склад *'}</label>
-              <select id="po-owner" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" onchange="ProductionModule.refreshAutoSarf()" required>
+              <select id="po-owner" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" onchange="ProductionModule.onOwnerChange()" required>
                 ${owners.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("")}
               </select>
             </div>
@@ -269,8 +268,8 @@ const ProductionModule = {
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-              <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
-                ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo va materiallar (2: Ishlab chiqarish uchun materiallar ombori):' : 'Израсходованное сырье (Склад 2):'}
+              <label id="po-consumed-label" class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
+                ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo:' : 'Израсходованное сырье:'}
               </label>
               <label style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: #f5f3ff; border: 1.5px solid #c4b5fd; font-size: 13px; font-weight: 700; color: #6d28d9; cursor: pointer; margin: 0;">
                 <input type="checkbox" id="po-auto-sarf" onchange="ProductionModule.onAutoSarfToggle()" style="width: 16px; height: 16px; cursor: pointer;" />
@@ -357,7 +356,8 @@ const ProductionModule = {
       "modal-lg"
     );
 
-    // Add initial clean row, then apply Avto sarf if it was on last time.
+    // The chosen Ombor's raw materials; a clean row, then Avto sarf if it was on last time.
+    await this.loadOwnerStock();
     this.addConsumedRow();
     let autoOn = false;
     try { autoOn = localStorage.getItem("prod_auto_sarf") === "1"; } catch (_) {}
@@ -385,6 +385,30 @@ const ProductionModule = {
       if (hint) hint.style.display = "none";
       this.addConsumedRow();
     }
+  },
+
+  // Raw materials come from the xomashyo warehouse of the Ombor produced into.
+  ownerWarehouse(owner, kind) {
+    return (this.materialWhs || []).find(w => w.owner === owner && w.kind === kind);
+  },
+
+  async loadOwnerStock() {
+    const isUz = CURRENT_LANG === 'uz';
+    const wh = this.ownerWarehouse(document.getElementById("po-owner")?.value, "xomashyo");
+    try {
+      this.wh2StockItems = wh ? ((await API.getStockBalances(wh.id)) || []).filter(s => s.quantity > 0) : [];
+    } catch (e) {
+      this.wh2StockItems = [];
+    }
+    const dl = document.getElementById("prod-consumed-wh2-datalist");
+    if (dl) dl.innerHTML = this.wh2StockItems.map(s => `<option value="${escapeHtml(`${s.material_code} - ${s.material_name} (${tr(s.unit)})`)}" data-id="${s.material_id}">${isUz ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("");
+    const lbl = document.getElementById("po-consumed-label");
+    if (lbl && wh) lbl.textContent = isUz ? `Sarflangan xomashyo (${wh.name}):` : `Израсходованное сырье (${wh.name}):`;
+  },
+
+  async onOwnerChange() {
+    await this.loadOwnerStock();
+    this.refreshAutoSarf();
   },
 
   async refreshAutoSarf() {
@@ -579,29 +603,37 @@ const ProductionModule = {
 
   async openLineExpenseModal() {
     const todayStr = new Date().toISOString().split("T")[0];
-    const stockItems = await API.getStockBalances(3); // Warehouse 3 (Aralash ombor)
-
-    const availableStock = (stockItems || []).filter(s => s.quantity > 0);
+    const isUz = CURRENT_LANG === 'uz';
+    // Each Ombor issues spare parts from its own aralash warehouse.
+    const whs = await API.getMaterialWarehouses();
+    this.materialWhs = whs.warehouses || [];
+    const owners = whs.owners || [];
+    this.leStock = [];
+    const availableStock = this.leStock;
 
     showModal(
-      CURRENT_LANG === 'uz' ? "Sarf materiallari (Aralash ombor) kiritish" : "Списание материалов (Склад 3)",
+      isUz ? "Sarf materiallari (Aralash ombor) kiritish" : "Списание материалов (Смешанный склад)",
       `
-        <datalist id="le-mat-datalist">
-          ${availableStock.map(s => `<option value="${s.material_code} - ${s.material_name} (${tr(s.unit)})" data-id="${s.material_id}">${CURRENT_LANG === 'uz' ? 'Mavjud' : 'Доступно'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("")}
-        </datalist>
+        <datalist id="le-mat-datalist"></datalist>
 
         <form id="line-expense-form">
-          <div class="form-row" style="display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px;">
+          <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 14px;">
             <div class="form-group">
               <label class="form-label" style="font-weight: 600; font-size: 13px;">${t('th_date')} *</label>
               <input type="date" id="le-date" class="form-control" value="${todayStr}" style="width: 100%; padding: 8px 12px; border-radius: 8px;" required />
+            </div>
+            <div class="form-group" style="${owners.length > 1 ? '' : 'display: none;'}">
+              <label class="form-label" style="font-weight: 600; font-size: 13px;">${isUz ? 'Qaysi ombor *' : 'Склад *'}</label>
+              <select id="le-ombor" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 8px;" onchange="ProductionModule.loadAralashStock()">
+                ${owners.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("")}
+              </select>
             </div>
           </div>
 
 
           <div style="margin-top: 18px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <label class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
-              ${CURRENT_LANG === 'uz' ? '3-Aralash ombordan sarflangan zapchast / materiallar:' : 'Списанные материалы со Склада 3:'}
+            <label id="le-stock-label" class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
+              ${isUz ? 'Sarflangan zapchast / materiallar:' : 'Списанные материалы:'}
             </label>
             <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="ProductionModule.addLineExpenseRow()" title="${CURRENT_LANG === 'uz' ? 'Material qo\'shish' : 'Добавить материал'}" aria-label="${CURRENT_LANG === 'uz' ? 'Material qo\'shish' : 'Добавить материал'}">${uiIcon("plus")}</button>
           </div>
@@ -609,7 +641,7 @@ const ProductionModule = {
           <table class="basket-table" style="width: 100%; border-collapse: collapse; margin-bottom: 14px;">
             <thead>
               <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #475569;">
-                <th style="padding: 8px 10px; text-align: left; width: 68%;">${CURRENT_LANG === 'uz' ? 'Zapchast / Material (Aralash ombor)' : 'Материал (Склад 3)'}</th>
+                <th style="padding: 8px 10px; text-align: left; width: 68%;">${CURRENT_LANG === 'uz' ? 'Zapchast / Material' : 'Материал'}</th>
                 <th style="padding: 8px 10px; text-align: left; width: 22%;">${CURRENT_LANG === 'uz' ? 'Sarflangan miqdor' : 'Расход'}</th>
                 <th style="padding: 8px 10px; text-align: center; width: 10%;">${t('th_actions')}</th>
               </tr>
@@ -650,7 +682,8 @@ const ProductionModule = {
             date: d,
             line_ids: [],
             items: items,
-            notes: notes
+            notes: notes,
+            ombor: document.getElementById("le-ombor").value
           });
           showToast(CURRENT_LANG === 'uz' ? "Sarf materiali muvaffaqiyatli saqlandi!" : "Расход материалов успешно сохранен!", "success");
           if (ProductionModule.activeTab === 'expenses') {
@@ -668,6 +701,21 @@ const ProductionModule = {
     );
 
     this.addLineExpenseRow();
+    await this.loadAralashStock();
+  },
+
+  async loadAralashStock() {
+    const isUz = CURRENT_LANG === 'uz';
+    const wh = this.ownerWarehouse(document.getElementById("le-ombor")?.value, "aralash");
+    let items = [];
+    try {
+      items = wh ? ((await API.getStockBalances(wh.id)) || []).filter(s => s.quantity > 0) : [];
+    } catch (e) { /* none */ }
+    this.leStock.splice(0, this.leStock.length, ...items);
+    const dl = document.getElementById("le-mat-datalist");
+    if (dl) dl.innerHTML = items.map(s => `<option value="${escapeHtml(`${s.material_code} - ${s.material_name} (${tr(s.unit)})`)}" data-id="${s.material_id}">${isUz ? 'Mavjud' : 'Доступно'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("");
+    const lbl = document.getElementById("le-stock-label");
+    if (lbl && wh) lbl.textContent = isUz ? `${wh.name} omboridan sarflangan zapchast / materiallar:` : `Списано со склада ${wh.name}:`;
   },
 
   addLineExpenseRow() {

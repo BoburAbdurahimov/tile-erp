@@ -38,7 +38,7 @@ class TestRights(unittest.TestCase):
                           json=[{"material_id": mat["id"], "price": 100}]))
             zakup = "Sotib olish (Zakup)"
             pur = ok(client.post("/api/savdo/purchases", headers=as_role(zakup), json={
-                "supplier_id": sup["id"], "date": str(date.today()),
+                "supplier_id": sup["id"], "date": str(date.today()), "ombor": "Toxir",
                 "items": [{"material_id": mat["id"], "quantity": 5}]}))
 
             res = client.post(f"/api/savdo/purchases/{pur['id']}/storno", headers=as_role(zakup))

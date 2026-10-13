@@ -96,6 +96,8 @@ class WarehouseResponse(BaseModel):
     name: str
     is_system_default: bool
     description: Optional[str] = None
+    owner: Optional[str] = None
+    kind: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -219,6 +221,7 @@ class LineExpenseCreate(BaseModel):
     line_ids: List[int] = []        # optional: materials are no longer issued per line
     items: List[LineExpenseItemInput]
     notes: Optional[str] = None
+    ombor: Optional[str] = None     # whose aralash warehouse; empty = the user's only Ombor
 
 class LineExpenseItemResponse(BaseModel):
     id: int
@@ -310,7 +313,8 @@ class PurchaseItemInput(BaseModel):
 
 class PurchaseCreate(BaseModel):
     supplier_id: int
-    warehouse_id: Optional[int] = None  # empty: by material (spare parts -> Aralash ombor, else 2)
+    warehouse_id: Optional[int] = None  # empty: the Ombor's xomashyo, or its aralash for spare parts
+    ombor: Optional[str] = None         # the Ombor (owner) it is for; empty = the user's only one
     date: dt_date = Field(default_factory=dt_date.today)
     currency: Optional[str] = None      # empty: the currency of the supplier's prices
     items: List[PurchaseItemInput]
@@ -338,6 +342,7 @@ class PurchaseResponse(BaseModel):
     supplier_code: str
     warehouse_id: int
     warehouse_name: str
+    ombor: str = ""                       # the owner of that warehouse (Toxir, ...); "" = shared
     date: dt_date
     currency: str
     total_amount: float
