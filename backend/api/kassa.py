@@ -103,6 +103,7 @@ def get_cash_transactions(
             category=tx.category,
             date=tx.date,
             description=tx.description,
+            status=tx.status or "Tasdiqlandi",
             created_at=tx.created_at
         ))
     return result
@@ -189,6 +190,85 @@ def create_cash_transaction(
         created_at=tx.created_at
     )
 
+def _undo_effects(db: Session, tx: CashTransaction, username: str) -> list:
+    """Take a Kassa entry's money back out of its register and counterparty,
+    and put the documents it paid back to unpaid. Returns the (employee,
+    month) pairs whose avans it paid, to recalculate after commit."""
+    reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
+    if reg:
+        if tx.type.lower() == "kirim":
+            reg.balance -= tx.amount
+        else:  # chiqim
+            reg.balance += tx.amount
+
+    if tx.counterparty_id:
+        cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == tx.counterparty_id).first()
+        if cp:
+            move_cash(cp, tx.type.lower(), tx.currency, tx.amount,
+                      get_exchange_rate_for_date(db, tx.date), sign=-1)
+
+    # Documents paid through this entry go back to unpaid / cancelled, so Ish
+    # haqi and Xarajatlar agree with Kassa (and the salary's foreign key does
+    # not stop a delete).
+    for calc in db.query(MonthlySalaryCalculation).filter(
+            MonthlySalaryCalculation.cash_transaction_id == tx.id).all():
+        calc.cash_transaction_id = None
+        calc.status = "draft"
+        calc.paid_at = None
+        calc.paid_by = None
+    for exp in db.query(OtherExpense).filter(OtherExpense.cash_transaction_id == tx.id).all():
+        exp.status = "Bekor"
+        exp.cash_transaction_id = None
+    # An avans paid through it is no longer paid: it goes from Ish haqi too.
+    try:
+        return release_transaction_adjustments(db, tx.id)
+    except ValueError as ve:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Bu avans Ish haqida: {ve} Avval oyni qayta oching.")
+
+
+def _undo_exchange_of(db: Session, tx: CashTransaction, username: str):
+    """One side of a konvertatsiya: both sides go and both registers get their money back."""
+    exchange = exchange_of_transaction(db, tx.id)
+    if not exchange:
+        return None
+    try:
+        undo_exchange(db, exchange, current_user=username)
+    except ValueError as ve:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(ve))
+    db.commit()
+    return {"success": True, "message": "Konvertatsiya bekor qilindi: ikkala kassadagi yozuv ham o'chirildi.",
+            "id": tx.id}
+
+
+@router.post("/transactions/{transaction_id}/storno")
+def storno_cash_transaction(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role),
+    username: str = Depends(get_current_username),
+):
+    """Storno: the entry stays in the history marked Storno, and its money
+    goes back as if it had not happened. Reports leave it out."""
+    check_permission("kassa", role)
+    check_action("storno", role)
+    tx = db.query(CashTransaction).filter(CashTransaction.id == transaction_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Tranzaksiya topilmadi.")
+    if tx.status == "Storno":
+        raise HTTPException(status_code=400, detail="Bu yozuv allaqachon storno qilingan.")
+    done = _undo_exchange_of(db, tx, username)
+    if done:
+        return done
+    avans_paid_to = _undo_effects(db, tx, username)
+    tx.status = "Storno"
+    db.commit()
+    for employee_id, year_month in avans_paid_to:
+        calculate_employee_salary(db, employee_id, year_month)
+    return {"success": True, "message": "Kassa yozuvi storno qilindi.", "id": transaction_id}
+
+
 @router.delete("/transactions/{transaction_id}")
 def delete_cash_transaction(
     transaction_id: int,
@@ -202,51 +282,11 @@ def delete_cash_transaction(
     if not tx:
         raise HTTPException(status_code=404, detail="Tranzaksiya topilmadi.")
 
-    # One side of a konvertatsiya: both sides go and both registers get their money back.
-    exchange = exchange_of_transaction(db, tx.id)
-    if exchange:
-        try:
-            undo_exchange(db, exchange, current_user=username)
-        except ValueError as ve:
-            db.rollback()
-            raise HTTPException(status_code=400, detail=str(ve))
-        db.commit()
-        return {"success": True, "message": "Konvertatsiya bekor qilindi: ikkala kassadagi yozuv ham o'chirildi.",
-                "id": transaction_id}
-
-    # Reverse register balance
-    reg = db.query(CashRegister).filter(CashRegister.id == tx.register_id).first()
-    if reg:
-        if tx.type.lower() == "kirim":
-            reg.balance -= tx.amount
-        else: # chiqim
-            reg.balance += tx.amount
-            
-    # Reverse counterparty balance if attached
-    if tx.counterparty_id:
-        cp = db.query(MDMCounterparty).filter(MDMCounterparty.id == tx.counterparty_id).first()
-        if cp:
-            move_cash(cp, tx.type.lower(), tx.currency, tx.amount,
-                               get_exchange_rate_for_date(db, tx.date), sign=-1)
-
-    # Documents paid through this entry go back to unpaid / cancelled, so Ish
-    # haqi and Xarajatlar agree with Kassa (and the salary's foreign key does
-    # not stop the delete).
-    for calc in db.query(MonthlySalaryCalculation).filter(
-            MonthlySalaryCalculation.cash_transaction_id == tx.id).all():
-        calc.cash_transaction_id = None
-        calc.status = "draft"
-        calc.paid_at = None
-        calc.paid_by = None
-    for exp in db.query(OtherExpense).filter(OtherExpense.cash_transaction_id == tx.id).all():
-        exp.status = "Bekor"
-        exp.cash_transaction_id = None
-    # An avans paid through it is no longer paid: it goes from Ish haqi too.
-    try:
-        avans_paid_to = release_transaction_adjustments(db, tx.id)
-    except ValueError as ve:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=f"Bu avans Ish haqida: {ve} Avval oyni qayta oching.")
+    done = _undo_exchange_of(db, tx, username)
+    if done:
+        return done
+    # A storno entry's money was already given back: it only leaves the list.
+    avans_paid_to = [] if tx.status == "Storno" else _undo_effects(db, tx, username)
     db.flush()
 
     db.delete(tx)

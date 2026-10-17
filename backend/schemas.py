@@ -191,6 +191,7 @@ class CashTransactionResponse(BaseModel):
     category: str
     date: dt_date
     description: Optional[str]
+    status: Optional[str] = "Tasdiqlandi"     # "Storno" once taken back
     created_at: dt_datetime
 
 class ExchangeRateCreate(BaseModel):

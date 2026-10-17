@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 from backend.models import (ProductionOrder, CashTransaction, LineExpense, SKLAD_CONFIG,
                             MonthlySalaryCalculation, SalaryAdjustment, Employee, Warehouse)
@@ -101,6 +101,7 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
             extract('year', CashTransaction.date) == year,
             extract('month', CashTransaction.date) == month,
             CashTransaction.type == "chiqim",
+            func.coalesce(CashTransaction.status, "") != "Storno",
         ).all()
     salary_tx_ids = set()
     owner_salary: Dict[str, float] = {}
@@ -126,7 +127,8 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         extract('year', CashTransaction.date) == year,
         extract('month', CashTransaction.date) == month,
         CashTransaction.type == "chiqim",
-        CashTransaction.category.in_(INDIRECT_CATEGORIES)
+        CashTransaction.category.in_(INDIRECT_CATEGORIES),
+        func.coalesce(CashTransaction.status, "") != "Storno",
     ).all()
     total_indirect = general_salary + sum(
         convert_amount(tx.amount, tx.currency, "USD", tx.date, db)
@@ -143,7 +145,8 @@ def calculate_monthly_production_cost_allocation(db: Session, year_month: str) -
         extract('year', CashTransaction.date) == year,
         extract('month', CashTransaction.date) == month,
         CashTransaction.type == "chiqim",
-        CashTransaction.category.in_(ADMIN_CATEGORIES)
+        CashTransaction.category.in_(ADMIN_CATEGORIES),
+        func.coalesce(CashTransaction.status, "") != "Storno",
     ).all()
     total_admin = admin_salary + sum(convert_amount(tx.amount, tx.currency, "USD", tx.date, db) for tx in admin_txs)
 

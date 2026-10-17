@@ -158,8 +158,9 @@ const KassaModule = {
             ${txs.map(tx => {
               const isKirim = tx.type === "kirim" || tx.type === "Kirim";
               const isUsd = tx.currency === 'USD';
+              const isStorno = tx.status === 'Storno';
               return `
-                <tr>
+                <tr class="${isStorno ? 'storno-row' : ''}" style="${isStorno ? 'opacity: 0.6; background: #fff1f2;' : ''}">
                   <td data-sort-value="${tx.date}">${formatDate(tx.date)}</td>
                   <td data-sort-value="${tx.register_name}"><strong>${tr(tx.register_name)}</strong></td>
                   <td data-sort-value="${tx.type}">
@@ -181,6 +182,8 @@ const KassaModule = {
                   </td>
                   <td data-sort-value="${tx.description || ''}">${tr(tx.description) || '-'}</td>
                   <td style="padding: 12px 14px; text-align: right; white-space: nowrap;">
+                    ${isStorno ? `<span class="badge" style="background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-weight: 700; margin-right: 4px;">Storno</span>`
+                      : (canDo('storno') ? `<button class="btn btn-sm" onclick="KassaModule.stornoTransaction(${tx.id}, ${jsArg(tx.category)})" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 12px; margin-right: 4px;">Storno</button>` : '')}
                     ${canDo('delete') ? `<button class="btn btn-danger btn-sm" onclick="KassaModule.deleteTransaction(${tx.id}, ${jsArg(tx.category)})" title="O'chirish" style="padding: 4px 8px; font-size: 12px;">${CURRENT_LANG === 'uz' ? "O'chirish" : "Удалить"}</button>` : ''}
                   </td>
                 </tr>
@@ -757,6 +760,25 @@ const KassaModule = {
       `).join("");
     } catch (e) {
       console.error(e);
+    }
+  },
+
+  // Storno keeps the entry in the list, marked, and gives its money back.
+  async stornoTransaction(id, category) {
+    const isUz = CURRENT_LANG === 'uz';
+    const question = category === "Konvertatsiya"
+      ? (isUz ? "Konvertatsiyani bekor qilasizmi? Ikkala kassadagi yozuv ham o'chadi va pul joyiga qaytadi."
+              : "Отменить конвертацию? Удалятся обе записи, деньги вернутся на место.")
+      : (isUz ? "Bu yozuvni STORNO qilasizmi? Pul kassaga (va kontragent balansiga) qaytadi, yozuv ro'yxatda «Storno» bo'lib qoladi."
+              : "Сторнировать запись? Деньги вернутся в кассу, запись останется со статусом «Сторно».");
+    if (!confirm(question)) return;
+    try {
+      await API.stornoCashTransaction(id);
+      showToast(isUz ? "Storno qilindi" : "Сторнировано", "success");
+      await this.loadRegisters();
+      await this.loadTransactions();
+    } catch (e) {
+      showToast(e.message, "error");
     }
   },
 

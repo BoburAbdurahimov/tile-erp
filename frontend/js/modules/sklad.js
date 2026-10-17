@@ -35,13 +35,18 @@ const SkladModule = {
                 : "Таблица длина × ширина. Размер пишется одним кодом: 680 = 600×80"}
             </p>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm" onclick="SkladModule.openReceiveModal()"
-              style="background:#059669;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            ${getUserRoles().includes("Admin") ? `
+            <button class="btn" onclick="SkladModule.openAdjustModal()"
+              style="background:#fff;color:#b45309;border:2px solid #f59e0b;padding:12px 20px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;">
+              ${isUz ? "Qo'lda to'g'rilash" : "Корректировка"}
+            </button>` : ""}
+            <button class="btn" onclick="SkladModule.openReceiveModal()"
+              style="background:#059669;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;">
               + ${isUz ? "Kirim" : "Приход"}
             </button>
-            <button class="btn btn-sm" onclick="SkladModule.openSellModal()"
-              style="background:#2563eb;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;">
+            <button class="btn" onclick="SkladModule.openSellModal()"
+              style="background:#2563eb;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;">
               ${isUz ? "Sotish" : "Продажа"}
             </button>
           </div>
@@ -413,6 +418,55 @@ const SkladModule = {
     const eni = parseInt(document.getElementById(`${prefix}-eni`).value, 10);
     const w = this.warehouses.find(x => x.name === owner && x.eni === eni);
     return w ? w.sklad_id : null;
+  },
+
+  // ================= QO'LDA TO'G'RILASH (Admin: set a cell to the count) =================
+  openAdjustModal() {
+    const isUz = CURRENT_LANG === "uz";
+    const lbl = "font-size:12px;font-weight:600;color:#334155;";
+    showModal(isUz ? "Ombor qoldig'ini qo'lda to'g'rilash" : "Ручная корректировка остатка", `
+      ${this.omborEniFields("adj")}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div><label style="${lbl}">${isUz ? "O'lcham kodi" : "Код размера"} *</label>
+          <input id="adj-code" class="form-control" inputmode="numeric" placeholder="680" oninput="SkladModule.showAdjustNow()"></div>
+        <div><label style="${lbl}">${isUz ? "Haqiqiy soni (sanab chiqilgan)" : "Фактическое количество"} *</label>
+          <input id="adj-qty" type="number" min="0" step="1" class="form-control" placeholder="0"></div>
+      </div>
+      <div id="adj-now" style="font-size:13px;color:#64748b;margin:-4px 0 12px;"></div>
+      <div><label style="${lbl}">${isUz ? "Sababi" : "Причина"} *</label>
+        <input id="adj-reason" class="form-control" placeholder="${isUz ? "Masalan: inventarizatsiya, singan kafel" : "Например: инвентаризация"}"></div>`,
+      async () => {
+        const code = parseInt(document.getElementById("adj-code").value, 10);
+        const qty = document.getElementById("adj-qty").value;
+        const reason = document.getElementById("adj-reason").value.trim();
+        if (!code || qty === "" || !reason) {
+          showToast(isUz ? "O'lcham, soni va sababini kiriting" : "Укажите размер, количество и причину", "warning");
+          return false;
+        }
+        try {
+          await apiRequest("/sklad/tuzatish", "POST", { sklad_id: this.pickedSklad("adj"), code, quantity: parseInt(qty, 10), reason });
+          showToast(isUz ? "Qoldiq to'g'rilandi" : "Остаток исправлен", "success");
+          await this.loadAll();
+          await this.setView(this.view);
+          return true;
+        } catch (e) { showToast(e.message, "error"); return false; }
+      });
+    ["adj-owner", "adj-eni"].forEach(id => document.getElementById(id).addEventListener("change", () => this.showAdjustNow()));
+  },
+
+  // What the chosen cell holds now, so the count can be compared.
+  async showAdjustNow() {
+    const isUz = CURRENT_LANG === "uz";
+    const el = document.getElementById("adj-now");
+    const code = parseInt(document.getElementById("adj-code")?.value || "", 10);
+    const hint = this.describeCode(code);
+    if (!el) return;
+    if (!code || !hint.ok) { el.textContent = code ? hint.text : ""; return; }
+    try {
+      const m = await API.getSkladMatrix(this.pickedSklad("adj"));
+      const c = (m.cells || []).find(x => x.code === code);
+      el.textContent = `${hint.text} — ${isUz ? "hozir omborda" : "сейчас на складе"}: ${c ? c.quantity : 0} ${isUz ? "ta" : "шт"}`;
+    } catch (e) { el.textContent = ""; }
   },
 
   // ================= KIRIM (goods in) =================
