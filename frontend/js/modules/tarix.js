@@ -350,17 +350,14 @@ const HistoryModule = {
       ? e.kind !== "amal"
       : (this.KINDS[e.kind] || {}).section === this.section);
 
-    // Totals in each currency, counting storno and cancelled rows out.
+    // Kassa totals, counting storno and cancelled rows out.
     const active = events.filter(e => !this.isStorno(e));
-    const total = cur => active.filter(e => e.currency === cur).reduce((s, e) => s + (e.amount || 0), 0);
     const kirim = active.filter(e => e.kind === "kassa_kirim").reduce((s, e) => s + (e.currency === "UZS" ? e.amount || 0 : 0), 0);
     const chiqim = active.filter(e => e.kind === "kassa_chiqim").reduce((s, e) => s + (e.currency === "UZS" ? e.amount || 0 : 0), 0);
     if (sum) {
       sum.innerHTML = [
         this.card(isUz ? "Harakatlar" : "Движений", formatNumber(events.length, 0, 0), "#0f172a",
           `${events.length - active.length} ${isUz ? "ta storno / bekor" : "сторно / отмен"}`),
-        this.card(isUz ? "Summa (UZS)" : "Сумма (UZS)", formatNumber(total("UZS"), 0, 0), "#2563eb"),
-        this.card(isUz ? "Summa (USD)" : "Сумма (USD)", formatNumber(total("USD"), 0, 2), "#7c3aed"),
         this.section === "kassa" || this.section === "all"
           ? this.card(isUz ? "Kassa: kirim − chiqim" : "Касса: приход − расход", formatNumber(kirim - chiqim, 0, 0),
               kirim - chiqim >= 0 ? "#15803d" : "#b91c1c", "UZS")

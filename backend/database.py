@@ -1,7 +1,8 @@
 import logging
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from contextvars import ContextVar
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from backend.config import DATABASE_URL, SQLITE_FALLBACK_URL
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,20 @@ def init_engine():
 
 init_engine()
 
+# The login of whoever made the current request (set by the app middleware).
+# Every new row that has a created_by column is stamped with it, so History
+# can say who did it.
+current_username: ContextVar = ContextVar("current_username", default=None)
+
+@event.listens_for(Session, "before_flush")
+def _stamp_created_by(session, flush_context, instances):
+    username = current_username.get()
+    if not username:
+        return
+    for obj in session.new:
+        if hasattr(obj, "created_by") and obj.created_by != "DEMO":
+            obj.created_by = username
+
 def get_db():
     db = SessionLocal()
     try:
@@ -71,6 +86,11 @@ _ADDED_COLUMNS = [
     ("warehouses", "kind", "VARCHAR(20)"),
     ("supplier_prices", "price_uzs", "FLOAT"),
     ("supplier_prices", "price_usd", "FLOAT"),
+    ("purchases", "created_by", "VARCHAR(100)"),
+    ("sales", "created_by", "VARCHAR(100)"),
+    ("production_orders", "created_by", "VARCHAR(100)"),
+    ("line_expenses", "created_by", "VARCHAR(100)"),
+    ("cash_transactions", "created_by", "VARCHAR(100)"),
 ]
 
 

@@ -96,12 +96,13 @@ NOT_AUDITED = ("/api/auth/login", "/api/auth/verify-otp", "/api/orders/preview",
 
 @app.middleware("http")
 async def audit_changes(request: Request, call_next):
+    token = (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    data = (decode_token(token) if token else None) or {}
+    database.current_username.set(data.get("u"))
     response = await call_next(request)
     path = request.url.path
     if (request.method in AUDITED_METHODS and path.startswith("/api/")
             and not path.startswith(NOT_AUDITED) and response.status_code < 400):
-        token = (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
-        data = decode_token(token) or {}
         parts = path.split("/")
         try:
             db = database.SessionLocal()
