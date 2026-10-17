@@ -71,6 +71,16 @@ class TestRights(unittest.TestCase):
         self.assertEqual(client.post(f"/api/orders/{order['id']}/cancel", headers=as_role(sotish)).status_code, 403)
         ok(client.post(f"/api/orders/{order['id']}/cancel", headers=as_role(f"{sotish},Storno")))
 
+    def test_a_ticked_module_opens_only_itself(self):
+        # "Ombor" no longer brings MDM changes or Sotib olish with it
+        omb = as_role("Ombor")
+        self.assertEqual(client.post("/api/mdm/materials", headers=omb, json={
+            "code": "HQ-OMB", "name": "x", "category": "Xomashyo", "unit": "kg", "min_stock": 0}).status_code, 403)
+        self.assertEqual(client.get("/api/savdo/purchases", headers=omb).status_code, 403)
+        # but it can still read the catalogue it picks materials from
+        self.assertEqual(client.get("/api/mdm/materials", headers=omb).status_code, 200)
+        self.assertEqual(client.get("/api/mdm/counterparties?type=supplier", headers=as_role("Sotib olish (Zakup)")).status_code, 200)
+
     def test_old_all_round_roles_keep_both(self):
         self.assertEqual(client.post("/api/orders/999999/cancel", headers=as_role("Direktor")).status_code, 400)
         self.assertEqual(client.post("/api/orders/999999/cancel", headers=as_role("Sotish (Realizatsiya)")).status_code, 403)

@@ -220,9 +220,11 @@ def record_daily_attendance(
     db: Session,
     entry_date: date,
     absent_records: List[Dict[str, Any]],
-    current_user: str = "Admin"
+    current_user: str = "Admin",
+    only_employee_ids: Optional[set] = None,
 ):
-    """Save attendance entries for a date and update monthly salary."""
+    """Save attendance entries for a date and update monthly salary.
+    only_employee_ids: the people this user keeps attendance for; others' marks stay."""
     year_month = entry_date.strftime("%Y-%m")
 
     absent_emp_ids = {r["employee_id"] for r in absent_records}
@@ -230,7 +232,7 @@ def record_daily_attendance(
     # Delete existing entries for this date for fixed employees
     existing = db.query(AttendanceEntry).filter(AttendanceEntry.date == entry_date).all()
     for e in existing:
-        if e.employee_id not in absent_emp_ids:
+        if e.employee_id not in absent_emp_ids and (only_employee_ids is None or e.employee_id in only_employee_ids):
             db.delete(e)
 
     # Insert or update absent entries

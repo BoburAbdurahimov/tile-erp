@@ -49,9 +49,9 @@ class TestSupplierPrices(unittest.TestCase):
     def prices(self, items, cp_id=None):
         return client.put(f"/api/mdm/counterparties/{cp_id or self.supplier['id']}/prices", headers=ADMIN, json=items)
 
-    def buy(self, items, ombor="Toxir"):
+    def buy(self, items, ombor="Toxir", **extra):
         res = client.post("/api/savdo/purchases", headers=ADMIN, json={
-            "supplier_id": self.supplier["id"], "date": str(DAY), "items": items, "ombor": ombor})
+            "supplier_id": self.supplier["id"], "date": str(DAY), "items": items, "ombor": ombor, **extra})
         if res.status_code == 200:
             self.made.append(res.json()["id"])
         return res
@@ -133,6 +133,31 @@ class TestSupplierPrices(unittest.TestCase):
 
         self.assertEqual(self.buy([{"material_id": self.clay["id"], "quantity": 5},
                                    {"material_id": self.spare["id"], "quantity": 1}]).status_code, 400)  # two warehouses
+
+    def test_both_currencies(self):
+        listed = ok(self.prices([
+            {"material_id": self.clay["id"], "price_uzs": 13000, "price_usd": 1},
+            {"material_id": self.glaze["id"], "price_usd": 2},
+        ]))
+        got = {r["material_id"]: (r["price_uzs"], r["price_usd"]) for r in listed}
+        self.assertEqual(got[self.clay["id"]], (13000, 1))
+        self.assertEqual(got[self.glaze["id"]], (None, 2))
+        self.assertEqual(self.prices([{"material_id": self.clay["id"]}]).status_code, 400)          # no price at all
+
+        # Bought in dollars: the clay's own dollar price, not its so'm price converted
+        usd = ok(self.buy([{"material_id": self.clay["id"], "quantity": 10}], currency="USD"))
+        self.assertEqual((usd["currency"], usd["total_amount"]), ("USD", 10))
+        # In so'm: the clay at 13 000, the glaze (dollars only) converted at the day's rate
+        uzs = ok(self.buy([{"material_id": self.clay["id"], "quantity": 10},
+                           {"material_id": self.glaze["id"], "quantity": 1}], currency="UZS"))
+        db = SessionLocal()
+        try:
+            glaze = convert_amount(2, "USD", "UZS", DAY, db)
+        finally:
+            db.close()
+        self.assertAlmostEqual(uzs["total_amount"], 130000 + glaze, delta=0.01)
+        # Not said: so'm, as the first line has it
+        self.assertEqual(ok(self.buy([{"material_id": self.clay["id"], "quantity": 1}]))["currency"], "UZS")
 
     def test_no_price_no_purchase(self):
         res = self.buy([{"material_id": self.clay["id"], "quantity": 5}])

@@ -17,7 +17,8 @@ const OrdersModule = {
   plan: [],
   products: [],
   config: null,
-  calStart: null,           // first day shown in the carousel
+  calStart: null,           // (old week strip; the calendar shows calMonth)
+  calMonth: null,           // first day of the month the calendar shows
   calSelected: null,        // YYYY-MM-DD
   payFilter: "open",        // open | paid | all
   draftLines: [],
@@ -418,53 +419,72 @@ const OrdersModule = {
 
   // ------------------------------------------------------------ stage 2
 
+  // A month at a glance: big day numbers, how many orders are due that day
+  // (orange; red once the day has passed) and how many were delivered (green).
   calendarHtml() {
     const isUz = this.isUz();
     const todayKey = this.dayKey(new Date());
-    const wd = isUz ? ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"] : ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+    if (!this.calMonth) { const t = new Date(); this.calMonth = new Date(t.getFullYear(), t.getMonth(), 1); }
+    const m0 = this.calMonth;
+    const months = isUz
+      ? ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"]
+      : ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+    const wd = isUz ? ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"] : ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+    // Monday-first weeks covering the whole month
+    const first = new Date(m0); first.setDate(1 - ((m0.getDay() + 6) % 7));
     const days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(this.calStart); d.setDate(d.getDate() + i); days.push(d);
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(first); d.setDate(first.getDate() + i);
+      if (i >= 35 && d.getMonth() !== m0.getMonth()) break;   // no empty sixth week
+      days.push(d);
     }
+    const dueBy = {}, doneBy = {};
+    this.open().forEach(o => { const k = o.deadline.slice(0, 10); dueBy[k] = (dueBy[k] || 0) + 1; });
+    this.delivered().forEach(o => { const k = (o.delivered_at || "").slice(0, 10); if (k) doneBy[k] = (doneBy[k] || 0) + 1; });
     const overdue = this.open().filter(o => o.deadline.slice(0, 10) < todayKey).length;
 
-    const chip = (d) => {
+    const cell = (d) => {
       const key = this.dayKey(d);
-      const due = this.open().filter(o => o.deadline.slice(0, 10) === key).length;
-      const done = this.delivered().filter(o => (o.delivered_at || "").slice(0, 10) === key).length;
-      const sel = key === this.calSelected;
-      const isToday = key === todayKey;
-      const past = key < todayKey;
+      const inMonth = d.getMonth() === m0.getMonth();
+      const due = dueBy[key] || 0, done = doneBy[key] || 0;
+      const sel = key === this.calSelected, isToday = key === todayKey, past = key < todayKey;
       return `
-        <button onclick="OrdersModule.pickDay('${key}')" data-day="${key}"
-          style="flex:1 0 76px;min-width:76px;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;cursor:pointer;
-                 border:2px solid ${sel ? "#2563eb" : isToday ? "#93c5fd" : "#e2e8f0"};background:${sel ? "#2563eb" : "#fff"};color:${sel ? "#fff" : "#0f172a"};">
-          <span style="font-size:11.5px;font-weight:600;opacity:.8;">${isToday ? (isUz ? "Bugun" : "Сегодня") : wd[d.getDay()]}</span>
-          <span style="font-size:20px;font-weight:800;line-height:1.1;">${d.getDate()}</span>
-          <span style="font-size:11px;opacity:.8;">${String(d.getMonth() + 1).padStart(2, "0")}</span>
-          <span style="margin-top:4px;min-height:18px;display:flex;gap:3px;">
-            ${due ? `<span style="background:${sel ? "#fff" : (past ? "#dc2626" : "#f59e0b")};color:${sel ? "#1d4ed8" : "#fff"};border-radius:9px;padding:0 6px;font-size:11px;font-weight:800;">${due}</span>` : ""}
-            ${done ? `<span style="background:${sel ? "#dbeafe" : "#dcfce7"};color:#166534;border-radius:9px;padding:0 6px;font-size:11px;font-weight:800;">✓${done}</span>` : ""}
+        <button onclick="OrdersModule.pickDay('${key}')" data-day="${key}" class="ord-cal-day"
+          style="min-width:0;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px 2px;border-radius:12px;cursor:pointer;
+                 border:2px solid ${sel ? "#2563eb" : isToday ? "#2563eb" : due ? (past ? "#fecaca" : "#fde68a") : "#e2e8f0"};
+                 background:${sel ? "#2563eb" : due ? (past ? "#fef2f2" : "#fffbeb") : "#fff"};color:${sel ? "#fff" : "#0f172a"};opacity:${inMonth ? 1 : 0.4};">
+          <span class="ord-cal-num" style="font-size:24px;font-weight:800;line-height:1;">${d.getDate()}</span>
+          <span style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;min-height:18px;">
+            ${due ? `<span style="background:${sel ? "#fff" : (past ? "#dc2626" : "#f59e0b")};color:${sel ? "#1d4ed8" : "#fff"};border-radius:9px;padding:1px 7px;font-size:12px;font-weight:800;">${due}</span>` : ""}
+            ${done ? `<span style="background:${sel ? "#dbeafe" : "#dcfce7"};color:#166534;border-radius:9px;padding:1px 6px;font-size:12px;font-weight:800;">✓${done}</span>` : ""}
           </span>
         </button>`;
     };
+    const nav = "flex:none;width:44px;height:44px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:22px;color:#475569;";
 
     return `
-      <div style="display:flex;align-items:stretch;gap:8px;">
-        <button onclick="OrdersModule.shiftCal(-7)" aria-label="prev"
-          style="flex:none;width:36px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:18px;color:#475569;">‹</button>
-        <div id="ord-cal-strip" style="flex:1;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:2px;">
-          ${days.map(chip).join("")}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="OrdersModule.shiftCal(-1)" aria-label="prev" style="${nav}">‹</button>
+          <div style="min-width:150px;text-align:center;font-size:20px;font-weight:800;color:#0f172a;">${months[m0.getMonth()]} ${m0.getFullYear()}</div>
+          <button onclick="OrdersModule.shiftCal(1)" aria-label="next" style="${nav}">›</button>
         </div>
-        <button onclick="OrdersModule.shiftCal(7)" aria-label="next"
-          style="flex:none;width:36px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:18px;color:#475569;">›</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="OrdersModule.goToday()" style="padding:8px 14px;border-radius:10px;font-weight:700;font-size:14px;">
+            ${isUz ? "Bugun" : "Сегодня"}</button>
+          ${overdue ? `<button class="btn btn-sm" onclick="OrdersModule.pickDay('overdue')"
+              style="padding:8px 14px;border-radius:10px;font-weight:800;font-size:14px;border:1px solid #fecaca;background:${this.calSelected === "overdue" ? "#dc2626" : "#fef2f2"};color:${this.calSelected === "overdue" ? "#fff" : "#b91c1c"};cursor:pointer;">
+              ${isUz ? "Muddati o'tgan" : "Просроченные"}: ${overdue}</button>` : ""}
+        </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        <button class="btn btn-secondary btn-sm" onclick="OrdersModule.goToday()" style="padding:6px 12px;border-radius:8px;font-weight:600;">
-          ${isUz ? "Bugun" : "Сегодня"}</button>
-        ${overdue ? `<button class="btn btn-sm" onclick="OrdersModule.pickDay('overdue')"
-            style="padding:6px 12px;border-radius:8px;font-weight:700;border:1px solid #fecaca;background:${this.calSelected === "overdue" ? "#dc2626" : "#fef2f2"};color:${this.calSelected === "overdue" ? "#fff" : "#b91c1c"};cursor:pointer;">
-            ${isUz ? "Muddati o'tgan" : "Просроченные"}: ${overdue}</button>` : ""}
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;">
+        ${wd.map((w, i) => `<div style="text-align:center;font-size:13px;font-weight:700;color:${i > 4 ? "#b91c1c" : "#64748b"};padding:4px 0;">${w}</div>`).join("")}
+        ${days.map(cell).join("")}
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:#64748b;">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;"></span> ${isUz ? "yetkazish kerak" : "к доставке"}</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dc2626;"></span> ${isUz ? "muddati o'tgan" : "просрочено"}</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#22c55e;"></span> ${isUz ? "yetkazilgan" : "доставлено"}</span>
       </div>`;
   },
 
@@ -529,18 +549,22 @@ const OrdersModule = {
       </div>`;
   },
 
-  pickDay(key) { this.calSelected = key; this.renderStage(); },
+  pickDay(key) {
+    this.calSelected = key;
+    if (key !== "overdue") { const [y, m] = key.split("-").map(Number); this.calMonth = new Date(y, m - 1, 1); }
+    this.renderStage();
+  },
 
-  shiftCal(days) {
-    const d = new Date(this.calStart); d.setDate(d.getDate() + days);
-    this.calStart = d;
+  shiftCal(months) {
+    const m = this.calMonth || new Date();
+    this.calMonth = new Date(m.getFullYear(), m.getMonth() + months, 1);
     this.renderStage();
   },
 
   goToday() {
-    const t0 = new Date(); t0.setHours(0, 0, 0, 0); t0.setDate(t0.getDate() - 2);
-    this.calStart = t0;
-    this.calSelected = this.dayKey(new Date());
+    const t = new Date();
+    this.calMonth = new Date(t.getFullYear(), t.getMonth(), 1);
+    this.calSelected = this.dayKey(t);
     this.renderStage();
   },
 

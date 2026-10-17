@@ -2,6 +2,7 @@ import logging
 from datetime import date
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -201,7 +202,8 @@ def get_counterparty_ledger(
                 })
 
     # 4. Cash Payments (Kassa Kirim / Chiqim)
-    cash_txs = db.query(CashTransaction).filter(CashTransaction.counterparty_id == counterparty_id).all()
+    cash_txs = db.query(CashTransaction).filter(CashTransaction.counterparty_id == counterparty_id,
+                                                func.coalesce(CashTransaction.status, "") != "Storno").all()
     for tx in cash_txs:
         hist_rate = get_exchange_rate_for_date(db, tx.date)
         conv_amount = convert_amount(tx.amount, tx.currency, view_currency, tx.date, db)

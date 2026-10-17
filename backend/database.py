@@ -69,6 +69,8 @@ _ADDED_COLUMNS = [
     ("monthly_salary_calculations", "penalty_amount", "FLOAT"),
     ("warehouses", "owner", "VARCHAR(20)"),
     ("warehouses", "kind", "VARCHAR(20)"),
+    ("supplier_prices", "price_uzs", "FLOAT"),
+    ("supplier_prices", "price_usd", "FLOAT"),
 ]
 
 
@@ -135,6 +137,12 @@ def run_data_migrations():
             # Payrolls are no longer finalized (locked): unpaid is just unpaid.
             if inspect(conn).has_table("monthly_salary_calculations"):
                 conn.execute(text("UPDATE monthly_salary_calculations SET status = 'draft' WHERE status = 'finalized'"))
+            # Supplier prices from before both currencies: the one price goes to its currency.
+            if inspect(conn).has_table("supplier_prices"):
+                conn.execute(text("UPDATE supplier_prices SET price_uzs = price "
+                                  "WHERE currency = 'UZS' AND price_uzs IS NULL AND price_usd IS NULL"))
+                conn.execute(text("UPDATE supplier_prices SET price_usd = price "
+                                  "WHERE currency = 'USD' AND price_uzs IS NULL AND price_usd IS NULL"))
     except Exception as e:
         logger.warning(f"Data migrations skipped: {e}")
     # Each Ombor owner gets its own xomashyo and aralash warehouse.

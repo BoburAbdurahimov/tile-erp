@@ -169,6 +169,7 @@ const API = {
   },
   createCashTransaction: (data) => apiRequest("/kassa/transactions", "POST", data),
   deleteCashTransaction: (id) => apiRequest(`/kassa/transactions/${id}`, "DELETE"),
+  stornoCashTransaction: (id) => apiRequest(`/kassa/transactions/${id}/storno`, "POST"),
   exchangeCash: (data) => apiRequest("/kassa/exchange", "POST", data),
   getExchangeRates: () => apiRequest("/kassa/exchange-rates"),
   setExchangeRate: (data) => apiRequest("/kassa/exchange-rates", "POST", data),

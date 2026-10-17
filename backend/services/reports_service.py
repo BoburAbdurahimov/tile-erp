@@ -1,7 +1,7 @@
 from datetime import date, datetime
 import io
 from typing import Dict, Any, List
-from sqlalchemy import extract
+from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -92,7 +92,8 @@ def get_cash_flow_report(db: Session, year_month: str) -> Dict[str, Any]:
 
     txs = db.query(CashTransaction).filter(
         extract('year', CashTransaction.date) == year,
-        extract('month', CashTransaction.date) == month
+        extract('month', CashTransaction.date) == month,
+        func.coalesce(CashTransaction.status, "") != "Storno",                        # a storno entry is as if it never happened
     ).order_by(CashTransaction.date, CashTransaction.id).all()
     # Konvertatsiya only moves money between registers: neither in nor out.
     moved = exchange_transaction_ids(db, year, month)

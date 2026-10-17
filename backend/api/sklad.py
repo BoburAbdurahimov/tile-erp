@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission, get_ombor_scope, check_ombor, get_combined_permissions
+from backend.api.auth import get_current_user_role, check_permission, get_ombor_scope, check_ombor, get_combined_permissions, is_admin
 from backend.models import (
     SKLAD_CONFIG, SKLAD_LENGTHS, SKLAD_WIDTHS,
     SKLAD_OP_IN, SKLAD_OP_OUT,
@@ -177,6 +177,28 @@ def receive(
         created_by=role,
     ))
     return svc.get_movements(db, limit=1, sklad_id=payload.sklad_id)[0]
+
+
+class AdjustRequest(BaseModel):
+    sklad_id: int
+    code: int                # 680
+    quantity: int            # what was counted
+    reason: str
+
+
+@router.post("/tuzatish")
+def adjust(
+    payload: AdjustRequest,
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role),
+):
+    """Qo'lda to'g'rilash - the Admin sets a cell to the counted quantity."""
+    if not is_admin(role):
+        raise HTTPException(status_code=403, detail="Qo'lda to'g'rilash faqat Admin uchun.")
+    _check_sklad(payload.sklad_id, None)
+    _guard(lambda: svc.adjust_stock(db, payload.sklad_id, payload.code, payload.quantity,
+                                    reason=payload.reason, created_by=role))
+    return svc.get_matrix(db, payload.sklad_id)
 
 
 @router.post("/sotish")

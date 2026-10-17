@@ -115,12 +115,12 @@ def create_purchase(
     # from MDM, so Sotib olish only asks who, what, how many and when.
     price_list = {p.material_id: p for p in
                   db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == supplier.id).all()}
-    lines = []                                   # (input, price, its currency or None = the purchase's)
+    lines = []                                   # (input, {currency: price}; None = the purchase's)
     for it in payload.items:
         if it.quantity <= 0:
             continue
         if it.unit_price is not None and it.unit_price > 0:
-            lines.append((it, it.unit_price, None))
+            lines.append((it, {None: it.unit_price}))
             continue
         if it.sklad_id or not it.material_id:
             raise HTTPException(status_code=400, detail="Bu qator uchun narx kiritilmagan.")
@@ -130,27 +130,35 @@ def create_purchase(
             raise HTTPException(status_code=400, detail=(
                 f"{supplier.name} uchun {mat.name if mat else 'bu material'} narxi MDM da biriktirilmagan. "
                 "MDM > Yetkazib beruvchilar da material va narxini qo'shing."))
-        lines.append((it, listed.price, listed.currency))
+        lines.append((it, listed.offers()))
     if not lines:
         raise HTTPException(status_code=400, detail="Xarid qilish uchun kamida bitta tovar/material va uning miqdori kerak.")
 
-    currency = payload.currency or next((cur for _, _, cur in lines if cur), None) or "UZS"
+    # The currency chosen; else the first listed line's (so'm when it has both).
+    first = next((o for _, o in lines if None not in o), {})
+    currency = (payload.currency or "").upper() or ("UZS" if "UZS" in first else next(iter(first), "UZS"))
+    if currency not in ("UZS", "USD"):
+        raise HTTPException(status_code=400, detail="Valyuta UZS yoki USD bo'lishi kerak.")
 
     # Which Ombor's warehouses the materials go to: the one chosen, or the
     # user's own when they work in one Ombor.
     owner = None
     if payload.warehouse_id:
         mw.check_warehouse(db, payload.warehouse_id, scope)
-    elif any(it.material_id and not it.sklad_id for it, _, _ in lines):
+    elif any(it.material_id and not it.sklad_id for it, _ in lines):
         owner = mw.pick_owner(scope, payload.ombor)
 
     total_amount = 0.0
     purchase_items = []
     header_warehouse = payload.warehouse_id
 
-    for it, unit_price, price_currency in lines:
-        if price_currency and price_currency != currency:
-            unit_price = convert_amount(unit_price, price_currency, currency, payload.date, db)
+    for it, offers in lines:
+        # Its price in the purchase's currency, or the other one converted at the day's rate.
+        if None in offers or currency in offers:
+            unit_price = offers.get(currency, offers.get(None))
+        else:
+            other, price = next(iter(offers.items()))
+            unit_price = convert_amount(price, other, currency, payload.date, db)
         line_tot = it.quantity * unit_price
         total_amount += line_tot
 

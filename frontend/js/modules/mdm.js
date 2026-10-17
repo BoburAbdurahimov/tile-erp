@@ -276,10 +276,13 @@ const MdmModule = {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px;">
           <div>
             <div style="font-size: 14px; font-weight: 700; color: #0f172a;">${isUz ? "Materiallar va narxlari" : "Материалы и цены"}</div>
-            <div style="font-size: 12px; color: #64748b;">${isUz ? "Sotib olishda narx shu yerdan olinadi." : "При закупке цена берётся отсюда."}</div>
+            <div style="font-size: 12px; color: #64748b;">${isUz ? "Sotib olishda narx shu yerdan olinadi. So'mda, dollarda yoki ikkalasida yozing." : "При закупке цена берётся отсюда. В сумах, долларах или в обоих."}</div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="MdmModule.addPriceRow()"
             title="${isUz ? "Material qo'shish" : "Добавить материал"}" aria-label="${isUz ? "Material qo'shish" : "Добавить материал"}">${uiIcon("plus")}</button>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 110px 90px 34px; gap: 6px; font-size: 11.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">
+          <span>${isUz ? "Material" : "Материал"}</span><span>${isUz ? "Narx, so'm" : "Цена, сум"}</span><span>${isUz ? "Narx, $" : "Цена, $"}</span><span></span>
         </div>
         <div id="sp-rows" style="display: flex; flex-direction: column; gap: 8px;"></div>
       </div>`;
@@ -292,17 +295,14 @@ const MdmModule = {
     const field = "padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px;";
     const div = document.createElement("div");
     div.className = "sp-row";
-    div.style.cssText = "display: grid; grid-template-columns: minmax(0, 1fr) 120px 80px 34px; gap: 6px; align-items: center;";
+    div.style.cssText = "display: grid; grid-template-columns: minmax(0, 1fr) 110px 90px 34px; gap: 6px; align-items: center;";
     div.innerHTML = `
       <select class="form-control sp-mat" style="${field}">
         <option value="">${isUz ? "Materialni tanlang" : "Выберите материал"}</option>
         ${(this.priceMaterials || []).map(m => `<option value="${m.id}" ${row && row.material_id === m.id ? "selected" : ""}>${escapeHtml(m.name)} (${escapeHtml(tr(m.unit))})</option>`).join("")}
       </select>
-      <input type="number" class="form-control sp-price" step="any" min="0.01" placeholder="${isUz ? "Narx" : "Цена"}" value="${row ? row.price : ""}" style="${field}">
-      <select class="form-control sp-cur" style="${field}">
-        <option value="UZS" ${!row || row.currency !== "USD" ? "selected" : ""}>UZS</option>
-        <option value="USD" ${row && row.currency === "USD" ? "selected" : ""}>USD</option>
-      </select>
+      <input type="number" class="form-control sp-uzs" step="any" min="0" placeholder="so'm" value="${row && row.price_uzs ? row.price_uzs : ""}" style="${field}">
+      <input type="number" class="form-control sp-usd" step="any" min="0" placeholder="$" value="${row && row.price_usd ? row.price_usd : ""}" style="${field}">
       <button type="button" class="btn btn-sm" onclick="this.closest('.sp-row').remove()" title="${isUz ? "O'chirish" : "Удалить"}"
         style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 6px 0; border-radius: 8px;">✕</button>`;
     box.appendChild(div);
@@ -315,13 +315,14 @@ const MdmModule = {
     const seen = new Set();
     for (const row of document.querySelectorAll("#sp-rows .sp-row")) {
       const materialId = parseInt(row.querySelector(".sp-mat").value);
-      const price = parseFloat(row.querySelector(".sp-price").value);
-      if (!materialId && !price) continue;                 // an empty row is ignored
+      const uzs = parseFloat(row.querySelector(".sp-uzs").value) || 0;
+      const usd = parseFloat(row.querySelector(".sp-usd").value) || 0;
+      if (!materialId && !uzs && !usd) continue;            // an empty row is ignored
       if (!materialId) return { error: isUz ? "Har bir narx uchun materialni tanlang" : "Выберите материал для каждой цены" };
-      if (!(price > 0)) return { error: isUz ? "Narx musbat bo'lishi kerak" : "Цена должна быть больше нуля" };
+      if (uzs < 0 || usd < 0 || (!uzs && !usd)) return { error: isUz ? "So'm yoki dollar narxini kiriting" : "Укажите цену в сумах или долларах" };
       if (seen.has(materialId)) return { error: isUz ? "Bir material ikki marta tanlangan" : "Материал выбран дважды" };
       seen.add(materialId);
-      items.push({ material_id: materialId, price, currency: row.querySelector(".sp-cur").value });
+      items.push({ material_id: materialId, price_uzs: uzs || null, price_usd: usd || null });
     }
     return { items };
   },

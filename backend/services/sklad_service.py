@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from backend.models import (
     SkladInventory, SkladMovement, SkladMovementItem,
     SKLAD_CONFIG, SKLAD_LENGTHS, SKLAD_WIDTHS,
-    SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_CLEAR, SKLAD_OP_STORNO,
+    SKLAD_OP_IN, SKLAD_OP_OUT, SKLAD_OP_CLEAR, SKLAD_OP_STORNO, SKLAD_OP_ADJUST,
     SELL_TYPE_METR, SELL_TYPE_MKV,
 )
 
@@ -261,6 +261,44 @@ def reverse_receipt(
         length=length, width=width, quantity=qty,
         eni=(get_config(sklad_id) or {}).get("eni", 120),
     ))
+    return movement
+
+
+def adjust_stock(db: Session, sklad_id: int, code: int, new_quantity: int,
+                 reason: Optional[str] = None, created_by: Optional[str] = None) -> SkladMovement:
+    """Qo'lda to'g'rilash: set what a cell holds to what was counted. The
+    movement keeps the old and the new count and the reason."""
+    length, width = decode_size(int(code))
+    new_quantity = int(new_quantity)
+    if new_quantity < 0:
+        raise SkladError("Miqdor manfiy bo'lishi mumkin emas.")
+    if not (reason or "").strip():
+        raise SkladError("Sababini yozing (masalan: sanoq natijasi).")
+    row = db.query(SkladInventory).filter(
+        SkladInventory.sklad_id == sklad_id,
+        SkladInventory.length == length,
+        SkladInventory.width == width,
+    ).first()
+    old = (row.quantity or 0) if row else 0
+    if old == new_quantity:
+        raise SkladError(f"{length + width}: omborda allaqachon {old} ta.")
+    movement = SkladMovement(
+        sklad_id=sklad_id,
+        operation=SKLAD_OP_ADJUST,
+        details=f"{length + width}: {old} → {new_quantity} TA",
+        occurred_at=datetime.utcnow(),
+        client_name=reason.strip(),
+        created_by=created_by,
+    )
+    db.add(movement)
+    db.flush()
+    _apply_delta(db, sklad_id, length, width, new_quantity - old)
+    db.add(SkladMovementItem(
+        movement_id=movement.id, length=length, width=width, quantity=abs(new_quantity - old),
+        eni=(get_config(sklad_id) or {}).get("eni", 120),
+    ))
+    db.commit()
+    db.refresh(movement)
     return movement
 
 

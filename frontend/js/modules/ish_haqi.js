@@ -138,6 +138,8 @@ const IshHaqiModule = (function () {
     const t = getI18n();
 
     await loadDepartments();
+    // Someone other than an Admin keeps Kunlik davomat and Xodimlar only.
+    if (!visibleTabs(t).some(([id]) => id === activeTab)) activeTab = "daily";
     container.innerHTML = `
       <div class="card" style="margin-bottom: 16px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -148,8 +150,7 @@ const IshHaqiModule = (function () {
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t.subtitle}</p>
           </div>
           <div class="tabs-nav" style="margin-bottom: 0; border-bottom: none; gap: 6px; flex-wrap: wrap;">
-            ${[["payroll", t.tab_payroll], ["daily", t.tab_daily], ["adjustments", t.tab_adjustments],
-               ["employees", t.tab_employees], ["job_types", t.tab_job_types]].map(([id, label]) =>
+            ${visibleTabs(t).map(([id, label]) =>
               `<button class="tab-btn ${activeTab === id ? 'active' : ''}" data-tab="${id}" onclick="IshHaqiModule.switchTab('${id}')">${label}</button>`).join("")}
             <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf(null, 'ish_haqi_va_xodimlar')" style="margin-left: 6px;" title="${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}" aria-label="${isUzbek() ? 'PDF yuklash' : 'Скачать PDF'}">${uiIcon("pdf")}</button>
           </div>
@@ -163,6 +164,14 @@ const IshHaqiModule = (function () {
     `;
 
     await loadActiveTabContent();
+  }
+
+  // Oylik hisob-kitob, Avans/Shtraf/Premiya and Ish turlari are the Admin's;
+  // the others see only their Ombor's people (the server sends only those).
+  function visibleTabs(t) {
+    const all = [["payroll", t.tab_payroll], ["daily", t.tab_daily], ["adjustments", t.tab_adjustments],
+                 ["employees", t.tab_employees], ["job_types", t.tab_job_types]];
+    return getUserRoles().includes("Admin") ? all : all.filter(([id]) => id === "daily" || id === "employees");
   }
 
   async function switchTab(tabName) {
@@ -1299,7 +1308,7 @@ const IshHaqiModule = (function () {
                 <div class="form-group" style="flex: 1;">
                   <label class="form-label">${isUz ? "Bo'lim / Ombor" : "Отдел / Склад"} *</label>
                   <select id="emp-dept" class="form-control" required>
-                    ${getDeptOptions(departmentIds.includes(activeDept) ? activeDept : "Ma'muriyat")}
+                    ${getDeptOptions(departmentIds.includes(activeDept) ? activeDept : (departmentIds[0] || "Ma'muriyat"))}
                   </select>
                 </div>
                 <div class="form-group" style="flex: 1;">

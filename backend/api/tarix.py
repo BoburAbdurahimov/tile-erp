@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -207,7 +208,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
 
     # --- Kassa
     for c in (db.query(CashTransaction)
-              .filter(CashTransaction.date >= d0, CashTransaction.date <= d1)
+              .filter(CashTransaction.date >= d0, CashTransaction.date <= d1, func.coalesce(CashTransaction.status, "") != "Storno")
               .order_by(CashTransaction.date.desc()).limit(limit).all()):
         if (c.description or "").startswith("Xarajat XR-"):
             continue  # shown as the expense itself

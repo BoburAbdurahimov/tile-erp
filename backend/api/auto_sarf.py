@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission, check_action
+from backend.api.auth import get_current_user_role, check_permission, check_action, is_admin
 from backend.services import material_warehouses as mw
 from backend.models import AutoSarfRule, MDMMaterial, StockItem
 from backend.services import sklad_service
@@ -46,16 +46,22 @@ def _active(db: Session):
     return db.query(AutoSarfRule).filter(AutoSarfRule.is_active == True)  # noqa: E712
 
 
+def _admin_only(role: str):
+    """Avto sarf (norms and their use in the production form) is the Admin's."""
+    if not is_admin(role):
+        raise HTTPException(status_code=403, detail="Avto sarf faqat Admin uchun.")
+
+
 @router.get("")
 def list_rules(db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
-    check_permission("ishlab_chiqarish", role)
+    _admin_only(role)
     rules = _active(db).order_by(AutoSarfRule.sklad_id.is_(None).desc(), AutoSarfRule.sklad_id, AutoSarfRule.id).all()
     return [_serialize(r) for r in rules]
 
 
 @router.post("")
 def add_rule(payload: RuleCreate, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
-    check_permission("ishlab_chiqarish", role)
+    _admin_only(role)
     if payload.sklad_id is not None and not sklad_service.get_config(payload.sklad_id):
         raise HTTPException(status_code=404, detail="Bunday ombor yo'q.")
     if not db.query(MDMMaterial).filter(MDMMaterial.id == payload.material_id).first():
@@ -77,8 +83,7 @@ def add_rule(payload: RuleCreate, db: Session = Depends(get_db), role: str = Dep
 
 @router.delete("/{rule_id}")
 def delete_rule(rule_id: int, db: Session = Depends(get_db), role: str = Depends(get_current_user_role)):
-    check_permission("ishlab_chiqarish", role)
-    check_action("delete", role)
+    _admin_only(role)
     rule = db.query(AutoSarfRule).filter(AutoSarfRule.id == rule_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Norma topilmadi.")
@@ -96,7 +101,7 @@ def calculate(
 ):
     """Materials needed for `quantity` pieces going into an Ombor: that Ombor's
     own norms, plus the general norms for materials it has none for."""
-    check_permission("ishlab_chiqarish", role)
+    _admin_only(role)
     rules = _active(db).all()
     by_material = {r.material_id: r for r in rules if r.sklad_id is None}
     if sklad_id is not None:
