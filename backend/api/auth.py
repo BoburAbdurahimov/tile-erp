@@ -22,7 +22,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication & User Management"])
 # RBAC Module Permissions mapping
 ROLE_PERMISSIONS = {
     # Super Admin
-    "Admin": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "moliya", "users", "mini_app", "admin_tools", "tarix"],
+    "Admin": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "moliya", "users", "mini_app", "admin_tools", "tarix", "ish_haqi"],
     
     # Granular individual permissions
     "Mini App": ["mini_app"],
@@ -37,15 +37,17 @@ ROLE_PERMISSIONS = {
     "Moliya": ["moliya"],
     "MDM (Spravochniklar)": ["mdm"],
     "MDM": ["mdm"],
+    "Ish haqi": ["ish_haqi"],
+    "Ish haqi & Xodimlar": ["ish_haqi"],
     # Rights on top of a module: deleting a record, and storno (taking back a
     # purchase, sale, production, payment or expense).
     "O'chirish": ["delete"],
     "Storno": ["storno"],
 
     # Legacy role aliases
-    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app", "tarix", "delete", "storno"],
-    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app", "tarix", "delete", "storno"],
-    "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app", "tarix"],
+    "Ish boshqaruvchi": ["dashboard", "mdm", "ombor", "kassa", "ishlab_chiqarish", "kontragentlar", "zakup", "sotish", "mini_app", "tarix", "delete", "storno", "ish_haqi"],
+    "Direktor": ["dashboard", "moliya", "ombor", "kontragentlar", "kassa", "ishlab_chiqarish", "zakup", "sotish", "mini_app", "tarix", "delete", "storno", "ish_haqi"],
+    "Buxgalter": ["dashboard", "kassa", "moliya", "kontragentlar", "zakup", "sotish", "mini_app", "tarix", "ish_haqi"],
     "Omborchi": ["dashboard", "ombor", "mdm", "zakup", "mini_app"],
     "Kassir": ["dashboard", "kassa", "kontragentlar", "mini_app"],
     "Sex boshlig'i": ["dashboard", "ishlab_chiqarish", "ombor", "mini_app"],

@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import check_permission, get_current_user_role, get_current_username, check_action
+from backend.api.auth import (check_permission, get_current_user_role, get_current_username, check_action,
+                              get_ombor_scope, is_admin)
+from backend.services import material_warehouses as mw
 from backend.models import (Employee, JobType, AttendanceEntry, WorkEntry, MonthlySalaryCalculation,
                             SalaryAdjustment, AuditLog, SKLAD_CONFIG)
 from backend.services.salary_service import (
@@ -31,6 +33,39 @@ def ombor_names() -> List[str]:
 
 def department_names() -> List[str]:
     return [ADMIN_DEPARTMENT] + ombor_names()
+
+
+# Who sees what: an Admin everything; anyone else with the Ish haqi right only
+# the people of their own Ombors (never Ma'muriyat), and only Kunlik davomat
+# and Xodimlar - Oylik hisob-kitob, Avans/Shtraf/Premiya and Ish turlari are
+# the Admin's.
+def allowed_departments(role: str = Depends(get_current_user_role),
+                        scope: Optional[List[int]] = Depends(get_ombor_scope)) -> Optional[List[str]]:
+    check_permission("ish_haqi", role)
+    if is_admin(role):
+        return None
+    return mw.scope_owners(scope)
+
+
+def admin_only(role: str = Depends(get_current_user_role)) -> str:
+    if not is_admin(role):
+        raise HTTPException(status_code=403, detail="Bu bo'lim faqat Admin uchun.")
+    return role
+
+
+def _mine(department: Optional[str], allowed: Optional[List[str]]) -> bool:
+    return allowed is None or (department or ADMIN_DEPARTMENT) in allowed
+
+
+def _check_mine(department: Optional[str], allowed: Optional[List[str]]):
+    if not _mine(department, allowed):
+        raise HTTPException(status_code=403, detail=f"Sizga faqat shu omborlar biriktirilgan: {', '.join(allowed)}.")
+
+
+def _check_employee(db: Session, employee_id: int, allowed: Optional[List[str]]) -> None:
+    emp = db.query(Employee).filter(Employee.id == employee_id).first()
+    if emp:
+        _check_mine(emp.department, allowed)
 
 
 def _check_department(name: Optional[str]) -> str:
@@ -170,12 +205,13 @@ def parse_bool(val: Any) -> Optional[bool]:
 # ==============================================================================
 
 @router.get("/departments")
-def get_departments():
-    return {"departments": [
+def get_departments(allowed: Optional[List[str]] = Depends(allowed_departments)):
+    deps = [
         {"id": ADMIN_DEPARTMENT, "sklad_ids": []},
         *({"id": name, "sklad_ids": [s["id"] for s in SKLAD_CONFIG if s["name"] == name]}
           for name in ombor_names()),
-    ]}
+    ]
+    return {"departments": [d for d in deps if _mine(d["id"], allowed)]}
 
 
 @router.get("/employees")
@@ -184,9 +220,12 @@ def get_employees(
     type: Optional[str] = None,
     active_only: Optional[Any] = Query(None),
     search: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    allowed: Optional[List[str]] = Depends(allowed_departments),
 ):
     query = db.query(Employee)
+    if allowed is not None:
+        query = query.filter(Employee.department.in_(allowed))
     is_active_only = parse_bool(active_only)
     if is_active_only is True:
         query = query.filter(Employee.is_active == True)
@@ -217,7 +256,9 @@ def get_employees(
     ]
 
 @router.post("/employees")
-def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                    allowed: Optional[List[str]] = Depends(allowed_departments)):
+    _check_mine(data.department, allowed)
     if data.employee_type not in ("fixed", "piecework"):
         raise HTTPException(status_code=400, detail="Xodim turi 'fixed' yoki 'piecework' bo'lishi shart")
     
@@ -255,8 +296,13 @@ def create_employee(data: EmployeeCreateSchema, current_user: str = Query("Admin
     return {"status": "success", "id": emp.id, "message": "Xodim muvaffaqiyatli qo'shildi"}
 
 @router.put("/employees/{id}")
-def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                    allowed: Optional[List[str]] = Depends(allowed_departments)):
     emp = db.query(Employee).filter(Employee.id == id).first()
+    if emp:
+        _check_mine(emp.department, allowed)
+        if data.department is not None:
+            _check_mine(data.department, allowed)
     if not emp:
         raise HTTPException(status_code=404, detail="Xodim topilmadi")
 
@@ -296,8 +342,11 @@ def update_employee(id: int, data: EmployeeUpdateSchema, current_user: str = Que
     return {"status": "success", "message": "Xodim muvaffaqiyatli yangilandi"}
 
 @router.put("/employees/{id}/toggle-active")
-def toggle_employee_active(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def toggle_employee_active(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                           allowed: Optional[List[str]] = Depends(allowed_departments)):
     emp = db.query(Employee).filter(Employee.id == id).first()
+    if emp:
+        _check_mine(emp.department, allowed)
     if not emp:
         raise HTTPException(status_code=404, detail="Xodim topilmadi")
 
@@ -322,8 +371,10 @@ def toggle_employee_active(id: int, current_user: str = Query("Admin"), db: Sess
 
 @router.delete("/employees/{id}")
 def delete_employee(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
-                    role: str = Depends(get_current_user_role)):
+                    role: str = Depends(get_current_user_role),
+                    allowed: Optional[List[str]] = Depends(allowed_departments)):
     check_action("delete", role)
+    _check_employee(db, id, allowed)
     if current_user != "Admin":
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
     emp = db.query(Employee).filter(Employee.id == id).first()
@@ -352,7 +403,8 @@ def delete_employee(id: int, current_user: str = Query("Admin"), db: Session = D
 # ==============================================================================
 
 @router.get("/job-types")
-def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depends(get_db)):
+def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depends(get_db),
+                  allowed: Optional[List[str]] = Depends(allowed_departments)):
     query = db.query(JobType)
     is_active = parse_bool(active_only)
     if is_active is True:
@@ -372,7 +424,8 @@ def get_job_types(active_only: Optional[Any] = Query(None), db: Session = Depend
     ]
 
 @router.post("/job-types")
-def create_job_type(data: JobTypeCreateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def create_job_type(data: JobTypeCreateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                    _: str = Depends(admin_only)):
     if float(data.price_per_unit) <= 0:
         raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak")
     pay_type = _pay_type(data.pay_type)
@@ -399,7 +452,8 @@ def create_job_type(data: JobTypeCreateSchema, current_user: str = Query("Admin"
     return {"status": "success", "id": jt.id, "message": "Ish turi muvaffaqiyatli qo'shildi"}
 
 @router.put("/job-types/{id}")
-def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                    _: str = Depends(admin_only)):
     jt = db.query(JobType).filter(JobType.id == id).first()
     if not jt:
         raise HTTPException(status_code=404, detail="Ish turi topilmadi")
@@ -433,7 +487,7 @@ def update_job_type(id: int, data: JobTypeUpdateSchema, current_user: str = Quer
 
 @router.delete("/job-types/{id}")
 def delete_job_type(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
-                    role: str = Depends(get_current_user_role)):
+                    role: str = Depends(admin_only)):
     check_action("delete", role)
     if current_user != "Admin":
         raise HTTPException(status_code=403, detail="O'chirish faqat Admin uchun ruxsat etilgan!")
@@ -460,7 +514,8 @@ def delete_job_type(id: int, current_user: str = Query("Admin"), db: Session = D
 # ==============================================================================
 
 @router.get("/daily-data")
-def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Session = Depends(get_db)):
+def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Session = Depends(get_db),
+                   allowed: Optional[List[str]] = Depends(allowed_departments)):
     try:
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except Exception:
@@ -477,6 +532,7 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
         a.employee_id: a for a in db.query(AttendanceEntry).filter(AttendanceEntry.date == entry_date).all()
     }
 
+    fixed_employees = [e for e in fixed_employees if _mine(e.department, allowed)]
     fixed_list = []
     for emp in fixed_employees:
         att = attendance_map.get(emp.id)
@@ -493,6 +549,7 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
     work_entries = db.query(WorkEntry).filter(
         WorkEntry.date == entry_date
     ).join(Employee).join(JobType).order_by(WorkEntry.created_at.asc()).all()
+    work_entries = [w for w in work_entries if _mine(w.employee.department, allowed)]
 
     piecework_list = [
         {
@@ -519,10 +576,16 @@ def get_daily_data(date_str: str = Query(..., description="YYYY-MM-DD"), db: Ses
     }
 
 @router.post("/daily-attendance")
-def save_daily_attendance(data: DailyAttendanceBatchSchema, db: Session = Depends(get_db)):
+def save_daily_attendance(data: DailyAttendanceBatchSchema, db: Session = Depends(get_db),
+                          allowed: Optional[List[str]] = Depends(allowed_departments)):
+    for r in data.absent_records:
+        _check_employee(db, r.employee_id, allowed)
+    # Only this user's people: the other Ombors' attendance that day stays as it is.
+    mine = None if allowed is None else {e.id for e in db.query(Employee).filter(Employee.department.in_(allowed))}
     try:
         absent_recs = [{"employee_id": r.employee_id, "reason": r.reason} for r in data.absent_records]
-        record_daily_attendance(db, data.date, absent_recs, current_user=data.current_user or "Admin")
+        record_daily_attendance(db, data.date, absent_recs, current_user=data.current_user or "Admin",
+                                only_employee_ids=mine)
         return {"status": "success", "message": f"{data.date} sanasi uchun davomat muvaffaqiyatli saqlandi"}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -531,7 +594,9 @@ def save_daily_attendance(data: DailyAttendanceBatchSchema, db: Session = Depend
         raise HTTPException(status_code=500, detail=f"Davomatni saqlashda xatolik: {e}")
 
 @router.post("/daily-work")
-def add_daily_work_entry(data: DailyWorkEntrySchema, db: Session = Depends(get_db)):
+def add_daily_work_entry(data: DailyWorkEntrySchema, db: Session = Depends(get_db),
+                         allowed: Optional[List[str]] = Depends(allowed_departments)):
+    _check_employee(db, data.employee_id, allowed)
     jt = db.query(JobType).filter(JobType.id == data.job_type_id).first()
     if jt and (jt.pay_type or "ishbay") == "fiks":
         raise HTTPException(status_code=400, detail="Fiks (oylik) ish turi uchun naryad kiritilmaydi - u oylik maosh sifatida hisoblanadi")
@@ -554,8 +619,12 @@ def add_daily_work_entry(data: DailyWorkEntrySchema, db: Session = Depends(get_d
 
 @router.delete("/daily-work/{id}")
 def delete_work_entry_endpoint(id: int, current_user: str = Query("Admin"), db: Session = Depends(get_db),
-                               role: str = Depends(get_current_user_role)):
+                               role: str = Depends(get_current_user_role),
+                               allowed: Optional[List[str]] = Depends(allowed_departments)):
     check_action("delete", role)
+    entry = db.query(WorkEntry).filter(WorkEntry.id == id).first()
+    if entry:
+        _check_employee(db, entry.employee_id, allowed)
     try:
         delete_daily_work_entry(db, id, current_user=current_user)
         return {"status": "success", "message": "Ish yozuvi o'chirildi"}
@@ -566,8 +635,11 @@ def delete_work_entry_endpoint(id: int, current_user: str = Query("Admin"), db: 
 
 @router.post("/daily-hours")
 def save_daily_hours(data: DailyHoursSchema, db: Session = Depends(get_db),
-                     username: str = Depends(get_current_username)):
+                     username: str = Depends(get_current_username),
+                     allowed: Optional[List[str]] = Depends(allowed_departments)):
     """Soatbay xodimlar: the hours each worked that day (hours x the hourly rate)."""
+    for i in data.items:
+        _check_employee(db, i.employee_id, allowed)
     try:
         saved = set_daily_hours(db, data.date, [i.model_dump() for i in data.items], current_user=username)
         return {"status": "success", "saved": saved}
@@ -580,12 +652,12 @@ def save_daily_hours(data: DailyHoursSchema, db: Session = Depends(get_db),
 
 @router.get("/adjustments")
 def get_adjustments(year_month: str = Query(..., description="YYYY-MM"), db: Session = Depends(get_db),
-                    username: str = Depends(get_current_username)):
+                    username: str = Depends(get_current_username), _: str = Depends(admin_only)):
     return list_salary_adjustments(db, year_month)
 
 @router.post("/adjustments")
 def create_adjustment(data: SalaryAdjustmentSchema, db: Session = Depends(get_db),
-                      role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+                      role: str = Depends(admin_only), username: str = Depends(get_current_username)):
     if (data.kind or "").strip().lower() == "avans":
         check_permission("kassa", role)          # an avans is paid out of a Kassa
     try:
@@ -597,7 +669,7 @@ def create_adjustment(data: SalaryAdjustmentSchema, db: Session = Depends(get_db
 
 @router.delete("/adjustments/{id}")
 def remove_adjustment(id: int, db: Session = Depends(get_db),
-                      role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+                      role: str = Depends(admin_only), username: str = Depends(get_current_username)):
     check_action("delete", role)
     adj = db.query(SalaryAdjustment).filter(SalaryAdjustment.id == id).first()
     if adj and adj.cash_transaction_id:
@@ -613,7 +685,8 @@ def remove_adjustment(id: int, db: Session = Depends(get_db),
 # ==============================================================================
 
 @router.get("/payroll/{year_month}")
-def get_payroll(year_month: str, recalculate: bool = False, db: Session = Depends(get_db)):
+def get_payroll(year_month: str, recalculate: bool = False, db: Session = Depends(get_db),
+                _: str = Depends(admin_only)):
     if recalculate:
         recalculate_all_salaries(db, year_month)
     else:
@@ -626,12 +699,14 @@ def get_payroll(year_month: str, recalculate: bool = False, db: Session = Depend
     return summary
 
 @router.post("/payroll/{year_month}/calculate")
-def trigger_calculate_payroll(year_month: str, current_user: str = Query("Admin"), db: Session = Depends(get_db)):
+def trigger_calculate_payroll(year_month: str, current_user: str = Query("Admin"), db: Session = Depends(get_db),
+                              _: str = Depends(admin_only)):
     recalculate_all_salaries(db, year_month, current_user=current_user)
     return get_payroll_summary(db, year_month)
 
 @router.post("/payroll/{id}/pay")
-def pay_salary_endpoint(id: int, data: PaySalarySchema, db: Session = Depends(get_db)):
+def pay_salary_endpoint(id: int, data: PaySalarySchema, db: Session = Depends(get_db),
+                        _: str = Depends(admin_only)):
     try:
         calc = pay_employee_salary(
             db=db,
@@ -655,7 +730,7 @@ def pay_salary_endpoint(id: int, data: PaySalarySchema, db: Session = Depends(ge
 
 @router.post("/payroll/{id}/storno")
 def storno_salary_endpoint(id: int, db: Session = Depends(get_db),
-                           role: str = Depends(get_current_user_role), username: str = Depends(get_current_username)):
+                           role: str = Depends(admin_only), username: str = Depends(get_current_username)):
     """Take a salary payment back: the money returns to its Kassa."""
     check_permission("kassa", role)
     check_action("storno", role)
@@ -666,7 +741,7 @@ def storno_salary_endpoint(id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=400, detail=str(ve))
 
 @router.get("/payroll/{year_month}/export-excel")
-def export_payroll_excel(year_month: str, db: Session = Depends(get_db)):
+def export_payroll_excel(year_month: str, db: Session = Depends(get_db), _: str = Depends(admin_only)):
     try:
         excel_stream = generate_payroll_excel(db, year_month)
         filename = f"Ish_haqi_{year_month}.xlsx"
