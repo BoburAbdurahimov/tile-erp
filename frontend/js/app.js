@@ -266,7 +266,7 @@ function getUserRoles() {
 function hasModuleAccess(moduleName) {
   const roles = getUserRoles();
   if (roles.includes("Admin")) return true;
-  if (moduleName === "dashboard") return true;
+  if (moduleName === "dashboard") return false;   // Bosh panel is the Admin's only
 
   const isDirector = roles.includes("Direktor") || roles.includes("Ish boshqaruvchi");
 
@@ -410,10 +410,25 @@ function selectOdooApp(moduleName) {
   navigateTo(moduleName);
 }
 
+// Where a user lands: Bosh panel for the Admin, else the first page they may open.
+const LANDING_ORDER = ["dashboard", "ombor", "ombor_eski", "production", "sales", "purchases", "kassa",
+                       "balances", "salary", "expenses", "finance", "mdm", "history", "users"];
+
+function firstAllowedModule() {
+  return LANDING_ORDER.find(m => hasModuleAccess(m)) || null;
+}
+
 async function navigateTo(moduleName) {
   if (!hasModuleAccess(moduleName)) {
-    showToast("Ushbu modulga kirish uchun sizda ruxsat yo'q!", "error");
-    moduleName = "dashboard";
+    // Bosh panel is the usual start page: going there without it is not an error.
+    if (moduleName !== "dashboard") showToast("Ushbu modulga kirish uchun sizda ruxsat yo'q!", "error");
+    moduleName = firstAllowedModule();
+    if (!moduleName) {
+      const box = document.getElementById("module-container");
+      if (box) box.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:#64748b;font-size:16px;">
+        ${CURRENT_LANG === "uz" ? "Sizga hali hech qaysi bo'lim ochilmagan. Admin bilan bog'laning." : "Вам пока не открыт ни один раздел. Обратитесь к администратору."}</div>`;
+      return;
+    }
   }
   currentModule = moduleName;
   
