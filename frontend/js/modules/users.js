@@ -83,10 +83,6 @@ const UsersModule = (() => {
             ${isUz ? "Barcha omborlar" : "Все склады"}
           </label>
         </div>
-        <div style="font-size: 11.5px; color: #64748b; margin-top: 6px;">
-          ${isUz ? "Foydalanuvchi faqat belgilangan omborda ishlaydi: tayyor kafel, xomashyo, aralash, ishlab chiqarish, sotish va xarid. Har ombor 120 va 100 bilan birga beriladi. Admin har doim hammasini ko'radi."
-                 : "Пользователь работает только в отмеченном складе: плитка, сырьё, смешанный склад, производство, продажи и закупки. Каждый склад даётся вместе (120 и 100). Админ всегда видит все."}
-        </div>
       </div>`;
   }
 
@@ -125,7 +121,6 @@ const UsersModule = (() => {
           `;
         }).join("")}
       </div>
-      <div style="font-size: 11px; color: #64748b; margin-top: 6px;">${isUz ? 'Istalgan modullarni mustaqil belgilashingiz mumkin (masalan: faqat Moliya va Ombor, yoki Kassadan tashqari hammasi).' : 'Вы можете отметить любые модули индивидуально (например: только Финансы и Склад, или все кроме Кассы).'}</div>
     `;
   }
 
@@ -160,11 +155,6 @@ const UsersModule = (() => {
           <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
 <span>${isUz ? "Foydalanuvchilar va Rollar" : "Пользователи и Роли"}</span>
           </h2>
-          <p style="margin: 4px 0 0 0; color: #64748b; font-size: 14px;">
-            ${isUz 
-              ? "ERP web tizimi hamda Telegram bot foydalanuvchilarini boshqarish va har bir modul bo'yicha alohida ruxsatlar biriktirish" 
-              : "Управление пользователями веб-системы ERP и Telegram бота, настройка прав доступа к модулям"}
-          </p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-secondary btn-icon" onclick="exportTableToPdf(null, 'foydalanuvchilar_royxati')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>

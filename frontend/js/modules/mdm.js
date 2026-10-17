@@ -9,9 +9,6 @@ const MdmModule = {
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
 <span>${t('mod_mdm_title')}</span>
             </h2>
-            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">
-              ${t('mod_mdm_sub')}
-            </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm btn-icon" onclick="MdmModule.exportPdf()" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
@@ -276,7 +273,6 @@ const MdmModule = {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px;">
           <div>
             <div style="font-size: 14px; font-weight: 700; color: #0f172a;">${isUz ? "Materiallar va narxlari" : "Материалы и цены"}</div>
-            <div style="font-size: 12px; color: #64748b;">${isUz ? "Sotib olishda narx shu yerdan olinadi. So'mda, dollarda yoki ikkalasida yozing." : "При закупке цена берётся отсюда. В сумах, долларах или в обоих."}</div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="MdmModule.addPriceRow()"
             title="${isUz ? "Material qo'shish" : "Добавить материал"}" aria-label="${isUz ? "Material qo'shish" : "Добавить материал"}">${uiIcon("plus")}</button>

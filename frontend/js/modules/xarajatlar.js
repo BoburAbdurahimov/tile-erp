@@ -52,10 +52,6 @@ const ExpensesModule = {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
             <div>
               <h2 style="margin:0;font-size:22px;font-weight:700;color:#0f172a;">${isUz ? "Boshqa xarajatlar" : "Прочие расходы"}</h2>
-              <p style="margin:4px 0 0;color:#64748b;font-size:13px;">
-                ${isUz ? "Ishlab chiqarishdan tashqari xarajatlar: bozorlik, taksi, abed va boshqalar. Har biri kassadan chiqim bo'ladi."
-                       : "Расходы вне производства: базар, такси, обед и прочее. Каждый списывается из кассы."}
-              </p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-secondary btn-sm btn-icon" onclick="ExpensesModule.load()" title="${isUz ? "Yangilash" : "Обновить"}" aria-label="${isUz ? "Yangilash" : "Обновить"}">${uiIcon("refresh")}</button>
@@ -392,7 +388,6 @@ const ExpensesModule = {
             </select>
             <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="ExpensesModule.quickCounterparty()" title="${isUz ? "Yangi kontragent" : "Новый контрагент"}" aria-label="${isUz ? "Yangi kontragent" : "Новый контрагент"}">${uiIcon("plus")}</button>
           </div>
-          <p style="margin:4px 0 0;font-size:11.5px;color:#64748b;">${isUz ? "Kontragent balansi o'zgarmaydi - faqat kimga to'langani ko'rinadi." : "Баланс контрагента не меняется — только видно, кому оплачено."}</p>
         </div>
         <div><label style="${l}">${isUz ? "Izoh" : "Описание"}</label>
           <input id="exp-desc" style="${f}" placeholder="${isUz ? "Masalan: sex uchun choy, shakar" : "Например: чай, сахар для цеха"}"></div>

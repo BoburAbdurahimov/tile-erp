@@ -67,7 +67,6 @@ const KassaModule = {
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <div style="font-size: 16px; font-weight: 700; color: #0f172a;">${tr(r.name)}</div>
-            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">${tr(r.description) || ''}</div>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 22px; font-weight: 800; color: ${r.currency === 'USD' ? '#10b981' : '#2563eb'};">
@@ -308,7 +307,6 @@ const KassaModule = {
               <label style="${label}">${isUz ? "Kurs: 1 USD = ? UZS" : "Курс: 1 USD = ? UZS"} *</label>
               <input type="number" id="ex-rate" class="form-control" step="any" min="0.01" value="${this.rateFor(todayStr)}" style="${field}"
                 oninput="this.dataset.touched = '1'; KassaModule.updateExchange()">
-              <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">${isUz ? "Belgilangan kurs qo'yildi - kerak bo'lsa o'zgartiring." : "Подставлен установленный курс - при необходимости измените."}</div>
             </div>
           </div>
           <div class="form-row" style="display: flex; gap: 12px; flex-wrap: wrap;">

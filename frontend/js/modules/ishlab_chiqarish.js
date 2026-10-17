@@ -490,10 +490,6 @@ const ProductionModule = {
 
     showModal(isUz ? "Avto sarf sozlamalari" : "Настройки авто расхода", `
       <div style="display:flex;flex-direction:column;gap:14px;">
-        <p style="margin:0;font-size:13px;color:#64748b;">
-          ${isUz ? "1 dona mahsulot uchun qancha material sarflanishini kiriting. Ishlab chiqarishda «Avto sarf» belgilansa, sarf shu normalar bo'yicha avtomatik hisoblanadi. Ombor uchun alohida norma (masalan Kodir 100) umumiy normadan ustun turadi."
-                 : "Укажите расход материала на 1 штуку. При отмеченном «Авто расход» расход считается по этим нормам. Норма для склада (например Кодир 100) важнее общей."}
-        </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">
           <div><label style="${l}">${isUz ? "Ombor" : "Склад"}</label>
             <select id="as-sklad" style="${f}">

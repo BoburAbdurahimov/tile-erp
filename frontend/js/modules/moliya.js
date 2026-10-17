@@ -39,11 +39,6 @@ const FinanceModule = {
         <div class="card-header" style="margin-top: 10px;">
           <div class="card-title">${isUz ? "Omborlar bo'yicha ishlab chiqarish tannarxi va bilvosita xarajatlar taqsimoti" : "Себестоимость производства и распределение косвенных расходов по складам"}</div>
         </div>
-        <p style="font-size: 13px; color: #64748b; margin-top: -12px; margin-bottom: 16px;">
-          ${isUz
-            ? "Qoida: Xomashyo tannarxi mahsulot chiqqan yo'nalishga yoziladi. Ish haqi xodim ishlaydigan omborga (uning 2 yo'nalishiga hajm bo'yicha), Ma'muriyat oyligi esa ma'muriy xarajatga yoziladi. Zapchastlar va bilvosita xarajatlar (svet, gaz, ijara) oylik ishlab chiqarish hajmiga proporsional taqsimlanadi."
-            : "Правило: Сырьё относится на направление, куда вышла продукция. Зарплата относится на склад, где работает сотрудник (по объему его 2 направлений), зарплата администрации — на административные расходы. Запчасти и косвенные расходы (свет, газ, аренда) распределяются пропорционально месячному объему выпуска."}
-        </p>
 
         <div class="table-container" id="lines-allocation-table-container" style="margin-bottom: 28px;">
           <!-- Rendered dynamically -->

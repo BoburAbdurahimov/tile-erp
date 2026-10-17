@@ -11,9 +11,6 @@ const PurchasesModule = {
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
 <span>${t('mod_zakup_title')}</span>
             </h2>
-            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">
-              ${t('mod_zakup_sub')}
-            </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm btn-icon" onclick="exportTableToPdf('purchases-main-table', 'xaridlar_zakup')" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
@@ -43,7 +40,6 @@ const PurchasesModule = {
         tableDiv.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; color: #64748b;">
             <h3>${isUz ? 'Hozircha xarid yo\'q' : 'Пока нет закупок'}</h3>
-            <p>${isUz ? 'Yangi xarid uchun yuqoridagi + tugmasini bosing' : 'Для новой закупки нажмите + вверху'}</p>
           </div>
         `;
         return;

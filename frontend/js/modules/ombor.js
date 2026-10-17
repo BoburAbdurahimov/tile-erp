@@ -12,7 +12,6 @@ const OmborModule = {
             <h2 style="margin: 0; font-size: 22px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
 <span>${t('nav_xomashyo')}</span>
             </h2>
-            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${CURRENT_LANG === 'uz' ? "Xomashyo, ehtiyot qismlar va yordamchi materiallar qoldig'i. Tayyor kafel «Ombor» bo'limida." : "Остатки сырья, запчастей и вспомогательных материалов. Готовая плитка — в разделе «Склад»."}</p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-primary btn-sm" onclick="OmborModule.openTransferModal()" style="background: #2563eb; color: #ffffff; font-weight: 600; padding: 8px 14px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
