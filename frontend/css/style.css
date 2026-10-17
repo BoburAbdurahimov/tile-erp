@@ -2220,3 +2220,58 @@ body { font-size: 16px; }
 [style*="font-size:14.5px"], [style*="font-size: 14.5px"] {
   font-size: 15.5px !important;
 }
+
+/* ==========================================================================
+   Big buttons: the ones pressed all day are easy to hit.
+   ========================================================================== */
+.btn.btn-icon,
+.btn.btn-icon.btn-sm {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 12px !important;
+}
+.btn.btn-icon .btn-svg {
+  width: 26px;
+  height: 26px;
+}
+/* Page and form buttons */
+.btn {
+  min-height: 46px;
+  font-weight: 700;
+}
+.btn:not(.btn-icon) {
+  padding-left: max(18px, 1em);
+  padding-right: max(18px, 1em);
+}
+/* Row actions in tables (Tahrirlash, Arxivlash, O'chirish, Storno, ...) */
+.data-table td .btn,
+.data-table td button {
+  min-height: 42px !important;
+  padding: 8px 16px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+}
+.data-table td .btn.btn-icon,
+.data-table td button.btn-icon {
+  width: 46px !important;
+  height: 46px !important;
+  padding: 0 !important;
+}
+/* Modal footers: Saqlash / Bekor qilish */
+.modal-footer .btn,
+.form-actions .btn {
+  min-height: 50px !important;
+  padding: 12px 26px !important;
+  font-size: 16px !important;
+}
+/* Small tab-like buttons and chips stay their size, but not tiny */
+.btn-sm:not(.btn-icon) {
+  min-height: 42px;
+}
+/* Tabs and filter chips (Ish haqi bo'limlari, ...) */
+#module-container .tab-btn {
+  min-height: 46px !important;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
