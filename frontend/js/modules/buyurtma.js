@@ -113,10 +113,6 @@ const OrdersModule = {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
             <div style="flex:1;min-width:0;">
               <h2 style="margin:0;font-size:22px;font-weight:700;color:#0f172a;">${isUz ? "Sotuv" : "Продажи"}</h2>
-              <p style="margin:4px 0 0;color:#64748b;font-size:13px;">
-                ${isUz ? "Buyurtma → Yetkazib berish → To'lov. Mahsulotlar Ombordan olinadi."
-                       : "Заказ → Доставка → Оплата. Товары берутся со Склада."}
-              </p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <button class="btn btn-primary btn-icon" onclick="OrdersModule.openNewOrder()" title="${isUz ? "Yangi buyurtma" : "Новый заказ"}" aria-label="${isUz ? "Yangi buyurtma" : "Новый заказ"}">${uiIcon("plus")}</button>
@@ -400,16 +396,14 @@ const OrdersModule = {
     const orders = this.section("orders-open", isUz ? "Ochiq buyurtmalar" : "Открытые заказы", open.length,
       open.length
         ? this.dot("#16a34a", isUz ? "Omborda bor" : "Есть на складе") + this.dot("#dc2626", isUz ? "Yasash kerak" : "Нужно произвести")
-        : (isUz ? "Yangi buyurtma uchun yuqoridagi + tugmasini bosing." : "Для нового заказа нажмите + вверху."),
+        : "",
       open.length
         ? this.cardGrid(open.map(o => this.orderCard(o)).join(""))
         : `<div style="padding:22px;text-align:center;color:#64748b;border:2px dashed #cbd5e1;border-radius:12px;font-size:16px;">
              ${isUz ? "Ochiq buyurtma yo'q" : "Нет открытых заказов"}</div>`);
     const plan = this.section("orders-plan", isUz ? "Nima yasash kerak" : "Что произвести",
       formatNumber(this.plan.reduce((s, p) => s + p.quantity, 0), 0, 0) + (isUz ? " ta" : " шт"),
-      this.plan.length
-        ? (isUz ? "Omborda yetmayotgan kafellar. Bossangiz — qaysi buyurtma uchun." : "Чего не хватает на складе. Нажмите — для какого заказа.")
-        : (isUz ? "Buyurtmalar uchun omborda yetmayotgan kafellar." : "Чего не хватает на складе для заказов."),
+      "",
       this.plan.length
         ? this.cardGrid(this.plan.map((p, i) => this.planCard(p, i)).join(""))
         : `<div style="padding:14px 16px;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:16px;font-weight:700;">
@@ -1041,7 +1035,6 @@ const OrdersModule = {
             <input id="dlv-phone" type="tel" style="${f}" placeholder="+998 90 123 45 67"></div>
         </div>
         <div><label style="${l}">${isUz ? "Izoh" : "Примечание"}</label><input id="dlv-note" style="${f}"></div>
-        <p style="margin:0;font-size:12px;color:#64748b;">${isUz ? "Saqlanganda mahsulot tanlangan ombordan chiqim qilinadi." : "При сохранении товар списывается с выбранного склада."}</p>
       </div>`, async () => {
         const v = id => (document.getElementById(id)?.value || "").trim();
         const chosen = parseInt(document.querySelector("input[name='dlv-sklad']:checked")?.value || "0", 10);
@@ -1249,10 +1242,7 @@ const OrdersModule = {
     showModal(isUz ? "Demo ma'lumot yuklash" : "Загрузить демо",
       `<p style="margin:0 0 8px;">${isUz
         ? "Omborga demo mahsulot va har bosqichdagi 9 ta demo buyurtma qo'shiladi (muddati o'tgan, bugungi, yetkazilgan, qisman va to'liq to'langan)."
-        : "На склад добавятся демо-товары и 9 демо-заказов на всех этапах (просроченные, сегодняшние, доставленные, частично и полностью оплаченные)."}</p>
-       <p style="margin:0;color:#64748b;font-size:13px;">${isUz
-        ? "Avvalgi demo bo'lsa, u yangisi bilan almashtiriladi. Haqiqiy ma'lumotlarga tegilmaydi."
-        : "Предыдущее демо будет заменено. Реальные данные не затрагиваются."}</p>`,
+        : "На склад добавятся демо-товары и 9 демо-заказов на всех этапах (просроченные, сегодняшние, доставленные, частично и полностью оплаченные)."}</p>`,
       async () => {
         const r = await API.loadOrderDemo();
         showToast(`${isUz ? "Demo yuklandi" : "Демо загружено"}: ${r.orders} ${isUz ? "ta buyurtma" : "заказов"}`, "success");

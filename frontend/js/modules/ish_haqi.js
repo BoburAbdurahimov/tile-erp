@@ -147,7 +147,6 @@ const IshHaqiModule = (function () {
             <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
 <span>${t.title}</span>
             </h2>
-            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">${t.subtitle}</p>
           </div>
           <div class="tabs-nav" style="margin-bottom: 0; border-bottom: none; gap: 6px; flex-wrap: wrap;">
             ${visibleTabs(t).map(([id, label]) =>
@@ -543,9 +542,6 @@ const IshHaqiModule = (function () {
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Fiksalangan xodimlar davomati" : "Табель окладных сотрудников"}</div>
             <button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveAttendance()">${t.btn_save_att}</button>
           </div>
-          <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
-            ${isUz ? "Ishga kelmagan bo'lsa, 'Kelmadi' deb belgilang. Kunlik maosh avtomatik chegiriladi." : "Отметьте сотрудников, которые не вышли. Дневная ставка будет удержана."}
-          </p>
           <div class="scroll-box" style="max-height: 480px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
             ${fixedRows}
           </div>
@@ -557,9 +553,6 @@ const IshHaqiModule = (function () {
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Soatbay xodimlar (ishlagan soati)" : "Почасовые сотрудники (часы)"}</div>
             ${soatbayEmps.length ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveHours()">${isUz ? "Soatlarni saqlash" : "Сохранить часы"}</button>` : ''}
           </div>
-          <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
-            ${isUz ? "Har bir xodim bugun necha soat ishlaganini kiriting: soat x soatlik narx oylikka qo'shiladi." : "Укажите, сколько часов отработал каждый: часы x ставка идут в зарплату."}
-          </p>
           <div class="scroll-box" style="max-height: 480px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
             ${soatbayRows}
           </div>
@@ -574,9 +567,6 @@ const IshHaqiModule = (function () {
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Ishbay xodimlar naryadlari" : "Сдельные наряды"}</div>
             <button class="btn btn-warning btn-sm btn-icon" onclick="IshHaqiModule.openAddWorkModal()" title="${t.btn_add_work}" aria-label="${t.btn_add_work}">${uiIcon("plus")}</button>
           </div>
-          <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
-            ${isUz ? "Bajarilgan ishlar hajmini kiriting. Oylik hisob-kitob avtomatik yangilanadi." : "Внесите объем работ за день. Сумма сразу отобразится в ведомости."}
-          </p>
           <div class="table-container scroll-box" style="max-height: 480px;">
             <table class="data-table" id="daily-piecework-table">
               <thead>

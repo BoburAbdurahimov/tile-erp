@@ -122,10 +122,6 @@ const HistoryModule = {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div>
           <h2 style="margin:0;font-size:22px;font-weight:700;color:#0f172a;">${isUz ? "Tarix" : "История"}</h2>
-          <p style="margin:4px 0 0;color:#64748b;font-size:13px;">
-            ${isUz ? "Barcha harakatlar: ombor, buyurtma va yetkazish, xaridlar, ishlab chiqarish, kassa, qarzlar."
-                   : "Все движения: склад, заказы и доставка, закупки, производство, касса, долги."}
-          </p>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary btn-sm btn-icon" onclick="HistoryModule.load()" title="${isUz ? "Yangilash" : "Обновить"}" aria-label="${isUz ? "Yangilash" : "Обновить"}">${uiIcon("refresh")}</button>

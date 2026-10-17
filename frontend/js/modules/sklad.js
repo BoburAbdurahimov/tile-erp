@@ -29,11 +29,6 @@ const SkladModule = {
             <h2 style="margin:0;font-size:22px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px;">
 <span>${isUz ? "Ombor (o'lcham bo'yicha)" : "Склад (по размерам)"}</span>
             </h2>
-            <p style="margin:4px 0 0 0;color:#64748b;font-size:13px;">
-              ${isUz
-                ? "Uzunlik × kenglik jadvali. O'lcham bitta kod bilan yoziladi: 680 = 600×80"
-                : "Таблица длина × ширина. Размер пишется одним кодом: 680 = 600×80"}
-            </p>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             ${getUserRoles().includes("Admin") ? `
@@ -194,9 +189,6 @@ const SkladModule = {
             <thead>${head}</thead><tbody>${body}</tbody>
           </table>
         </div>
-        <div style="margin-top:8px;font-size:11.5px;color:#94a3b8;">
-          ${isUz ? "Qator = uzunlik, ustun = kenglik. 680 = 600×80." : "Строка = длина, столбец = ширина. 680 = 600×80."}
-        </div>
       </div>
       ${this.phonePicture(m)}
       <div style="height:18px;"></div>`;
@@ -270,7 +262,6 @@ const SkladModule = {
         <img id="sklad-pic-${m.sklad_id}" src="${this.matrixPicture(m)}" alt="${m.name} ${m.eni}"
              onclick="SkladModule.openPicture(${m.sklad_id})">
         <div class="sklad-pic-meta">
-          <span>${isUz ? "Kattalashtirish uchun bosing" : "Нажмите, чтобы увеличить"}</span>
           <span>${isUz ? "Yangilandi" : "Обновлено"} ${time}</span>
         </div>
       </div>`;
@@ -484,10 +475,7 @@ const SkladModule = {
          <strong style="font-size:13px;">${isUz ? "O'lchamlar" : "Размеры"}</strong>
          <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="SkladModule.addReceiveLine()" title="${isUz ? "Qator qo\'shish" : "Добавить строку"}" aria-label="${isUz ? "Qator qo\'shish" : "Добавить строку"}">${uiIcon("plus")}</button>
        </div>
-       <div id="rcv-lines"></div>
-       <div style="margin-top:8px;font-size:11.5px;color:#94a3b8;">
-         ${isUz ? "O'lcham kodi: 680 = 600×80, 835 = 800×35" : "Код размера: 680 = 600×80, 835 = 800×35"}
-       </div>`,
+       <div id="rcv-lines"></div>`,
       async () => await this.submitReceive()
     );
     this.renderReceiveLines();

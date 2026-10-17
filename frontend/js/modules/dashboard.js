@@ -117,7 +117,6 @@ const DashboardModule = {
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <div style="font-weight: 700; font-size: 15px;">${r.name}</div>
-              <div style="font-size: 12px; color: #64748b;">${r.description || ''}</div>
             </div>
             <div style="text-align: right;">
               <div style="font-size: 18px; font-weight: 800; color: ${r.currency === 'USD' ? '#10b981' : '#2563eb'};">

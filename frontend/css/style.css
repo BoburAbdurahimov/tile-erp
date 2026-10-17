@@ -2183,3 +2183,40 @@ body.no-storno [onclick*="ExpensesModule.cancel("] {
     border-top: 1px solid #e2e8f0;
   }
 }
+
+/* ==========================================================================
+   Big, easy-to-read text everywhere: nothing below 14px, tables 15px,
+   fields and buttons 16px. Small sizes written inline in the pages are
+   lifted too.
+   ========================================================================== */
+body { font-size: 16px; }
+.data-table th { font-size: 14px !important; }
+.data-table td { font-size: 15.5px !important; }
+.form-control, input, select, textarea { font-size: 16px !important; }
+.form-label, label { font-size: 14.5px !important; }
+.btn { font-size: 15px; }
+.btn-sm { font-size: 14px !important; }
+.badge { font-size: 14px !important; }
+.kpi-sub, .sklad-pic-meta, #module-container small { font-size: 14px !important; }
+.tab-btn { font-size: 15px !important; }
+.odoo-nav-tab { font-size: 14.5px !important; }
+.modal-title { font-size: 19px !important; }
+.kpi-title { font-size: 14px !important; }
+.toast, .toast-message { font-size: 15px !important; }
+
+[style*="font-size:9px"], [style*="font-size: 9px"],
+[style*="font-size:10px"], [style*="font-size: 10px"],
+[style*="font-size:11px"], [style*="font-size: 11px"],
+[style*="font-size:11.5px"], [style*="font-size: 11.5px"],
+[style*="font-size:12px"], [style*="font-size: 12px"] {
+  font-size: 14px !important;
+}
+[style*="font-size:12.5px"], [style*="font-size: 12.5px"],
+[style*="font-size:13px"], [style*="font-size: 13px"],
+[style*="font-size:13.5px"], [style*="font-size: 13.5px"] {
+  font-size: 15px !important;
+}
+[style*="font-size:14px"], [style*="font-size: 14px"],
+[style*="font-size:14.5px"], [style*="font-size: 14.5px"] {
+  font-size: 15.5px !important;
+}
