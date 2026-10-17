@@ -165,6 +165,13 @@ const PurchasesModule = {
             <div id="pur-rows" style="display: flex; flex-direction: column; gap: 8px;"></div>
             <div id="pur-hint" style="font-size: 13px; color: #64748b; margin-top: 6px;">${isUz ? "Avval kimdan olinayotganini tanlang." : "Сначала выберите поставщика."}</div>
           </div>
+          <div id="pur-cur-box" style="display: none;">
+            <label style="${label}">${isUz ? 'Qaysi valyutada olinyapti *' : 'В какой валюте *'}</label>
+            <select id="pur-currency" class="form-control" style="${field}">
+              <option value="UZS">${isUz ? "So'm" : "Сум"}</option>
+              <option value="USD">${isUz ? "Dollar" : "Доллар"}</option>
+            </select>
+          </div>
           <div>
             <label style="${label}">${isUz ? 'Sana *' : 'Дата *'}</label>
             <input type="date" id="pur-date" class="form-control" value="${todayStr}" style="${field}" required />
@@ -199,7 +206,10 @@ const PurchasesModule = {
           return false;
         }
         try {
-          await API.createPurchase({ supplier_id: supplierId, date: d, items, ombor });
+          // Asked only when the supplier has a so'm and a dollar price; else theirs is used.
+          const curBox = document.getElementById("pur-cur-box");
+          const currency = curBox && curBox.style.display !== "none" ? document.getElementById("pur-currency").value : undefined;
+          await API.createPurchase({ supplier_id: supplierId, date: d, items, ombor, currency });
           showToast(isUz ? "Xarid saqlandi, ombor qoldig'i yangilandi" : "Закупка сохранена, остатки обновлены", "success");
           await PurchasesModule.loadPurchases();
           return true;
@@ -219,6 +229,8 @@ const PurchasesModule = {
     const hint = document.getElementById("pur-hint");
     rows.innerHTML = "";
     this.supplierMaterials = [];
+    const curBox = document.getElementById("pur-cur-box");
+    if (curBox) curBox.style.display = "none";
     if (!supplierId) {
       hint.textContent = isUz ? "Avval kimdan olinayotganini tanlang." : "Сначала выберите поставщика.";
       return;
@@ -236,6 +248,8 @@ const PurchasesModule = {
       return;
     }
     hint.textContent = "";
+    // A supplier with prices in both so'm and dollars: say which one this purchase is in.
+    if (curBox && this.supplierMaterials.some(m => m.price_uzs && m.price_usd)) curBox.style.display = "";
     this.addPurchaseItemRow();
   },
 

@@ -67,13 +67,21 @@ class SupplierPrice(Base):
     id = Column(Integer, primary_key=True, index=True)
     counterparty_id = Column(Integer, ForeignKey("mdm_counterparties.id"), nullable=False, index=True)
     material_id = Column(Integer, ForeignKey("mdm_materials.id"), nullable=False, index=True)
-    price = Column(Float, nullable=False)                  # per material unit
+    price = Column(Float, nullable=False)                  # per material unit (the main one, kept for old readers)
     currency = Column(String(10), nullable=False, default="UZS")
+    # A material may have a so'm price, a dollar price, or both.
+    price_uzs = Column(Float, nullable=True)
+    price_usd = Column(Float, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("counterparty_id", "material_id", name="uq_supplier_price"),)
 
     material = relationship("MDMMaterial")
+
+    def offers(self) -> dict:
+        """{"UZS": price, "USD": price} for the currencies it has a price in."""
+        out = {c: p for c, p in (("UZS", self.price_uzs), ("USD", self.price_usd)) if p}
+        return out or {self.currency or "UZS": self.price}
 
 class Warehouse(Base):
     __tablename__ = "warehouses"

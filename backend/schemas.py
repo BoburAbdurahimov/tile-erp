@@ -56,10 +56,17 @@ class CounterpartyUpdate(BaseModel):
 
 class SupplierPriceItem(BaseModel):
     material_id: int
-    price: float
-    currency: str = "UZS"
+    price_uzs: Optional[float] = None   # so'm price
+    price_usd: Optional[float] = None   # dollar price; one or both
+    price: Optional[float] = None       # older clients: one price in `currency`
+    currency: Optional[str] = None
 
-class SupplierPriceResponse(SupplierPriceItem):
+class SupplierPriceResponse(BaseModel):
+    material_id: int
+    price_uzs: Optional[float] = None
+    price_usd: Optional[float] = None
+    price: float
+    currency: str
     material_code: str
     material_name: str
     unit: str

@@ -26,7 +26,7 @@ ROLE_PERMISSIONS = {
     
     # Granular individual permissions
     "Mini App": ["mini_app"],
-    "Ombor": ["ombor", "mdm", "zakup"],
+    "Ombor": ["ombor"],
     "Kassa": ["kassa"],
     "Ishlab chiqarish": ["ishlab_chiqarish", "ombor"],
     "Kontragentlar & Balanslar": ["kontragentlar"],

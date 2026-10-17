@@ -270,12 +270,12 @@ function hasModuleAccess(moduleName) {
 
   const isDirector = roles.includes("Direktor") || roles.includes("Ish boshqaruvchi");
 
-  if (moduleName === "mdm") return roles.includes("MDM") || roles.includes("MDM (Spravochniklar)") || isDirector || roles.includes("Ombor") || roles.includes("Omborchi");
+  if (moduleName === "mdm") return roles.includes("MDM") || roles.includes("MDM (Spravochniklar)") || isDirector || roles.includes("Omborchi");
   if (moduleName === "ombor" || moduleName === "ombor_eski") return roles.includes("Ombor") || roles.includes("Omborchi") || isDirector;
   if (moduleName === "kassa") return roles.includes("Kassa") || roles.includes("Kassir") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "production") return roles.includes("Ishlab chiqarish") || roles.includes("Sex boshlig'i") || isDirector;
   if (moduleName === "balances") return roles.includes("Kontragentlar & Balanslar") || roles.includes("Balanslar") || roles.includes("Buxgalter") || roles.includes("Kassir") || isDirector;
-  if (moduleName === "purchases") return roles.includes("Sotib olish (Zakup)") || roles.includes("Ombor") || roles.includes("Omborchi") || isDirector;
+  if (moduleName === "purchases") return roles.includes("Sotib olish (Zakup)") || roles.includes("Omborchi") || isDirector;
   if (moduleName === "sales") return roles.includes("Sotish (Realizatsiya)") || roles.includes("Buxgalter") || isDirector;
   if (moduleName === "finance") return roles.includes("Moliya & PnL") || roles.includes("Moliya") || roles.includes("Moliyachi") || roles.includes("Direktor") || roles.includes("Buxgalter");
   if (moduleName === "salary") return roles.includes("Ish haqi") || roles.includes("Ish haqi & Xodimlar") || roles.includes("Buxgalter") || isDirector;

@@ -16,13 +16,23 @@ from backend.schemas import (
     WarehouseCreate, WarehouseUpdate, WarehouseResponse,
     SupplierPriceItem, SupplierPriceResponse
 )
-from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope
+from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope, get_combined_permissions
 from backend.services import material_warehouses as mw
 from backend.services.reports_service import generate_mdm_excel
 
 router = APIRouter(prefix="/mdm", tags=["MODUL 1: MDM (Master Data)"])
 
 # ----------------- MATERIALS -----------------
+
+# The catalogues are read by the modules that pick from them (Ombor,
+# Sotib olish, Ishlab chiqarish, Sotish, Kassa); changing them needs MDM.
+READ_MODULES = ("mdm", "ombor", "zakup", "ishlab_chiqarish", "sotish", "kassa", "kontragentlar")
+
+
+def check_read(role: str):
+    if not any(m in get_combined_permissions(role) for m in READ_MODULES):
+        check_permission("mdm", role)
+
 
 @router.get("/materials", response_model=List[MaterialResponse])
 def get_materials(
@@ -31,7 +41,7 @@ def get_materials(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("mdm", role)
+    check_read(role)
     query = db.query(MDMMaterial)
     if not include_archived:
         query = query.filter(MDMMaterial.is_archived == False)
@@ -149,7 +159,7 @@ def get_counterparties(
     db: Session = Depends(get_db),
     role: str = Depends(get_current_user_role)
 ):
-    check_permission("kontragentlar" if role == "Direktor" else "mdm", role)
+    check_read(role)
     query = db.query(MDMCounterparty)
     if not include_archived:
         query = query.filter(MDMCounterparty.is_archived == False)
@@ -291,6 +301,7 @@ def _price_rows(db: Session, counterparty_id: int) -> List[dict]:
     rows = db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == counterparty_id).all()
     return [{
         "material_id": r.material_id, "price": r.price, "currency": r.currency,
+        "price_uzs": r.offers().get("UZS"), "price_usd": r.offers().get("USD"),
         "material_code": r.material.code if r.material else "", "material_name": r.material.name if r.material else "",
         "unit": r.material.unit if r.material else "", "category": r.material.category if r.material else "",
     } for r in sorted(rows, key=lambda r: (r.material.name if r.material else ""))]
@@ -328,15 +339,27 @@ def set_supplier_prices(
         seen.add(item.material_id)
         if not db.query(MDMMaterial).filter(MDMMaterial.id == item.material_id).first():
             raise HTTPException(status_code=404, detail="Material topilmadi.")
-        if item.price is None or item.price <= 0:
+    rows = []
+    for item in payload:
+        uzs, usd = item.price_uzs, item.price_usd
+        if uzs is None and usd is None and item.price is not None:       # one price and its currency
+            cur = (item.currency or "UZS").upper()
+            if cur not in PRICE_CURRENCIES:
+                raise HTTPException(status_code=400, detail="Valyuta UZS yoki USD bo'lishi kerak.")
+            uzs, usd = (item.price, None) if cur == "UZS" else (None, item.price)
+        if uzs is None and usd is None:
+            raise HTTPException(status_code=400, detail="So'm yoki dollar narxini kiriting.")
+        if any(p is not None and p <= 0 for p in (uzs, usd)):
             raise HTTPException(status_code=400, detail="Narx musbat bo'lishi kerak.")
-        if (item.currency or "").upper() not in PRICE_CURRENCIES:
-            raise HTTPException(status_code=400, detail="Valyuta UZS yoki USD bo'lishi kerak.")
+        rows.append((item.material_id, uzs, usd))
 
     db.query(SupplierPrice).filter(SupplierPrice.counterparty_id == counterparty_id).delete()
-    for item in payload:
-        db.add(SupplierPrice(counterparty_id=counterparty_id, material_id=item.material_id,
-                             price=round(float(item.price), 4), currency=item.currency.upper()))
+    for material_id, uzs, usd in rows:
+        main_cur, main = ("UZS", uzs) if uzs else ("USD", usd)
+        db.add(SupplierPrice(counterparty_id=counterparty_id, material_id=material_id,
+                             price=round(float(main), 4), currency=main_cur,
+                             price_uzs=round(float(uzs), 4) if uzs else None,
+                             price_usd=round(float(usd), 4) if usd else None))
     db.commit()
     return _price_rows(db, counterparty_id)
 
@@ -348,7 +371,7 @@ def get_warehouses(
     role: str = Depends(get_current_user_role),
     scope: Optional[List[int]] = Depends(get_ombor_scope),
 ):
-    check_permission("ombor" if role in ["Direktor", "Ish boshqaruvchi"] else "mdm", role)
+    check_read(role)
     allowed = mw.allowed_ids(db, scope)
     whs = db.query(Warehouse).order_by(Warehouse.id).all()
     return [w for w in whs if allowed is None or w.id in allowed]
