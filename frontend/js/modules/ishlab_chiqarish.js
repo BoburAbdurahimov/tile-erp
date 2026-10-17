@@ -230,8 +230,6 @@ const ProductionModule = {
     showModal(
       CURRENT_LANG === 'uz' ? "Yangi Ishlab Chiqarish hujjati kiritish" : "Ввод документа выпуска готовой продукции",
       `
-        <datalist id="prod-consumed-wh2-datalist"></datalist>
-
         <form id="new-prod-order-form">
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
             <div class="form-group">
@@ -271,9 +269,9 @@ const ProductionModule = {
               <label id="po-consumed-label" class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
                 ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo:' : 'Израсходованное сырье:'}
               </label>
-              <label style="display: ${ProductionModule.isAdmin() ? 'inline-flex' : 'none'}; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: #f5f3ff; border: 1.5px solid #c4b5fd; font-size: 13px; font-weight: 700; color: #6d28d9; cursor: pointer; margin: 0;">
-                <input type="checkbox" id="po-auto-sarf" onchange="ProductionModule.onAutoSarfToggle()" style="width: 16px; height: 16px; cursor: pointer;" />
-                ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
+              <label style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 10px; background: #f5f3ff; border: 2px solid #c4b5fd; font-size: 16px; font-weight: 800; color: #6d28d9; cursor: pointer; margin: 0;">
+                <input type="checkbox" id="po-auto-sarf" checked onchange="ProductionModule.onAutoSarfToggle()" style="width: 24px; height: 24px; cursor: pointer;" />
+                ${CURRENT_LANG === 'uz' ? 'Avto rasxod' : 'Авто расход'}
               </label>
             </div>
             <button type="button" id="po-add-row-btn" class="btn btn-secondary btn-sm btn-icon" onclick="ProductionModule.addConsumedRow()" title="${CURRENT_LANG === 'uz' ? 'Xomashyo qo\'shish' : 'Добавить сырье'}" aria-label="${CURRENT_LANG === 'uz' ? 'Xomashyo qo\'shish' : 'Добавить сырье'}">${uiIcon("plus")}</button>
@@ -319,21 +317,20 @@ const ProductionModule = {
           return false;
         }
 
+        // Avto rasxod: the server takes the Admin's norms. Otherwise what was picked from the warehouse.
+        const auto = !!document.getElementById("po-auto-sarf")?.checked;
         const consumed = [];
-        const rows = document.querySelectorAll("#consumed-rows-body tr");
-        rows.forEach(rowEl => {
-          const matInput = rowEl.querySelector(".row-mat-input") ? rowEl.querySelector(".row-mat-input").value.trim() : "";
-          const cQty = parseFloat(rowEl.querySelector(".row-qty").value);
-          const autoId = parseInt(rowEl.dataset.materialId || "0", 10);
-          if (autoId && cQty > 0) {
-            consumed.push({ material_id: autoId, warehouse_id: 2, quantity: cQty });
-            return;
+        if (!auto) {
+          for (const rowEl of document.querySelectorAll("#consumed-rows-body tr")) {
+            const materialId = parseInt(rowEl.querySelector(".row-mat")?.value || "0", 10);
+            const cQty = parseFloat(rowEl.querySelector(".row-qty")?.value || "0");
+            if (cQty > 0 && !materialId) {
+              showToast(CURRENT_LANG === 'uz' ? "Ombordan materialni tanlang" : "Выберите материал со склада", "warning");
+              return false;
+            }
+            if (materialId && cQty > 0) consumed.push({ material_id: materialId, quantity: cQty });
           }
-          const matchedRaw = (ProductionModule.wh2StockItems || []).find(s => `${s.material_code} - ${s.material_name} (${tr(s.unit)})`.toLowerCase() === matInput.toLowerCase() || s.material_code.toLowerCase() === matInput.toLowerCase());
-          if (matchedRaw && cQty > 0) {
-            consumed.push({ material_id: matchedRaw.material_id, warehouse_id: 2, quantity: cQty });
-          }
-        });
+        }
 
         try {
           await API.createProductionOrder({
@@ -342,6 +339,7 @@ const ProductionModule = {
             quantity: qty,
             date: d,
             consumed_materials: consumed,
+            auto_sarf: auto,
             notes
           });
           showToast(CURRENT_LANG === 'uz' ? "Ishlab chiqarish buyurtmasi muvaffaqiyatli saqlandi!" : "Документ выпуска успешно сохранен!", "success");
@@ -356,27 +354,32 @@ const ProductionModule = {
       "modal-lg"
     );
 
-    // The chosen Ombor's raw materials; a clean row, then Avto sarf if it was on last time.
+    // The chosen Ombor's raw materials; Avto rasxod starts on.
     await this.loadOwnerStock();
-    this.addConsumedRow();
-    let autoOn = false;
-    try { autoOn = localStorage.getItem("prod_auto_sarf") === "1"; } catch (_) {}
-    const cb = document.getElementById("po-auto-sarf");
-    // Avto sarf is the Admin's only
-    if (cb && autoOn && this.isAdmin()) {
-      cb.checked = true;
-      this.onAutoSarfToggle();
-    }
+    this.onAutoSarfToggle();
   },
 
-  // Avto sarf (its norms and its use in the form) is the Admin's only.
+  // Avto sarf norms are set by the Admin only.
   isAdmin() { return getUserRoles().includes("Admin"); },
+
+  // A material picked from what the warehouse holds, with how much is there.
+  stockOptions(items) {
+    const isUz = CURRENT_LANG === 'uz';
+    return `<option value="">${isUz ? 'Ombordan tanlang' : 'Выберите со склада'}</option>` +
+      items.map(s => `<option value="${s.material_id}">${escapeHtml(`${s.material_code} - ${s.material_name}`)} (${isUz ? 'bor' : 'есть'}: ${formatNumber(s.quantity, 0, 2)} ${escapeHtml(tr(s.unit))})</option>`).join("");
+  },
+
+  stockSelect(cls, items) {
+    const isUz = CURRENT_LANG === 'uz';
+    return items.length
+      ? `<select class="form-control ${cls}" style="width: 100%;">${this.stockOptions(items)}</select>`
+      : `<select class="form-control ${cls}" style="width: 100%;" disabled><option value="">${isUz ? 'Omborda hech narsa yo\'q' : 'Склад пуст'}</option></select>`;
+  },
 
   // ------------------------------------------------------------ Avto sarf (form)
 
   onAutoSarfToggle() {
     const on = !!document.getElementById("po-auto-sarf")?.checked;
-    try { localStorage.setItem("prod_auto_sarf", on ? "1" : "0"); } catch (_) {}
     const addBtn = document.getElementById("po-add-row-btn");
     if (addBtn) addBtn.style.display = on ? "none" : "";
     if (on) {
@@ -404,8 +407,8 @@ const ProductionModule = {
     } catch (e) {
       this.wh2StockItems = [];
     }
-    const dl = document.getElementById("prod-consumed-wh2-datalist");
-    if (dl) dl.innerHTML = this.wh2StockItems.map(s => `<option value="${escapeHtml(`${s.material_code} - ${s.material_name} (${tr(s.unit)})`)}" data-id="${s.material_id}">${isUz ? 'Omborda mavjud' : 'В наличии'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("");
+    // Manual rows pick from this warehouse
+    document.querySelectorAll("#consumed-rows-body .row-mat").forEach(sel => { sel.outerHTML = this.stockSelect("row-mat", this.wh2StockItems); });
     const lbl = document.getElementById("po-consumed-label");
     if (lbl && wh) lbl.textContent = isUz ? `Sarflangan xomashyo (${wh.name}):` : `Израсходованное сырье (${wh.name}):`;
   },
@@ -441,8 +444,8 @@ const ProductionModule = {
     tbody.innerHTML = "";
     if (!res.configured) {
       showHint(isUz
-        ? "Avto sarf hali sozlanmagan. Yuqoridagi «Avto sarf» tugmasi orqali normalarni kiriting yoki galochkani olib, qo'lda kiriting."
-        : "Авто расход ещё не настроен. Задайте нормы кнопкой «Авто расход» или снимите галочку и введите вручную.", "#b45309");
+        ? "Bu ombor uchun avto rasxod sozlanmagan (Admin sozlaydi). Avto rasxodni o'chirib, qo'lda kiriting."
+        : "Для этого склада авто расход не настроен (настраивает Админ). Выключите его и введите вручную.", "#b45309");
       return;
     }
     res.items.forEach(it => {
@@ -581,16 +584,7 @@ const ProductionModule = {
     const trEl = document.createElement("tr");
     trEl.style.borderBottom = "1px solid #f1f5f9";
     trEl.innerHTML = `
-      <td style="padding: 6px 8px;">
-        <input 
-          type="text" 
-          list="prod-consumed-wh2-datalist" 
-          class="form-control row-mat-input" 
-          placeholder="${CURRENT_LANG === 'uz' ? 'Xomashyo kodi yoki nomi...' : 'Код или наименование сырья...'}" 
-          style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
-          required 
-        />
-      </td>
+      <td style="padding: 6px 8px;">${this.stockSelect("row-mat", this.wh2StockItems || [])}</td>
       <td style="padding: 6px 8px;">
         <input type="number" step="any" class="form-control row-qty" placeholder="0" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" required />
       </td>
@@ -609,13 +603,10 @@ const ProductionModule = {
     this.materialWhs = whs.warehouses || [];
     const owners = whs.owners || [];
     this.leStock = [];
-    const availableStock = this.leStock;
 
     showModal(
       isUz ? "Sarf materiallari (Aralash ombor) kiritish" : "Списание материалов (Смешанный склад)",
       `
-        <datalist id="le-mat-datalist"></datalist>
-
         <form id="line-expense-form">
           <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 14px;">
             <div class="form-group">
@@ -662,14 +653,10 @@ const ProductionModule = {
         const notes = document.getElementById("le-notes").value.trim();
 
         const items = [];
-        const rows = document.querySelectorAll("#le-items-body tr");
-        rows.forEach(rowEl => {
-          const matInput = rowEl.querySelector(".le-mat-input") ? rowEl.querySelector(".le-mat-input").value.trim() : "";
-          const qty = parseFloat(rowEl.querySelector(".le-qty") ? rowEl.querySelector(".le-qty").value : 0);
-          const matchedMat = availableStock.find(s => `${s.material_code} - ${s.material_name} (${tr(s.unit)})`.toLowerCase() === matInput.toLowerCase() || s.material_code.toLowerCase() === matInput.toLowerCase());
-          if (matchedMat && qty > 0) {
-            items.push({ material_id: matchedMat.material_id, quantity: qty });
-          }
+        document.querySelectorAll("#le-items-body tr").forEach(rowEl => {
+          const materialId = parseInt(rowEl.querySelector(".le-mat")?.value || "0", 10);
+          const qty = parseFloat(rowEl.querySelector(".le-qty")?.value || "0");
+          if (materialId && qty > 0) items.push({ material_id: materialId, quantity: qty });
         });
 
         if (items.length === 0) {
@@ -700,8 +687,8 @@ const ProductionModule = {
       "modal-lg"
     );
 
-    this.addLineExpenseRow();
     await this.loadAralashStock();
+    this.addLineExpenseRow();
   },
 
   async loadAralashStock() {
@@ -712,8 +699,7 @@ const ProductionModule = {
       items = wh ? ((await API.getStockBalances(wh.id)) || []).filter(s => s.quantity > 0) : [];
     } catch (e) { /* none */ }
     this.leStock.splice(0, this.leStock.length, ...items);
-    const dl = document.getElementById("le-mat-datalist");
-    if (dl) dl.innerHTML = items.map(s => `<option value="${escapeHtml(`${s.material_code} - ${s.material_name} (${tr(s.unit)})`)}" data-id="${s.material_id}">${isUz ? 'Mavjud' : 'Доступно'}: ${formatNumber(s.quantity, 0, 2)} ${tr(s.unit)}</option>`).join("");
+    document.querySelectorAll("#le-items-body .le-mat").forEach(sel => { sel.outerHTML = this.stockSelect("le-mat", items); });
     const lbl = document.getElementById("le-stock-label");
     if (lbl && wh) lbl.textContent = isUz ? `${wh.name} omboridan sarflangan zapchast / materiallar:` : `Списано со склада ${wh.name}:`;
   },
@@ -725,16 +711,7 @@ const ProductionModule = {
     const trEl = document.createElement("tr");
     trEl.style.borderBottom = "1px solid #f1f5f9";
     trEl.innerHTML = `
-      <td style="padding: 6px 8px;">
-        <input 
-          type="text" 
-          list="le-mat-datalist" 
-          class="form-control le-mat-input" 
-          placeholder="${CURRENT_LANG === 'uz' ? 'Zapchast kodi yoki nomini yozing...' : 'Код или наименование...'}" 
-          style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"
-          required 
-        />
-      </td>
+      <td style="padding: 6px 8px;">${this.stockSelect("le-mat", this.leStock || [])}</td>
       <td style="padding: 6px 8px;">
         <input type="number" step="any" class="form-control le-qty" placeholder="1" style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" required />
       </td>

@@ -153,6 +153,14 @@ const PurchasesModule = {
             </select>
           </div>` : ''}
           <div>
+            <label style="${label}">${isUz ? 'Qaysi omborga *' : 'На какой склад *'}</label>
+            <select id="pur-kind" class="form-control" style="${field}">
+              <option value="">${isUz ? 'Tanlang' : 'Выберите'}</option>
+              <option value="xomashyo">${isUz ? 'Xomashyo ombori' : 'Склад сырья'}</option>
+              <option value="aralash">${isUz ? 'Aralash ombor' : 'Смешанный склад'}</option>
+            </select>
+          </div>
+          <div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <label style="${label} margin-bottom: 0;">${isUz ? 'Nima va qancha *' : 'Что и сколько *'}</label>
               <button type="button" class="btn btn-secondary btn-sm btn-icon" onclick="PurchasesModule.addPurchaseItemRow()"
@@ -187,6 +195,11 @@ const PurchasesModule = {
           showToast(isUz ? "Qaysi ombor uchun olinayotganini tanlang" : "Выберите склад", "warning");
           return false;
         }
+        const kind = document.getElementById("pur-kind").value;
+        if (!kind) {
+          showToast(isUz ? "Xomashyo yoki aralash omborni tanlang" : "Выберите склад сырья или смешанный", "warning");
+          return false;
+        }
         const items = [];
         for (const row of document.querySelectorAll("#pur-rows .pur-row")) {
           const materialId = parseInt(row.querySelector(".pur-mat").value);
@@ -205,7 +218,7 @@ const PurchasesModule = {
           // Asked only when the supplier has a so'm and a dollar price; else theirs is used.
           const curBox = document.getElementById("pur-cur-box");
           const currency = curBox && curBox.style.display !== "none" ? document.getElementById("pur-currency").value : undefined;
-          await API.createPurchase({ supplier_id: supplierId, date: d, items, ombor, currency });
+          await API.createPurchase({ supplier_id: supplierId, date: d, items, ombor, kind, currency });
           showToast(isUz ? "Xarid saqlandi, ombor qoldig'i yangilandi" : "Закупка сохранена, остатки обновлены", "success");
           await PurchasesModule.loadPurchases();
           return true;
