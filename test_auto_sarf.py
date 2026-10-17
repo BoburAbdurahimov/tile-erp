@@ -59,6 +59,12 @@ class TestAutoSarf(unittest.TestCase):
         self.assertEqual(sum(1 for r in rules if r["material_id"] == mid), 1)
 
         ok(client.delete(f"{URL}/{r1['id']}", headers=ADMIN))
+        # Avto sarf is the Admin's only: norms and the calculation alike
+        sex = {"x-user-role": "Ishlab chiqarish,O'chirish"}
+        self.assertEqual(client.get(URL, headers=sex).status_code, 403)
+        self.assertEqual(client.post(URL, json={"material_id": mid, "qty_per_unit": 1}, headers=sex).status_code, 403)
+        self.assertEqual(client.delete(f"{URL}/{r2['id']}", headers=sex).status_code, 403)
+        self.assertEqual(client.get(f"{URL}/calc?quantity=1", headers=sex).status_code, 403)
         self.assertFalse(any(r["id"] == r1["id"] for r in ok(client.get(URL, headers=ADMIN))))
 
     def test_02_bad_input(self):

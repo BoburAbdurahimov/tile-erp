@@ -9,7 +9,7 @@ const ProductionModule = {
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div class="card-title" style="font-size: 20px; font-weight: 700;">${t('mod_prod_title')}</div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-secondary" onclick="ProductionModule.openAutoSarfSettings()" style="font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px; cursor: pointer; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
+            <button class="btn btn-secondary" onclick="ProductionModule.openAutoSarfSettings()" style="${ProductionModule.isAdmin() ? '' : 'display: none; '}font-weight: 700; font-size: 14px; padding: 10px 16px; border-radius: 8px; cursor: pointer; border: 1.5px solid #7c3aed; color: #6d28d9; background: #f5f3ff;">
               ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
             </button>
             <button class="btn btn-secondary btn-icon" onclick="ProductionModule.exportPdf()" title="${t('btn_export_pdf')}" aria-label="${t('btn_export_pdf')}">${uiIcon("pdf")}</button>
@@ -271,7 +271,7 @@ const ProductionModule = {
               <label id="po-consumed-label" class="form-label" style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 0;">
                 ${CURRENT_LANG === 'uz' ? 'Sarflangan xomashyo:' : 'Израсходованное сырье:'}
               </label>
-              <label style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: #f5f3ff; border: 1.5px solid #c4b5fd; font-size: 13px; font-weight: 700; color: #6d28d9; cursor: pointer; margin: 0;">
+              <label style="display: ${ProductionModule.isAdmin() ? 'inline-flex' : 'none'}; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; background: #f5f3ff; border: 1.5px solid #c4b5fd; font-size: 13px; font-weight: 700; color: #6d28d9; cursor: pointer; margin: 0;">
                 <input type="checkbox" id="po-auto-sarf" onchange="ProductionModule.onAutoSarfToggle()" style="width: 16px; height: 16px; cursor: pointer;" />
                 ${CURRENT_LANG === 'uz' ? 'Avto sarf' : 'Авто расход'}
               </label>
@@ -362,11 +362,15 @@ const ProductionModule = {
     let autoOn = false;
     try { autoOn = localStorage.getItem("prod_auto_sarf") === "1"; } catch (_) {}
     const cb = document.getElementById("po-auto-sarf");
-    if (cb && autoOn) {
+    // Avto sarf is the Admin's only
+    if (cb && autoOn && this.isAdmin()) {
       cb.checked = true;
       this.onAutoSarfToggle();
     }
   },
+
+  // Avto sarf (its norms and its use in the form) is the Admin's only.
+  isAdmin() { return getUserRoles().includes("Admin"); },
 
   // ------------------------------------------------------------ Avto sarf (form)
 
