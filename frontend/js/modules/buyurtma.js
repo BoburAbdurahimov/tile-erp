@@ -118,7 +118,6 @@ const OrdersModule = {
               <button class="btn btn-primary btn-icon" onclick="OrdersModule.openNewOrder()" title="${isUz ? "Yangi buyurtma" : "Новый заказ"}" aria-label="${isUz ? "Yangi buyurtma" : "Новый заказ"}">${uiIcon("plus")}</button>
             </div>
           </div>
-          <div id="orders-alert" style="margin-top:14px;"></div>
           <div id="orders-stages" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:14px;"></div>
         </div>
         <div id="orders-content">
@@ -144,7 +143,6 @@ const OrdersModule = {
       showToast(e.message, "error");
     }
     this.renderStages();
-    this.renderAlert();
     this.renderStage();
     if (typeof refreshOrderBadge === "function") refreshOrderBadge(this.orders);
   },
@@ -175,29 +173,6 @@ const OrdersModule = {
           </span>
         </button>`;
     }).join("");
-  },
-
-  renderAlert() {
-    const isUz = this.isUz();
-    const el = document.getElementById("orders-alert");
-    if (!el) return;
-    const now = Date.now();
-    const urgent = this.open().filter(o =>
-      o.shortfall_pieces > 0 && this.parseLocal(o.deadline).getTime() - now < 3 * 86400000);
-    if (!urgent.length) { el.innerHTML = ""; return; }
-    const pieces = urgent.reduce((s, o) => s + o.shortfall_pieces, 0);
-    el.innerHTML = `
-      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13.5px;">
-
-        <span>
-          <b>${isUz ? "Eslatma:" : "Напоминание:"}</b>
-          ${isUz
-            ? `${urgent.length} ta buyurtmaning muddati 3 kun ichida, lekin omborda yetarli emas. Jami <b>${formatNumber(pieces, 0, 0)} ta</b> ishlab chiqarish kerak.`
-            : `У ${urgent.length} заказов срок в течение 3 дней, но на складе не хватает. Нужно произвести <b>${formatNumber(pieces, 0, 0)} шт</b>.`}
-          <a href="javascript:void(0)" onclick="OrdersModule.showPlan()" style="color:#c2410c;font-weight:700;margin-left:4px;">
-            ${isUz ? "Rejani ko'rish" : "Смотреть план"}</a>
-        </span>
-      </div>`;
   },
 
   setStage(stage) {
@@ -324,13 +299,6 @@ const OrdersModule = {
             </button>`;
         }).join("")}
       </div>`);
-  },
-
-  // The reminder's link: bring the plan into view.
-  showPlan() {
-    if (this.stage !== "orders") this.setStage("orders");
-    const el = document.getElementById("orders-plan");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   },
 
   // The whole order: client, money, stock, time left and the actions.
