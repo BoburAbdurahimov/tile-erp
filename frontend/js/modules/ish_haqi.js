@@ -547,8 +547,8 @@ const IshHaqiModule = (function () {
           </div>
         </div>
 
-        <!-- Section 2: Soatbay (hourly) employees -->
-        <div class="card">
+        <!-- Section 2: Soatbay (hourly) employees - only while old soatbay staff remain -->
+        <div class="card" style="${soatbayEmps.length ? '' : 'display: none;'}">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Soatbay xodimlar (ishlagan soati)" : "Почасовые сотрудники (часы)"}</div>
             ${soatbayEmps.length ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveHours()">${isUz ? "Soatlarni saqlash" : "Сохранить часы"}</button>` : ''}
@@ -1097,6 +1097,8 @@ const IshHaqiModule = (function () {
   // How a job (position) is paid: ishbay = units done x rate, soatbay =
   // hours x rate (both through naryad entries), fiks = a monthly salary.
   const PAY_TYPES = ["ishbay", "soatbay", "fiks"];
+  // Soatbay is no longer offered; a job already saved as soatbay keeps it.
+  const shownPayTypes = current => PAY_TYPES.filter(k => k !== "soatbay" || k === current);
   // An Ish turi already saved with another unit keeps it (jobTypeFields adds it).
   const UNITS = [
     ["m2", "m² (Kvadrat metr)"], ["dona", "dona (Штука)"], ["metr", "metr (Метр)"], ["tonna", "tonna (Тонна)"],
@@ -1144,8 +1146,8 @@ const IshHaqiModule = (function () {
     return `
       <div class="form-group">
         <label class="form-label">${isUz ? "To'lov turi" : "Тип оплаты"} *</label>
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
-          ${PAY_TYPES.map(k => {
+        <div style="display:grid; grid-template-columns:repeat(${shownPayTypes(pt).length}, 1fr); gap:8px;">
+          ${shownPayTypes(pt).map(k => {
             const t = payTypeText(k);
             return `<label style="display:flex; flex-direction:column; gap:2px; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:10px; cursor:pointer;" class="pt-option">
               <span style="display:flex; align-items:center; gap:6px; font-weight:700; color:${t.color};">
@@ -1234,7 +1236,7 @@ const IshHaqiModule = (function () {
       <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
           <div>
-            <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Ish turlari va narxlar (ishbay, soatbay, fiks)" : "Виды работ и расценки (сдельно, почасово, фикс)"}</div>
+            <div class="card-title" style="font-size: 16px; font-weight: 700;">${isUz ? "Ish turlari va narxlar (ishbay, fiks)" : "Виды работ и расценки (сдельно, фикс)"}</div>
             <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">${jobTypesList.length} ${isUz ? "ta ish turi" : "видов работ"}</p>
           </div>
           <button class="btn btn-primary btn-sm btn-icon" onclick="IshHaqiModule.openAddJobTypeModal()" title="${t.btn_add_job}" aria-label="${t.btn_add_job}">${uiIcon("plus")}</button>
@@ -1357,7 +1359,7 @@ const IshHaqiModule = (function () {
       ? `${isUz ? "Hozirgi" : "Сейчас"}: ${escapeHtml(legacyText)} (${isUz ? "ish turidan emas" : "не из видов работ"})`
       : (isUz ? "Lavozimni tanlang" : "Выберите должность")}</option>`;
     return head + PAY_TYPES.map(pt => {
-      const list = usable.filter(j => payTypeOf(j) === pt);
+      const list = usable.filter(j => payTypeOf(j) === pt && (pt !== "soatbay" || j.id === selectedId));
       if (!list.length) return "";
       return `<optgroup label="${escapeHtml(payTypeText(pt).name)}">${list.map(j =>
         `<option value="${j.id}" ${j.id === selectedId ? "selected" : ""}>${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${escapeHtml(unitText(j))}</option>`).join("")}</optgroup>`;
@@ -1643,13 +1645,13 @@ const IshHaqiModule = (function () {
       showToast(isUz ? "Avval ishbay xodimlarni ro'yxatga qo'shing!" : "Сначала добавьте сдельных сотрудников!", "warning");
       return;
     }
-    if (!jobTypesList.some(j => j.is_active !== false && payTypeOf(j) !== "fiks")) {
-      showToast(isUz ? "Avval ishbay yoki soatbay ish turi qo'shing!" : "Сначала добавьте сдельный или почасовой вид работ!", "warning");
+    if (!jobTypesList.some(j => j.is_active !== false && payTypeOf(j) === "ishbay")) {
+      showToast(isUz ? "Avval ishbay ish turi qo'shing!" : "Сначала добавьте сдельный вид работ!", "warning");
       return;
     }
 
     let empOptions = pieceworkEmps.map(e => `<option value="${e.id}" data-job="${assignedJobId(e) || ""}">[${escapeHtml(deptLabel(deptKey(e.department)))}] ${escapeHtml(e.full_name)} (${escapeHtml(e.position)})</option>`).join("");
-    let jobOptions = jobTypesList.filter(j => j.is_active !== false && payTypeOf(j) !== "fiks").map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${escapeHtml(unitText(j))}" data-paytype="${payTypeOf(j)}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${escapeHtml(unitText(j))} (${payTypeText(payTypeOf(j)).name})</option>`).join("");
+    let jobOptions = jobTypesList.filter(j => j.is_active !== false && payTypeOf(j) === "ishbay").map(j => `<option value="${j.id}" data-price="${j.price_per_unit}" data-unit="${escapeHtml(unitText(j))}" data-paytype="${payTypeOf(j)}">${escapeHtml(j.name)} — ${formatNumber(j.price_per_unit)} UZS / ${escapeHtml(unitText(j))} (${payTypeText(payTypeOf(j)).name})</option>`).join("");
 
     const modalHost = document.getElementById("salary-modals-host");
     modalHost.innerHTML = `
