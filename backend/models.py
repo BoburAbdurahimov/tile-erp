@@ -158,6 +158,7 @@ class CashTransaction(Base):
     status = Column(String(20), default="Tasdiqlandi") # "Tasdiqlandi", "Storno"
     storno_ref_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
     description = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     counterparty = relationship("MDMCounterparty")
@@ -222,6 +223,7 @@ class ProductionOrder(Base):
     unit_cost_usd = Column(Float, default=0.0) # total_cost_usd / quantity
     storno_ref_id = Column(Integer, ForeignKey("production_orders.id"), nullable=True)
     notes = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     line = relationship("ProductionLine")
@@ -269,6 +271,7 @@ class LineExpense(Base):
     total_cost_uzs = Column(Float, default=0.0)
     status = Column(String(20), default="Tasdiqlandi") # "Tasdiqlandi", "Storno"
     notes = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     warehouse = relationship("Warehouse")
@@ -302,6 +305,7 @@ class Purchase(Base):
     status = Column(String(20), default="Tasdiqlandi") # "Tasdiqlandi", "Storno"
     storno_ref_id = Column(Integer, ForeignKey("purchases.id"), nullable=True)
     description = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     supplier = relationship("MDMCounterparty")
@@ -339,6 +343,7 @@ class Sale(Base):
     status = Column(String(20), default="Tasdiqlandi") # "Tasdiqlandi", "Storno"
     storno_ref_id = Column(Integer, ForeignKey("sales.id"), nullable=True)
     description = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     client = relationship("MDMCounterparty")

@@ -137,7 +137,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             "xarid", _at(p.date, p.created_at), ref=p.purchase_number,
             place=p.warehouse.name if p.warehouse else None,
             party=p.supplier.name if p.supplier else None, details=", ".join(lines),
-            amount=p.total_amount, currency=p.currency, status=p.status,
+            amount=p.total_amount, currency=p.currency, status=p.status, user=p.created_by,
         ))
 
     # --- Legacy sales documents
@@ -148,7 +148,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             place=s.warehouse.name if s.warehouse else None,
             party=s.client.name if s.client else None,
             details=", ".join(f"{i.material.name if i.material else ''} × {i.quantity:g}" for i in s.items),
-            amount=s.total_amount, currency=s.currency, status=s.status,
+            amount=s.total_amount, currency=s.currency, status=s.status, user=s.created_by,
         ))
 
     # --- Production
@@ -170,7 +170,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             place=sklad.sklad_label(o.out_sklad_id) if o.out_sklad_id else (o.line.name if o.line else None),
             details=out + (f" — sarf: {used}" if used else ""),
             quantity=f"{o.quantity:g} {unit}".strip(),
-            amount=o.total_cost_usd, currency="USD", status=o.status, sklad_id=prod_sklad,
+            amount=o.total_cost_usd, currency="USD", status=o.status, sklad_id=prod_sklad, user=o.created_by,
         ))
 
     # --- Line expenses (consumables issued to lines)
@@ -181,7 +181,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             place=e.warehouse.name if e.warehouse else None,
             party=f"Liniya: {e.line_ids_str}" if e.line_ids_str else None,
             details=", ".join(f"{i.material.name if i.material else ''} × {i.quantity:g}" for i in e.items),
-            amount=e.total_cost_usd, currency="USD", status=e.status,
+            amount=e.total_cost_usd, currency="USD", status=e.status, user=e.created_by,
         ))
 
     # --- Transfers between the material warehouses
@@ -217,7 +217,7 @@ def collect(db: Session, start: datetime, end: datetime, limit: int) -> list[dic
             ref=f"#{c.id}", place=c.register.name if c.register else None,
             party=c.counterparty.name if c.counterparty else None,
             details=" — ".join(x for x in [c.category, c.description] if x),
-            amount=c.amount, currency=c.currency, status=c.status,
+            amount=c.amount, currency=c.currency, status=c.status, user=c.created_by,
         ))
 
     # --- Who did what (every change made through the API)
