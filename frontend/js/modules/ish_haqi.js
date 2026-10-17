@@ -535,7 +535,7 @@ const IshHaqiModule = (function () {
         ${renderDeptFilterBar()}
       </div>
 
-      <div class="grid-2">
+      <div class="${soatbayEmps.length ? 'grid-2' : ''}">
         <!-- Section 1: Fixed Employees Absences -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -548,7 +548,7 @@ const IshHaqiModule = (function () {
         </div>
 
         <!-- Section 2: Soatbay (hourly) employees - only while old soatbay staff remain -->
-        <div class="card" style="${soatbayEmps.length ? '' : 'display: none;'}">
+        ${soatbayEmps.length ? `<div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="card-title" style="font-size: 15px; font-weight: 700;">${isUz ? "Soatbay xodimlar (ishlagan soati)" : "Почасовые сотрудники (часы)"}</div>
             ${soatbayEmps.length ? `<button class="btn btn-primary btn-sm" onclick="IshHaqiModule.saveHours()">${isUz ? "Soatlarni saqlash" : "Сохранить часы"}</button>` : ''}
@@ -557,7 +557,7 @@ const IshHaqiModule = (function () {
             ${soatbayRows}
           </div>
           ${soatbayEmps.length ? `<div id="hours-total" style="text-align: right; margin-top: 10px; font-size: 13px; font-weight: 700; color: #0f172a;"></div>` : ''}
-        </div>
+        </div>` : ''}
       </div>
 
       <div style="margin-top: 16px;">
