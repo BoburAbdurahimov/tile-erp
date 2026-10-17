@@ -1639,13 +1639,17 @@ const IshHaqiModule = (function () {
   // Daily Work Entry Modal
   function openAddWorkModal() {
     const isUz = isUzbek();
-    const pieceworkEmps = employeesList.filter(e => e.employee_type === "piecework");
-    if (pieceworkEmps.length === 0) {
-      showToast(isUz ? "Avval ishbay xodimlarni ro'yxatga qo'shing!" : "Сначала добавьте сдельных сотрудников!", "warning");
+    // A naryad needs an ishbay job type, and someone whose position is one
+    // (an employee with a fiks position gets a monthly salary instead).
+    if (!jobTypesList.some(j => j.is_active !== false && payTypeOf(j) === "ishbay")) {
+      showToast(isUz ? "Avval Ish turlari bo'limida ishbay ish turi qo'shing." : "Сначала добавьте сдельный вид работ.", "warning");
       return;
     }
-    if (!jobTypesList.some(j => j.is_active !== false && payTypeOf(j) === "ishbay")) {
-      showToast(isUz ? "Avval ishbay ish turi qo'shing!" : "Сначала добавьте сдельный вид работ!", "warning");
+    const pieceworkEmps = employeesList.filter(e => e.employee_type === "piecework");
+    if (pieceworkEmps.length === 0) {
+      showToast(isUz
+        ? "Ishbay xodim yo'q. Xodimlar ro'yxatida xodimni tahrirlab, lavozimiga ishbay ish turini tanlang."
+        : "Нет сдельных сотрудников. В списке сотрудников выберите сотруднику сдельную должность.", "warning");
       return;
     }
 
