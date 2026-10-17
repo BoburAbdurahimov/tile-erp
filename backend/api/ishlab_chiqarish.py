@@ -15,6 +15,7 @@ from backend.schemas import (
 )
 from backend.api.auth import get_current_user_role, check_permission, is_admin, check_action, get_ombor_scope, check_ombor
 from backend.services import material_warehouses as mw
+from backend.api import auto_sarf
 from backend.services import sklad_service as sklad_svc
 from backend.services.numbering import next_number
 from backend.services.inventory_service import (
@@ -208,17 +209,24 @@ def create_production_order(
     # go into (Toxir's production uses Toxir's clay).
     owner = mw.owner_of_sklad(payload.out_sklad_id)
     wh_id = mw.warehouse_id(db, owner, mw.XOMASHYO) if owner else mw.SHARED[mw.XOMASHYO]
-    for c in payload.consumed_materials:
-        if c.quantity <= 0:
+    consumed = [(c.material_id, c.quantity) for c in payload.consumed_materials]
+    if payload.auto_sarf:
+        calc = auto_sarf.needed(db, payload.quantity, payload.out_sklad_id)
+        if not calc["configured"]:
+            raise HTTPException(status_code=400, detail=(
+                "Bu ombor uchun avto rasxod sozlanmagan. Avto rasxodni o'chirib, qo'lda kiriting."))
+        consumed = [(it["material_id"], it["quantity"]) for it in calc["items"]]
+    for material_id, quantity in consumed:
+        if quantity <= 0:
             continue
-        unit_cost = deduct_stock(db, wh_id, c.material_id, c.quantity)
-        line_cost = c.quantity * unit_cost
+        unit_cost = deduct_stock(db, wh_id, material_id, quantity)
+        line_cost = quantity * unit_cost
         direct_cost_usd += line_cost
         
         consumed_records.append(ProductionConsumedMaterial(
-            material_id=c.material_id,
+            material_id=material_id,
             warehouse_id=wh_id,
-            quantity=c.quantity,
+            quantity=quantity,
             unit_cost_usd=unit_cost,
             total_cost_usd=line_cost
         ))

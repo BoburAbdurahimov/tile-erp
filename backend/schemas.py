@@ -266,7 +266,8 @@ class ProductionOrderCreate(BaseModel):
     out_width: Optional[int] = None
     quantity: float
     date: dt_date = Field(default_factory=dt_date.today)
-    consumed_materials: List[ConsumedMaterialInput]
+    consumed_materials: List[ConsumedMaterialInput] = []
+    auto_sarf: bool = False         # consume by the Admin's Avto sarf norms instead
     notes: Optional[str] = None
 
 class ConsumedMaterialResponse(BaseModel):
@@ -325,6 +326,7 @@ class PurchaseCreate(BaseModel):
     ombor: Optional[str] = None         # the Ombor (owner) it is for; empty = the user's only one
     date: dt_date = Field(default_factory=dt_date.today)
     currency: Optional[str] = None      # empty: the currency of the supplier's prices
+    kind: Optional[str] = None          # "xomashyo" or "aralash"; empty: by material category
     items: List[PurchaseItemInput]
     description: Optional[str] = None
 

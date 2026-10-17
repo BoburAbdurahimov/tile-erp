@@ -4,14 +4,14 @@ by hand instead).
 
 A norm is either for every Ombor (sklad_id NULL) or for one Ombor such as
 Kodir 100; an Ombor's own norm wins over the general one for that material."""
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.api.auth import get_current_user_role, check_permission, check_action, is_admin
+from backend.api.auth import get_current_user_role, check_permission, check_action, is_admin, get_ombor_scope, check_ombor
 from backend.services import material_warehouses as mw
 from backend.models import AutoSarfRule, MDMMaterial, StockItem
 from backend.services import sklad_service
@@ -47,7 +47,7 @@ def _active(db: Session):
 
 
 def _admin_only(role: str):
-    """Avto sarf (norms and their use in the production form) is the Admin's."""
+    """Avto sarf norms are set by the Admin only."""
     if not is_admin(role):
         raise HTTPException(status_code=403, detail="Avto sarf faqat Admin uchun.")
 
@@ -92,16 +92,9 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db), role: str = Depends
     return {"success": True, "id": rule_id}
 
 
-@router.get("/calc")
-def calculate(
-    quantity: float = Query(..., gt=0),
-    sklad_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-    role: str = Depends(get_current_user_role),
-):
+def needed(db: Session, quantity: float, sklad_id: Optional[int]) -> dict:
     """Materials needed for `quantity` pieces going into an Ombor: that Ombor's
     own norms, plus the general norms for materials it has none for."""
-    _admin_only(role)
     rules = _active(db).all()
     by_material = {r.material_id: r for r in rules if r.sklad_id is None}
     if sklad_id is not None:
@@ -130,3 +123,19 @@ def calculate(
         })
     items.sort(key=lambda x: x["material_code"])
     return {"items": items, "configured": bool(items)}
+
+
+@router.get("/calc")
+def calculate(
+    quantity: float = Query(..., gt=0),
+    sklad_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    role: str = Depends(get_current_user_role),
+    scope: Optional[List[int]] = Depends(get_ombor_scope),
+):
+    """The production form's Avto rasxod: anyone entering production uses the
+    norms; only the Admin sets them."""
+    check_permission("ishlab_chiqarish", role)
+    if sklad_id is not None:
+        check_ombor(sklad_id, scope)
+    return needed(db, quantity, sklad_id)

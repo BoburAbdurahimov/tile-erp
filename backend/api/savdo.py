@@ -143,6 +143,8 @@ def create_purchase(
     # Which Ombor's warehouses the materials go to: the one chosen, or the
     # user's own when they work in one Ombor.
     owner = None
+    if payload.kind and payload.kind not in mw.KINDS:
+        raise HTTPException(status_code=400, detail="Xomashyo yoki aralash omborni tanlang.")
     if payload.warehouse_id:
         mw.check_warehouse(db, payload.warehouse_id, scope)
     elif any(it.material_id and not it.sklad_id for it, _ in lines):
@@ -204,7 +206,8 @@ def create_purchase(
             raise HTTPException(status_code=404, detail="Material topilmadi.")
         # Spare parts go to the Ombor's aralash warehouse, the rest (raw and
         # auxiliary materials) to its xomashyo warehouse.
-        warehouse_id = payload.warehouse_id or mw.warehouse_id(db, owner, mw.kind_for_category(material.category))
+        warehouse_id = payload.warehouse_id or mw.warehouse_id(
+            db, owner, payload.kind or mw.kind_for_category(material.category))
         if header_warehouse and warehouse_id != header_warehouse:
             # Storno takes a purchase back from one warehouse.
             raise HTTPException(status_code=400, detail="Ehtiyot qism va xomashyoni alohida xarid qiling.")
