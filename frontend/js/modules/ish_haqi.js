@@ -535,7 +535,8 @@ const IshHaqiModule = (function () {
         ${renderDeptFilterBar()}
       </div>
 
-      <div class="${soatbayEmps.length ? 'grid-2' : ''}">
+      <!-- Attendance and naryads side by side on a wide screen, stacked on a narrow one -->
+      <div class="daily-grid">
         <!-- Section 1: Fixed Employees Absences -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -558,9 +559,7 @@ const IshHaqiModule = (function () {
           </div>
           ${soatbayEmps.length ? `<div id="hours-total" style="text-align: right; margin-top: 10px; font-size: 13px; font-weight: 700; color: #0f172a;"></div>` : ''}
         </div>` : ''}
-      </div>
 
-      <div style="margin-top: 16px;">
         <!-- Section 3: Piecework Jobs Entry -->
         <div class="card">
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">

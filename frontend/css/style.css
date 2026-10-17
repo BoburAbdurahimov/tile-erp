@@ -2275,3 +2275,8 @@ body { font-size: 16px; }
   padding-left: 18px !important;
   padding-right: 18px !important;
 }
+
+/* Ish haqi > Kunlik davomat: attendance beside the naryads on a wide screen */
+.daily-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; align-items: start; }
+.daily-grid > .card { margin-bottom: 0; }
+@media (max-width: 1200px) { .daily-grid { grid-template-columns: minmax(0, 1fr); } }
